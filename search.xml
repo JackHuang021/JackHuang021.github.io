@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>从零开始搭建Hexo博客</title>
+    <url>/archives/39fb7b7f.html</url>
+    <content><![CDATA[<h2 id="Hexo简介"><a href="#Hexo简介" class="headerlink" title="Hexo简介"></a>Hexo简介</h2><p>引用官网的介绍：A fast, simple &amp; powerful blog framework<br>Hexo是一款基于Node.js的静态博客框架，依赖少易于安装使用，可以方便的生成静态网页托管在GitHub上，是搭建博客的首选框架。</p>
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>基于Ubuntu20.04安装Hexo配置Next主题</p>
+<span id="more"></span>
+<h3 id="安装Git"><a href="#安装Git" class="headerlink" title="安装Git"></a>安装Git</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install git</span><br></pre></td></tr></table></figure>
+<p>安装完成后进行配置</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">git config --global user.email &quot;you@example.com&quot;</span><br><span class="line">git config --global user.name &quot;Your Name&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="安装Node-js"><a href="#安装Node-js" class="headerlink" title="安装Node.js"></a>安装Node.js</h3><p>使用NVM（Node Version Manager）方式进行安装</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash</span><br></pre></td></tr></table></figure>
+<p>安装完成后关闭终端重新打开</p>
+<h3 id="安装最新版本node"><a href="#安装最新版本node" class="headerlink" title="安装最新版本node"></a>安装最新版本node</h3><p>安装过程中可能会因为网络问题失败，可以尝试挂梯子,安装完成后更新自带npm</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">nvm install node</span><br><span class="line">npm install npm -g</span><br></pre></td></tr></table></figure>
+
+<h3 id="安装Hexo"><a href="#安装Hexo" class="headerlink" title="安装Hexo"></a>安装Hexo</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">npm install -g hexo-cli</span><br></pre></td></tr></table></figure>
+<p>安装完成后的版本信息如下</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">jack@linux:~/blog/source/_posts$ hexo -v</span><br><span class="line">INFO  Validating config</span><br><span class="line">INFO  ==================================</span><br><span class="line">  ███╗   ██╗███████╗██╗  ██╗████████╗</span><br><span class="line">  ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝</span><br><span class="line">  ██╔██╗ ██║█████╗   ╚███╔╝    ██║</span><br><span class="line">  ██║╚██╗██║██╔══╝   ██╔██╗    ██║</span><br><span class="line">  ██║ ╚████║███████╗██╔╝ ██╗   ██║</span><br><span class="line">  ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝</span><br><span class="line">========================================</span><br><span class="line">NexT version 8.11.1</span><br><span class="line">Documentation: https://theme-next.js.org</span><br><span class="line">========================================</span><br><span class="line">hexo: 5.4.2</span><br><span class="line">hexo-cli: 4.3.0</span><br><span class="line">os: linux 5.13.0-40-generic Ubuntu 20.04.4 LTS (Focal Fossa)</span><br><span class="line">node: 18.2.0</span><br><span class="line">v8: 10.1.124.8-node.13</span><br><span class="line">uv: 1.43.0</span><br><span class="line">zlib: 1.2.11</span><br><span class="line">brotli: 1.0.9</span><br><span class="line">ares: 1.18.1</span><br><span class="line">modules: 108</span><br><span class="line">nghttp2: 1.47.0</span><br><span class="line">napi: 8</span><br><span class="line">llhttp: 6.0.6</span><br><span class="line">openssl: 3.0.3+quic</span><br><span class="line">cldr: 41.0</span><br><span class="line">icu: 71.1</span><br><span class="line">tz: 2022a</span><br><span class="line">unicode: 14.0</span><br><span class="line">ngtcp2: 0.1.0-DEV</span><br><span class="line">nghttp3: 0.1.0-DEV</span><br></pre></td></tr></table></figure>
+
+<h3 id="初步运行Hexo进行验证"><a href="#初步运行Hexo进行验证" class="headerlink" title="初步运行Hexo进行验证"></a>初步运行Hexo进行验证</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">hexo init blog</span><br><span class="line">cd blog</span><br><span class="line">npm install</span><br><span class="line">hexo server</span><br></pre></td></tr></table></figure>
+<p>运行之后可以通过 <a href="http://localhost:4000/">http://localhost:4000</a> 进行访问</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">INFO  Validating config</span><br><span class="line">INFO  ==================================</span><br><span class="line">  ███╗   ██╗███████╗██╗  ██╗████████╗</span><br><span class="line">  ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝</span><br><span class="line">  ██╔██╗ ██║█████╗   ╚███╔╝    ██║</span><br><span class="line">  ██║╚██╗██║██╔══╝   ██╔██╗    ██║</span><br><span class="line">  ██║ ╚████║███████╗██╔╝ ██╗   ██║</span><br><span class="line">  ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝</span><br><span class="line">========================================</span><br><span class="line">NexT version 8.11.1</span><br><span class="line">Documentation: https://theme-next.js.org</span><br><span class="line">========================================</span><br><span class="line">INFO  Start processing</span><br><span class="line">INFO  Hexo is running at http://localhost:4000 . Press Ctrl+C to stop.</span><br></pre></td></tr></table></figure>
+<h3 id="部署GitHub远程服务器"><a href="#部署GitHub远程服务器" class="headerlink" title="部署GitHub远程服务器"></a>部署GitHub远程服务器</h3><h4 id="创建GitHub项目"><a href="#创建GitHub项目" class="headerlink" title="创建GitHub项目"></a>创建GitHub项目</h4><p>在GitHub上注册账号，注册后上传ssh公钥，便于后续的部署操作<br>创建一个与你用户名对应的项目<code>username.github.io</code>，例如我创建的项目地址为<code>https://github.com/JackHuang021/JackHuang021.github.io.git</code>  </p>
+<h4 id="进行部署"><a href="#进行部署" class="headerlink" title="进行部署"></a>进行部署</h4><p>部署需要用到<code>hexo deploy</code>上传到GitHub仓库，这里需要下载部署插件，并修改hexo配置文件<code>_config.yml</code>，<br>我们很多的博客设置都可以在这个配置文件里面进行修改<br>首先安装Git部署插件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd ~/blog</span><br><span class="line">npm install hex-deployer-git --save</span><br></pre></td></tr></table></figure>
+<p>修改博客配置文件<code>_config.yml</code>，增加如下内容</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># Deployment</span><br><span class="line">## Docs: https://hexo.io/docs/one-command-deployment</span><br><span class="line">deploy:</span><br><span class="line">  type: git</span><br><span class="line">  repo: git@github.com:JackHuang021/JackHuang021.github.io.git</span><br><span class="line">  branch: master</span><br></pre></td></tr></table></figure>
+<p>最后使用<code>hexo d</code>进行上传部署，现在访问<code>username.github.io</code>便可以看到博客页面了<br>后续更新博客设置或者文章的话需要再次进行上传部署<code>hexo d -g</code></p>
+]]></content>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/archives/4a17b156.html</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
