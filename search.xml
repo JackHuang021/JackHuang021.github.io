@@ -117,6 +117,10 @@
 </ol>
 <h4 id="编译过程中遇到的错误"><a href="#编译过程中遇到的错误" class="headerlink" title="编译过程中遇到的错误"></a>编译过程中遇到的错误</h4><figure class="highlight awk"><table><tr><td class="code"><pre><span class="line"><span class="regexp">/home/</span>tanyd<span class="regexp">/zdyz/</span>linaro494<span class="regexp">/arm-linux-gnueabihf/</span>libc<span class="regexp">/usr/i</span>nclude/features.h:<span class="number">311</span>:<span class="number">52</span>: error: operator <span class="string">&#x27;&amp;&amp;&#x27;</span> has no right operand <span class="comment">#if defined _FILE_OFFSET_BITS &amp;&amp; _FILE_OFFSET_BITS == 64</span></span><br></pre></td></tr></table></figure>
 <p>解决方法： 在<code>#if defined</code>前面加上 <code>#define _FILE_OFFSET_BITS 64</code>  </p>
+<h4 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h4><ol>
+<li><a href="https://blog.csdn.net/qq_26943851/article/details/104434130">正点原子IMX6ULL移植OpenCV3.4.1</a></li>
+<li><a href="https://blog.csdn.net/u011827554/article/details/123657141">imx6ull编译opencv4.4问题整理</a></li>
+</ol>
 ]]></content>
       <categories>
         <category>OpenCV</category>
