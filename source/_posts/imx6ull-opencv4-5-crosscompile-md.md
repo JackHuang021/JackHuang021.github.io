@@ -60,3 +60,7 @@ unzip opencv.zip
 /home/tanyd/zdyz/linaro494/arm-linux-gnueabihf/libc/usr/include/features.h:311:52: error: operator '&&' has no right operand #if defined _FILE_OFFSET_BITS && _FILE_OFFSET_BITS == 64
 ```
 解决方法： 在`#if defined`前面加上 `#define _FILE_OFFSET_BITS 64`  
+
+#### 参考链接
+1. [正点原子IMX6ULL移植OpenCV3.4.1](https://blog.csdn.net/qq_26943851/article/details/104434130)
+2. [imx6ull编译opencv4.4问题整理](https://blog.csdn.net/u011827554/article/details/123657141)
