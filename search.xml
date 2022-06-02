@@ -82,4 +82,47 @@
         <tag>ssh</tag>
       </tags>
   </entry>
+  <entry>
+    <title>imx6ull OpenCV4.5 交叉编译</title>
+    <url>/archives/e4359116.html</url>
+    <content><![CDATA[<h4 id="交叉编译环境"><a href="#交叉编译环境" class="headerlink" title="交叉编译环境"></a>交叉编译环境</h4><ul>
+<li>Ubuntu版本：Ubuntu20.04 64bits</li>
+<li>交叉编译工具：arm-linux-gnueabihf-</li>
+<li>硬件平台正点原子IMX6ULL (ALPHA)</li>
+</ul>
+<span id="more"></span>
+
+<h4 id="准备源码和交叉编译工具链"><a href="#准备源码和交叉编译工具链" class="headerlink" title="准备源码和交叉编译工具链"></a>准备源码和交叉编译工具链</h4><p>Linux环境下的编译方法可以参考<a href="https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html">Opencv安装官网教程</a></p>
+<figure class="highlight awk"><table><tr><td class="code"><pre><span class="line">wget -O opencv.zip https:<span class="regexp">//gi</span>thub.com<span class="regexp">/opencv/</span>opencv<span class="regexp">/archive/</span><span class="number">4</span>.x.zip</span><br><span class="line">unzip opencv.zip</span><br></pre></td></tr></table></figure>
+<p>交叉编译工具链版本<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602095241.png"></p>
+<h4 id="安装cmake和cmake-gui工具"><a href="#安装cmake和cmake-gui工具" class="headerlink" title="安装cmake和cmake-gui工具"></a>安装cmake和cmake-gui工具</h4><p>在命令行使用cmake工具确实很不方便，cmake-gui配置起来比较省时间<br><code>sudo apt-get install cmake cmake-qt-gui  cmake-curses-gui</code>  </p>
+<h4 id="配置交叉编译环境"><a href="#配置交叉编译环境" class="headerlink" title="配置交叉编译环境"></a>配置交叉编译环境</h4><ol>
+<li>运行cmake-gui<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100408.png">  </li>
+<li>在第一个框输入OpenCV源码路径，在第二个框输入OpenCV编译目录  </li>
+<li>点击<code>Configure</code>配置交叉编译环境<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100750.png"></li>
+<li>选择<code>Spcify options for cross-compile</code>  </li>
+<li>按照下图设置交叉编译工具链<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101028.png"></li>
+<li>点击<code>Finish</code>回到cmake-gui主页面，勾选Advanced<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101237.png"></li>
+</ol>
+<h4 id="配置cmake选项"><a href="#配置cmake选项" class="headerlink" title="配置cmake选项"></a>配置cmake选项</h4><ol>
+<li>在CMAKE_EXE_LINKER_FLAGS处添加上<code>-lpthread -lrt -ldl</code><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101546.png"></li>
+<li>在CMAKE_INSTALL_PREFIX处指定安装目录，如果不指定，它会默认安装到Ubuntu系统目录<code>/usr/local</code>下。  </li>
+<li>取消<code>BUILD_opencv_gapi</code>选项，不取消这个选项后续编译的时候会报错</li>
+<li>再依次点击<code>Configure</code>， <code>Generate</code>，击了Generate后看到信息像如下图一样，表明生成成功，一般按照上面配置后基本都不会报错。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602102258.png"></li>
+</ol>
+<h4 id="编译OpenCV"><a href="#编译OpenCV" class="headerlink" title="编译OpenCV"></a>编译OpenCV</h4><ol>
+<li>打开之前设置的imx6编译目录，该目录下有刚才生成的Makefile  </li>
+<li>输入<code>make -j12</code>开始编译</li>
+<li>编译完成后输入<code>make install</code>，OpenCV的库和头文件会安装到之前设置的<code>CMAKE_INSTALL_PREFIX</code>目录</li>
+</ol>
+<h4 id="编译过程中遇到的错误"><a href="#编译过程中遇到的错误" class="headerlink" title="编译过程中遇到的错误"></a>编译过程中遇到的错误</h4><figure class="highlight awk"><table><tr><td class="code"><pre><span class="line"><span class="regexp">/home/</span>tanyd<span class="regexp">/zdyz/</span>linaro494<span class="regexp">/arm-linux-gnueabihf/</span>libc<span class="regexp">/usr/i</span>nclude/features.h:<span class="number">311</span>:<span class="number">52</span>: error: operator <span class="string">&#x27;&amp;&amp;&#x27;</span> has no right operand <span class="comment">#if defined _FILE_OFFSET_BITS &amp;&amp; _FILE_OFFSET_BITS == 64</span></span><br></pre></td></tr></table></figure>
+<p>解决方法： 在<code>#if defined</code>前面加上 <code>#define _FILE_OFFSET_BITS 64</code>  </p>
+]]></content>
+      <categories>
+        <category>OpenCV</category>
+      </categories>
+      <tags>
+        <tag>imx6ull OpenCV 交叉编译</tag>
+      </tags>
+  </entry>
 </search>
