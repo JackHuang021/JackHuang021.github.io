@@ -129,4 +129,38 @@
         <tag>imx6ull OpenCV 交叉编译</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Ubuntu安装搜狗输入法的问题记录</title>
+    <url>/archives/245a6c83.html</url>
+    <content><![CDATA[<ul>
+<li>最近在帮一个客户安装搜狗输入法时遇到了安装后无候选框的问题，记录一下该问题的解决办法，今天进入官网查看，官网已经修改安装指南，建议按照官网指南安装，本文截图来自搜狗官网</li>
+</ul>
+<h4 id="Ubuntu搜狗输入法下载"><a href="#Ubuntu搜狗输入法下载" class="headerlink" title="Ubuntu搜狗输入法下载"></a>Ubuntu搜狗输入法下载</h4><ul>
+<li><a href="https://pinyin.sogou.com/linux?r=pinyin">搜狗输入法Linux版官网</a>，目前最新版本为V4.0.1</li>
+<li><a href="https://pinyin.sogou.com/linux/guide">搜狗输入法Linux版安装指南</a></li>
+</ul>
+<h4 id="Ubuntu20-04安装步骤"><a href="#Ubuntu20-04安装步骤" class="headerlink" title="Ubuntu20.04安装步骤"></a>Ubuntu20.04安装步骤</h4><ol>
+<li>添加中文语言支持，打开 系统设置——区域和语言——管理已安装的语言——在“语言”tab下——点击“添加或删除语言”<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092214.png"></li>
+<li>弹出“已安装语言”窗口，勾选中文（简体），点击应用<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092221.png"></li>
+<li>安装fcitx输入法框架<code>sudo apt-get install fcitx</code></li>
+<li>卸载系统ibus输入法框架<code>sudo apt purge ibus</code></li>
+<li>回到“语言支持”窗口，在键盘输入法系统中，选择<code>fcitx</code><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092226.png"></li>
+<li>通过命令行安装搜狗输入法<code>sudo dpkg -i sogoupinyin_版本号_amd64.deb</code>，如果安装过程中提示缺少相关依赖，则执行如下命令解决：<code>sudo apt -f install</code></li>
+<li>安装输入法依赖<figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">sudo</span> apt install libqt<span class="number">5</span>qml<span class="number">5</span> libqt<span class="number">5</span>quick<span class="number">5</span> libqt<span class="number">5</span>quickwidgets<span class="number">5</span> qml-module-qtquick<span class="number">2</span></span><br><span class="line"><span class="attribute">sudo</span> apt install libgsettings-qt<span class="number">1</span></span><br></pre></td></tr></table></figure></li>
+<li>点击“应用到整个系统”，关闭窗口，重启电脑</li>
+<li>查看状态栏右上角，可以看到“搜狗”字样，在输入窗口即可使用搜狗输入法。没有“搜狗”字样，选择配置，将搜狗加入输入法列表即可。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094224.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094237.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094048.png"></li>
+</ol>
+<h4 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h4><ul>
+<li>安装完成后输入候选框不出现，只能输入英文</li>
+<li>解决办法，安装qt依赖库可以解决<figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">sudo</span> apt install libqt<span class="number">5</span>qml<span class="number">5</span> libqt<span class="number">5</span>quick<span class="number">5</span> libqt<span class="number">5</span>quickwidgets<span class="number">5</span> qml-module-qtquick<span class="number">2</span></span><br><span class="line"><span class="attribute">sudo</span> apt install libgsettings-qt<span class="number">1</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Linux</tag>
+        <tag>搜狗输入法</tag>
+      </tags>
+  </entry>
 </search>
