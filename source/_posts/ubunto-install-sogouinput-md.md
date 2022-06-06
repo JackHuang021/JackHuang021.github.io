@@ -16,6 +16,8 @@ date: 2022-06-06 09:15:55
 + [搜狗输入法Linux版官网](https://pinyin.sogou.com/linux?r=pinyin)，目前最新版本为V4.0.1
 + [搜狗输入法Linux版安装指南](https://pinyin.sogou.com/linux/guide)
 
+<!-- more -->
+
 #### Ubuntu20.04安装步骤
 1. 添加中文语言支持，打开 系统设置——区域和语言——管理已安装的语言——在“语言”tab下——点击“添加或删除语言”
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092214.png)
