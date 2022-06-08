@@ -22,32 +22,28 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="本地ssh客户端准备ssh密钥ssh密钥默认保存路径~&#x2F;.ssh，进入该目录查看是否已存在生成的密钥 1ls -al ~&#x2F;.ssh">
+    <meta name="description" content="图像读取和保存 图像读取Mat img &#x3D; imread(filename) 图像保存imwrite(filename, img)">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ssh使用密钥实现免密登录">
-<meta property="og:url" content="https://jackhuang021.github.io/archives/37d9659b.html">
+<meta property="og:title" content="OpenCV图像操作">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/117a3b0c.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="本地ssh客户端准备ssh密钥ssh密钥默认保存路径~&#x2F;.ssh，进入该目录查看是否已存在生成的密钥 1ls -al ~&#x2F;.ssh">
+<meta property="og:description" content="图像读取和保存 图像读取Mat img &#x3D; imread(filename) 图像保存imwrite(filename, img)">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601093641.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601094901.png">
-<meta property="article:published_time" content="2022-06-01T00:38:13.000Z">
-<meta property="article:modified_time" content="2022-06-01T01:53:44.002Z">
+<meta property="article:published_time" content="2022-06-08T03:05:11.000Z">
+<meta property="article:modified_time" content="2022-06-08T03:32:47.659Z">
 <meta property="article:author" content="Jack">
-<meta property="article:tag" content="Linux">
-<meta property="article:tag" content="ssh">
+<meta property="article:tag" content="OpenCV Image">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601093641.png">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/archives/37d9659b.html">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/117a3b0c.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/37d9659b.html","path":"archives/37d9659b.html","title":"ssh使用密钥实现免密登录"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/117a3b0c.html","path":"archives/117a3b0c.html","title":"OpenCV图像操作"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>ssh使用密钥实现免密登录 | Jack's Home</title>
+<title>OpenCV图像操作 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -151,7 +147,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0ssh%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%87%86%E5%A4%87ssh%E5%AF%86%E9%92%A5"><span class="nav-number">1.</span> <span class="nav-text">本地ssh客户端准备ssh密钥</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8A%E4%BC%A0ssh%E5%85%AC%E9%92%A5%E5%88%B0ssh%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">上传ssh公钥到ssh服务器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95ssh%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95"><span class="nav-number">3.</span> <span class="nav-text">测试ssh免密登录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95"><span class="nav-number">4.</span> <span class="nav-text">删除免密登录</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E8%AF%BB%E5%8F%96%E5%92%8C%E4%BF%9D%E5%AD%98"><span class="nav-number">1.</span> <span class="nav-text">图像读取和保存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%83%8F%E7%B4%A0%E7%BA%A7%E6%93%8D%E4%BD%9C"><span class="nav-number">2.</span> <span class="nav-text">像素级操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C"><span class="nav-number">3.</span> <span class="nav-text">图像基本操作</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -224,7 +220,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/37d9659b.html">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/117a3b0c.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/favicon-32x32.png">
@@ -237,12 +233,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="ssh使用密钥实现免密登录 | Jack's Home">
+      <meta itemprop="name" content="OpenCV图像操作 | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          ssh使用密钥实现免密登录
+          OpenCV图像操作
         </h1>
 
         <div class="post-meta-container">
@@ -254,7 +250,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2022-06-01 08:38:13 / 修改时间：09:53:44" itemprop="dateCreated datePublished" datetime="2022-06-01T08:38:13+08:00">2022-06-01</time>
+      <time title="创建时间：2022-06-08 11:05:11 / 修改时间：11:32:47" itemprop="dateCreated datePublished" datetime="2022-06-08T11:05:11+08:00">2022-06-08</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -262,7 +258,7 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+          <a href="/categories/OpenCV/" itemprop="url" rel="index"><span itemprop="name">OpenCV</span></a>
         </span>
     </span>
 
@@ -280,7 +276,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>350</span>
+      <span>675</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -298,16 +294,21 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h3 id="本地ssh客户端准备ssh密钥"><a href="#本地ssh客户端准备ssh密钥" class="headerlink" title="本地ssh客户端准备ssh密钥"></a>本地ssh客户端准备ssh密钥</h3><p>ssh密钥默认保存路径<code>~/.ssh</code>，进入该目录查看是否已存在生成的密钥</p>
-<figure class="highlight jboss-cli"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ls</span> -al ~<span class="string">/.ssh</span></span><br></pre></td></tr></table></figure>
-<p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601093641.png"></p>
-<span id="more"></span>
-<p>如上图，<code>id_rsa.pub</code>和<code>qtc_id.pub</code>都是公钥<br>如果没有公钥，可以使用<code>ssh-keygen</code>生成</p>
-<h3 id="上传ssh公钥到ssh服务器"><a href="#上传ssh公钥到ssh服务器" class="headerlink" title="上传ssh公钥到ssh服务器"></a>上传ssh公钥到ssh服务器</h3><figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh-<span class="keyword">copy</span>-id -i ~<span class="regexp">/.ssh/i</span>d_rsa.pub username@ip_address</span><br></pre></td></tr></table></figure>
-<p>执行后会提示输入服务器用户密码</p>
-<h3 id="测试ssh免密登录"><a href="#测试ssh免密登录" class="headerlink" title="测试ssh免密登录"></a>测试ssh免密登录</h3><figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh <span class="symbol">username@</span>ip_address</span><br></pre></td></tr></table></figure>
-<p>如果可以直接登录，说明已经配置成功<br>都2022年了，不要在输入密码上再浪费更多时间了</p>
-<h3 id="删除免密登录"><a href="#删除免密登录" class="headerlink" title="删除免密登录"></a>删除免密登录</h3><p>上传公钥后，服务端<code>.ssh/authorized_keys</code>文件中会添加一行内容，就是本地客户端的公钥，编辑该文件删除改行，即可禁用客户端免密登录<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601094901.png"></p>
+        <h4 id="图像读取和保存"><a href="#图像读取和保存" class="headerlink" title="图像读取和保存"></a>图像读取和保存</h4><ul>
+<li>图像读取<code>Mat img = imread(filename)</code></li>
+<li>图像保存<code>imwrite(filename, img)</code><span id="more"></span></li>
+</ul>
+<h4 id="像素级操作"><a href="#像素级操作" class="headerlink" title="像素级操作"></a>像素级操作</h4><ul>
+<li>获取单通道灰度图像(x, y)位置像素值<code>Scalar intensity = img.at&lt;uchar&gt;(Point(x, y));</code></li>
+<li>修改像素值<code>img.at&lt;uchar&gt;(Point(x, y)) = 128</code></li>
+<li>获取3通道BGR颜色空间图像(x, y)位置像素值  <figure class="highlight sml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Vec3b</span> <span class="built_in">vector</span> = img.at&lt;<span class="type">Vec3b</span>&gt;(<span class="type">Point</span>(x, y));</span><br><span class="line">uchar blue = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">0</span>];</span><br><span class="line">uchar green = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">1</span>];</span><br><span class="line">uchar red = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">2</span>];</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="图像基本操作"><a href="#图像基本操作" class="headerlink" title="图像基本操作"></a>图像基本操作</h4><ul>
+<li>选取图像某个区域  <figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Rect</span> r(<span class="number">10</span>, <span class="number">10</span>, <span class="number">100</span>, <span class="number">100</span>);</span><br><span class="line"><span class="attribute">Mat</span> smallImg = img(r);</span><br></pre></td></tr></table></figure></li>
+<li>颜色空间转换  <figure class="highlight reasonml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Mat img = imread(<span class="string">&quot;image.jpg&quot;</span>);</span><br><span class="line">Mat gray;</span><br><span class="line">cvt<span class="constructor">Color(<span class="params">img</span>, <span class="params">gray</span>, COLOR_BGR2GRAY)</span>;</span><br></pre></td></tr></table></figure></li>
+<li>数据类型转换<code>src.convertTo(dst, CV_32F)</code></li>
+<li>图像显示  <figure class="highlight lisp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Mat img = imread(<span class="string">&quot;image.jpg&quot;</span>)<span class="comment">;</span></span><br><span class="line">namedWindow(<span class="string">&quot;image&quot;</span>, WINDOW_AUTOSIZE)<span class="comment">;</span></span><br><span class="line">imshow(<span class="string">&quot;image&quot;</span>, img)<span class="comment">;</span></span><br><span class="line">waitKey()<span class="comment">;</span></span><br></pre></td></tr></table></figure></li>
+</ul>
 
     </div>
 
@@ -325,7 +326,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/37d9659b.html" title="ssh使用密钥实现免密登录">https://jackhuang021.github.io/archives/37d9659b.html</a>
+      <a href="https://jackhuang021.github.io/archives/117a3b0c.html" title="OpenCV图像操作">https://jackhuang021.github.io/archives/117a3b0c.html</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -334,22 +335,18 @@
 </div>
 
           <div class="post-tags">
-              <a href="/tags/Linux/" rel="tag"># Linux</a>
-              <a href="/tags/ssh/" rel="tag"># ssh</a>
+              <a href="/tags/OpenCV-Image/" rel="tag"># OpenCV Image</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/39fb7b7f.html" rel="prev" title="从零开始搭建Hexo博客">
-                  <i class="fa fa-chevron-left"></i> 从零开始搭建Hexo博客
+                <a href="/archives/d2c86892.html" rel="prev" title="OpenCV图像容器Mat">
+                  <i class="fa fa-chevron-left"></i> OpenCV图像容器Mat
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/e4359116.html" rel="next" title="imx6ull OpenCV4.5 交叉编译">
-                  imx6ull OpenCV4.5 交叉编译 <i class="fa fa-chevron-right"></i>
-                </a>
             </div>
           </div>
     </footer>

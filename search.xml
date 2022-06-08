@@ -199,4 +199,30 @@
         <tag>搜狗输入法</tag>
       </tags>
   </entry>
+  <entry>
+    <title>OpenCV图像操作</title>
+    <url>/archives/117a3b0c.html</url>
+    <content><![CDATA[<h4 id="图像读取和保存"><a href="#图像读取和保存" class="headerlink" title="图像读取和保存"></a>图像读取和保存</h4><ul>
+<li>图像读取<code>Mat img = imread(filename)</code></li>
+<li>图像保存<code>imwrite(filename, img)</code><span id="more"></span></li>
+</ul>
+<h4 id="像素级操作"><a href="#像素级操作" class="headerlink" title="像素级操作"></a>像素级操作</h4><ul>
+<li>获取单通道灰度图像(x, y)位置像素值<code>Scalar intensity = img.at&lt;uchar&gt;(Point(x, y));</code></li>
+<li>修改像素值<code>img.at&lt;uchar&gt;(Point(x, y)) = 128</code></li>
+<li>获取3通道BGR颜色空间图像(x, y)位置像素值  <figure class="highlight sml"><table><tr><td class="code"><pre><span class="line"><span class="type">Vec3b</span> <span class="built_in">vector</span> = img.at&lt;<span class="type">Vec3b</span>&gt;(<span class="type">Point</span>(x, y));</span><br><span class="line">uchar blue = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">0</span>];</span><br><span class="line">uchar green = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">1</span>];</span><br><span class="line">uchar red = <span class="built_in">vector</span>.<span class="keyword">val</span>[<span class="number">2</span>];</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="图像基本操作"><a href="#图像基本操作" class="headerlink" title="图像基本操作"></a>图像基本操作</h4><ul>
+<li>选取图像某个区域  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">Rect</span> r(<span class="number">10</span>, <span class="number">10</span>, <span class="number">100</span>, <span class="number">100</span>);</span><br><span class="line"><span class="attribute">Mat</span> smallImg = img(r);</span><br></pre></td></tr></table></figure></li>
+<li>颜色空间转换  <figure class="highlight reasonml"><table><tr><td class="code"><pre><span class="line">Mat img = imread(<span class="string">&quot;image.jpg&quot;</span>);</span><br><span class="line">Mat gray;</span><br><span class="line">cvt<span class="constructor">Color(<span class="params">img</span>, <span class="params">gray</span>, COLOR_BGR2GRAY)</span>;</span><br></pre></td></tr></table></figure></li>
+<li>数据类型转换<code>src.convertTo(dst, CV_32F)</code></li>
+<li>图像显示  <figure class="highlight lisp"><table><tr><td class="code"><pre><span class="line">Mat img = imread(<span class="string">&quot;image.jpg&quot;</span>)<span class="comment">;</span></span><br><span class="line">namedWindow(<span class="string">&quot;image&quot;</span>, WINDOW_AUTOSIZE)<span class="comment">;</span></span><br><span class="line">imshow(<span class="string">&quot;image&quot;</span>, img)<span class="comment">;</span></span><br><span class="line">waitKey()<span class="comment">;</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
+      <categories>
+        <category>OpenCV</category>
+      </categories>
+      <tags>
+        <tag>OpenCV Image</tag>
+      </tags>
+  </entry>
 </search>
