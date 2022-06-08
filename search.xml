@@ -1,6 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>OpenCV图像容器Mat</title>
+    <url>/archives/d2c86892.html</url>
+    <content><![CDATA[<h4 id="图像的存储"><a href="#图像的存储" class="headerlink" title="图像的存储"></a>图像的存储</h4><p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png"><br>借助官方这张很有代表性的图片，在计算机中以像素值的方式存储图像中的每个像素点，所有像素值以类似矩阵的二维数组形式进行存储。官网给OpenCV的定义：OpenCV是一个计算机视觉库，主要的目的就是在这些像素值上进行处理、计算，所以首先就需要学习OpenCV是怎么存储、处理这些图像的。</p>
+<span id="more"></span>
+
+<h4 id="Mat介绍"><a href="#Mat介绍" class="headerlink" title="Mat介绍"></a>Mat介绍</h4><ul>
+<li>OpenCV起始于2001年，最开始是基于C语言编写，图像存储在C结构体<code>IplImage</code>。</li>
+<li>OpenCV2.0基于C++进行重写，图像以Mat类进行存储。</li>
+<li>Mat类包含两部分数据：  <ol>
+<li>图像数据头部分，包含图像尺寸、存储方式、图像数据指针等信息</li>
+<li>图像数据部分</li>
+</ol>
+</li>
+<li>每个Mat对象都独立的保存数据头部分，但是可能共享图像数据部分。</li>
+<li>Mat的拷贝构造只会拷贝数据头部分，数据部分不会进行拷贝。  <figure class="highlight gcode"><table><tr><td class="code"><pre><span class="line">Mat A, C;                          <span class="comment">// creates just the header parts</span></span><br><span class="line">A = imread<span class="comment">(argv[1], IMREAD_COLOR)</span>; <span class="comment">// here we&#x27;ll know the method used (allocate matrix)</span></span><br><span class="line">Mat B<span class="comment">(A)</span>;                          <span class="comment">// Use the copy constructor</span></span><br><span class="line">C = A;                             <span class="comment">// Assignment operator</span></span><br></pre></td></tr></table></figure></li>
+<li>Mat类有一个引用计数机制，进行拷贝构造时引用加1，Mat对象析构时引用减1，当引用变为0时，释放数据部分内存。</li>
+<li>当需要进行数据部分拷贝时，OpenCV提供了<code>cv::Mat::clone()</code>和<code>cv::Mat::copyTo</code>两个方法</li>
+</ul>
+<h4 id="Mat数据存储方式"><a href="#Mat数据存储方式" class="headerlink" title="Mat数据存储方式"></a>Mat数据存储方式</h4><ul>
+<li>根据颜色空间和数据类型来选择图像数据存储方式</li>
+</ul>
+<h4 id="Mat对象操作"><a href="#Mat对象操作" class="headerlink" title="Mat对象操作"></a>Mat对象操作</h4><ul>
+<li>使用<code>cv::Mat::Mat</code>构造函数进行创建<code>Mat img(2, 2, CV_8UC3, Scalar(0, 0, 255))</code>，指定图像的行和列大小、像素数据类型、像素颜色通道，如<code>CV_8UC3</code>表示8位无符号数据，颜色通道为3，由以下方式进行定义<br><code>CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]</code></li>
+<li>类似MATLAB方式创建单位矩阵<code>cv::Mat::eyes</code>、零矩阵<code>cv::Mat::zeros</code>、元素全为1的矩阵<code>cv::Mat::ones</code>  <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line">Mat E = Mat::<span class="built_in">eye</span>(<span class="number">4</span>, <span class="number">4</span>, CV_64F);</span><br><span class="line">cout &lt;&lt; <span class="string">&quot;E = &quot;</span> &lt;&lt; endl &lt;+ Mat对象的打印</span><br><span class="line"><span class="number">1.</span> 默认输出&lt; <span class="string">&quot; &quot;</span> &lt;&lt; E &lt;&lt; endl &lt;&lt; endl;</span><br><span class="line">Mat O = Mat::<span class="built_in">ones</span>(<span class="number">2</span>, <span class="number">2</span>, CV_32F);</span><br><span class="line">cout &lt;&lt; <span class="string">&quot;O = &quot;</span> &lt;&lt; endl &lt;&lt; <span class="string">&quot; &quot;</span> &lt;&lt; O &lt;&lt; endl &lt;&lt; endl;</span><br><span class="line">Mat Z = Mat::<span class="built_in">zeros</span>(<span class="number">3</span>,<span class="number">3</span>, CV_8UC1);</span><br><span class="line">cout &lt;&lt; <span class="string">&quot;Z = &quot;</span> &lt;&lt; endl &lt;&lt; <span class="string">&quot; &quot;</span> &lt;&lt; Z &lt;&lt; endl &lt;&lt; endl;</span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
+      <categories>
+        <category>OpenCV</category>
+      </categories>
+      <tags>
+        <tag>OpenCV Mat</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>从零开始搭建Hexo博客</title>
     <url>/archives/39fb7b7f.html</url>
     <content><![CDATA[<h2 id="Hexo简介"><a href="#Hexo简介" class="headerlink" title="Hexo简介"></a>Hexo简介</h2><p>引用官网的介绍：A fast, simple &amp; powerful blog framework<br>Hexo是一款基于Node.js的静态博客框架，依赖少易于安装使用，可以方便的生成静态网页托管在GitHub上，是搭建博客的首选框架。</p>
@@ -61,28 +95,6 @@
       </tags>
   </entry>
   <entry>
-    <title>ssh使用密钥实现免密登录</title>
-    <url>/archives/37d9659b.html</url>
-    <content><![CDATA[<h3 id="本地ssh客户端准备ssh密钥"><a href="#本地ssh客户端准备ssh密钥" class="headerlink" title="本地ssh客户端准备ssh密钥"></a>本地ssh客户端准备ssh密钥</h3><p>ssh密钥默认保存路径<code>~/.ssh</code>，进入该目录查看是否已存在生成的密钥</p>
-<figure class="highlight jboss-cli"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ls</span> -al ~<span class="string">/.ssh</span></span><br></pre></td></tr></table></figure>
-<p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601093641.png"></p>
-<span id="more"></span>
-<p>如上图，<code>id_rsa.pub</code>和<code>qtc_id.pub</code>都是公钥<br>如果没有公钥，可以使用<code>ssh-keygen</code>生成</p>
-<h3 id="上传ssh公钥到ssh服务器"><a href="#上传ssh公钥到ssh服务器" class="headerlink" title="上传ssh公钥到ssh服务器"></a>上传ssh公钥到ssh服务器</h3><figure class="highlight gradle"><table><tr><td class="code"><pre><span class="line">ssh-<span class="keyword">copy</span>-id -i ~<span class="regexp">/.ssh/i</span>d_rsa.pub username@ip_address</span><br></pre></td></tr></table></figure>
-<p>执行后会提示输入服务器用户密码</p>
-<h3 id="测试ssh免密登录"><a href="#测试ssh免密登录" class="headerlink" title="测试ssh免密登录"></a>测试ssh免密登录</h3><figure class="highlight angelscript"><table><tr><td class="code"><pre><span class="line">ssh <span class="symbol">username@</span>ip_address</span><br></pre></td></tr></table></figure>
-<p>如果可以直接登录，说明已经配置成功<br>都2022年了，不要在输入密码上再浪费更多时间了</p>
-<h3 id="删除免密登录"><a href="#删除免密登录" class="headerlink" title="删除免密登录"></a>删除免密登录</h3><p>上传公钥后，服务端<code>.ssh/authorized_keys</code>文件中会添加一行内容，就是本地客户端的公钥，编辑该文件删除改行，即可禁用客户端免密登录<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601094901.png"></p>
-]]></content>
-      <categories>
-        <category>Linux</category>
-      </categories>
-      <tags>
-        <tag>Linux</tag>
-        <tag>ssh</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>imx6ull OpenCV4.5 交叉编译</title>
     <url>/archives/e4359116.html</url>
     <content><![CDATA[<h4 id="交叉编译环境"><a href="#交叉编译环境" class="headerlink" title="交叉编译环境"></a>交叉编译环境</h4><ul>
@@ -127,6 +139,28 @@
       </categories>
       <tags>
         <tag>imx6ull OpenCV 交叉编译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ssh使用密钥实现免密登录</title>
+    <url>/archives/37d9659b.html</url>
+    <content><![CDATA[<h3 id="本地ssh客户端准备ssh密钥"><a href="#本地ssh客户端准备ssh密钥" class="headerlink" title="本地ssh客户端准备ssh密钥"></a>本地ssh客户端准备ssh密钥</h3><p>ssh密钥默认保存路径<code>~/.ssh</code>，进入该目录查看是否已存在生成的密钥</p>
+<figure class="highlight jboss-cli"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ls</span> -al ~<span class="string">/.ssh</span></span><br></pre></td></tr></table></figure>
+<p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601093641.png"></p>
+<span id="more"></span>
+<p>如上图，<code>id_rsa.pub</code>和<code>qtc_id.pub</code>都是公钥<br>如果没有公钥，可以使用<code>ssh-keygen</code>生成</p>
+<h3 id="上传ssh公钥到ssh服务器"><a href="#上传ssh公钥到ssh服务器" class="headerlink" title="上传ssh公钥到ssh服务器"></a>上传ssh公钥到ssh服务器</h3><figure class="highlight gradle"><table><tr><td class="code"><pre><span class="line">ssh-<span class="keyword">copy</span>-id -i ~<span class="regexp">/.ssh/i</span>d_rsa.pub username@ip_address</span><br></pre></td></tr></table></figure>
+<p>执行后会提示输入服务器用户密码</p>
+<h3 id="测试ssh免密登录"><a href="#测试ssh免密登录" class="headerlink" title="测试ssh免密登录"></a>测试ssh免密登录</h3><figure class="highlight angelscript"><table><tr><td class="code"><pre><span class="line">ssh <span class="symbol">username@</span>ip_address</span><br></pre></td></tr></table></figure>
+<p>如果可以直接登录，说明已经配置成功<br>都2022年了，不要在输入密码上再浪费更多时间了</p>
+<h3 id="删除免密登录"><a href="#删除免密登录" class="headerlink" title="删除免密登录"></a>删除免密登录</h3><p>上传公钥后，服务端<code>.ssh/authorized_keys</code>文件中会添加一行内容，就是本地客户端的公钥，编辑该文件删除改行，即可禁用客户端免密登录<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220601094901.png"></p>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Linux</tag>
+        <tag>ssh</tag>
       </tags>
   </entry>
   <entry>
