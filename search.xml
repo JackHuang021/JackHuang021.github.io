@@ -264,13 +264,31 @@
 <li>几种特殊矩阵的构造，<code>cv::Mat::eyes</code>单位矩阵、<code>cv::Mat::zeros</code>零矩阵、<code>cv::Mat::ones</code>全1矩阵</li>
 </ul>
 <h4 id="图像卷积操作"><a href="#图像卷积操作" class="headerlink" title="图像卷积操作"></a>图像卷积操作</h4><ul>
-<li><p>根据kernel矩阵重新计算图像中每个像素的值，使用<code>filter2D</code>进行卷积操作</p>
+<li><p>根据kernel矩阵重新计算图像中每个像素的值，<em>h(k, j)</em> 为kernel，使用<code>filter2D</code>进行卷积操作<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609163143.png"></p>
   <figure class="highlight pgsql"><table><tr><td class="code"><pre><span class="line">CV_EXPORTS_W <span class="type">void</span> filter2D( InputArray src, </span><br><span class="line">                            OutputArray dst, </span><br><span class="line">                            <span class="type">int</span> ddepth, </span><br><span class="line">                            InputArray kernel, </span><br><span class="line">                            <span class="type">Point</span> anchor = <span class="type">Point</span>(<span class="number">-1</span>,<span class="number">-1</span>), </span><br><span class="line">                            <span class="type">double</span> delta = <span class="number">0</span>, </span><br><span class="line">                            <span class="type">int</span> borderType = BORDER_DEFAULT );</span><br></pre></td></tr></table></figure></li>
-<li><p>两张图像融合<code>dst = src1*alpha + src2*beta + gamma</code>，使用<code>addWeighted()</code>进行融合。</p>
-  <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cv::addWeighted</span><span class="params">( InputArray src1,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> alpha,</span></span></span><br><span class="line"><span class="params"><span class="function">                      InputArray src2,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> beta,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> gamma,</span></span></span><br><span class="line"><span class="params"><span class="function">                      OutputArray dst,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">int</span> dtype = <span class="number">-1</span> )</span></span>;	</span><br></pre></td></tr></table></figure>
+<li><p>使用图像卷积进行图像模糊（平滑）</p>
+<ol>
+<li>简单的图像平滑，Kernel模型如下<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609163417.png"></li>
+<li>高斯模糊，根据距当前像素点的距离决定平滑的权重，一维高斯核的图像如下<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609163925.png"><br>  二维高斯公式，其中μ为平均值，σ为方差<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609164447.png"></li>
+<li>中值滤波，将像素点周围区域内的像素进行排序，采用中间位置的像素值作为当前像素点的值</li>
+<li>双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。</li>
+</ol>
 </li>
-<li><p>改变图像对比度和亮度<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</p>
+<li><p>使用图像卷积进行形态学操作</p>
+<ol>
+<li>膨胀，使用Kernel范围内最大的值替换当前像素值</li>
+<li>腐蚀，使用Kernel范围内最小的值替换当前像素值</li>
+<li>开操作，先腐蚀后膨胀，去除暗黑背景中细小的噪点</li>
+<li>闭操作，先膨胀后腐蚀，去除明亮背景中的细小噪点</li>
+</ol>
 </li>
+</ul>
+<h4 id="图像融合"><a href="#图像融合" class="headerlink" title="图像融合"></a>图像融合</h4><ul>
+<li>图像融合公式<code>dst = src1*alpha + src2*beta + gamma</code>，使用<code>addWeighted()</code>进行融合。  <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cv::addWeighted</span><span class="params">( InputArray src1,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> alpha,</span></span></span><br><span class="line"><span class="params"><span class="function">                      InputArray src2,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> beta,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> gamma,</span></span></span><br><span class="line"><span class="params"><span class="function">                      OutputArray dst,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">int</span> dtype = <span class="number">-1</span> )</span></span>;	</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="改变图像对比度和亮度"><a href="#改变图像对比度和亮度" class="headerlink" title="改变图像对比度和亮度"></a>改变图像对比度和亮度</h4><ul>
+<li>公式<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</li>
+<li>Gamma校准，使用查找表，按照如下公式对像素值进行一个非线性的转换 <em>O &#x3D; (I &#x2F; 255)^γ × 255</em>，γ越大整体亮度降低。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609161302.png"></li>
 </ul>
 ]]></content>
       <categories>
