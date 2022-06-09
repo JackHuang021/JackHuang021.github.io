@@ -22,36 +22,30 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="最近在帮一个客户安装搜狗输入法时遇到了安装后无候选框的问题，记录一下该问题的解决办法，今天进入官网查看，官网已经修改安装指南，建议按照官网指南安装，本文截图来自搜狗官网  Ubuntu搜狗输入法下载 搜狗输入法Linux版官网，目前最新版本为V4.0.1 搜狗输入法Linux版安装指南">
+    <meta name="description" content="Linux Input子系统介绍 按键、鼠标、键盘、触摸屏等都属于输入(input)设备, Linux 内核为此专门做了一个叫做 input子系统的框架来处理输入事件。输入设备本质上还是字符设备,只是在此基础上套上了 input 框架,用户只需要负责上报输入事件,比如按键值、坐标等信息, input 核心层负责处理这些事件。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Ubuntu安装搜狗输入法的问题记录">
-<meta property="og:url" content="https://jackhuang021.github.io/archives/245a6c83.html">
+<meta property="og:title" content="Linux Input子系统按键连按驱动调试记录">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/e19e1ecc.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="最近在帮一个客户安装搜狗输入法时遇到了安装后无候选框的问题，记录一下该问题的解决办法，今天进入官网查看，官网已经修改安装指南，建议按照官网指南安装，本文截图来自搜狗官网  Ubuntu搜狗输入法下载 搜狗输入法Linux版官网，目前最新版本为V4.0.1 搜狗输入法Linux版安装指南">
+<meta property="og:description" content="Linux Input子系统介绍 按键、鼠标、键盘、触摸屏等都属于输入(input)设备, Linux 内核为此专门做了一个叫做 input子系统的框架来处理输入事件。输入设备本质上还是字符设备,只是在此基础上套上了 input 框架,用户只需要负责上报输入事件,比如按键值、坐标等信息, input 核心层负责处理这些事件。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092214.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092221.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092226.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094224.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094237.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094048.png">
-<meta property="article:published_time" content="2022-06-06T01:15:55.000Z">
-<meta property="article:modified_time" content="2022-06-06T06:07:05.960Z">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609141734.png">
+<meta property="article:published_time" content="2022-06-09T06:10:48.000Z">
+<meta property="article:modified_time" content="2022-06-09T07:01:06.260Z">
 <meta property="article:author" content="Jack">
-<meta property="article:tag" content="Linux">
-<meta property="article:tag" content="搜狗输入法">
+<meta property="article:tag" content="Linux Driver 按键驱动">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092214.png">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609141734.png">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/archives/245a6c83.html">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/e19e1ecc.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/245a6c83.html","path":"archives/245a6c83.html","title":"Ubuntu安装搜狗输入法的问题记录"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/e19e1ecc.html","path":"archives/e19e1ecc.html","title":"Linux Input子系统按键连按驱动调试记录"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>Ubuntu安装搜狗输入法的问题记录 | Jack's Home</title>
+<title>Linux Input子系统按键连按驱动调试记录 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -155,7 +149,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Ubuntu%E6%90%9C%E7%8B%97%E8%BE%93%E5%85%A5%E6%B3%95%E4%B8%8B%E8%BD%BD"><span class="nav-number">1.</span> <span class="nav-text">Ubuntu搜狗输入法下载</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Ubuntu20-04%E5%AE%89%E8%A3%85%E6%AD%A5%E9%AA%A4"><span class="nav-number">2.</span> <span class="nav-text">Ubuntu20.04安装步骤</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95"><span class="nav-number">3.</span> <span class="nav-text">问题记录</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Linux-Input%E5%AD%90%E7%B3%BB%E7%BB%9F%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text">Linux Input子系统介绍</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#input%E9%A9%B1%E5%8A%A8%E7%BC%96%E5%86%99%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">input驱动编写流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8A%E6%8A%A5%E8%BE%93%E5%85%A5%E4%BA%8B%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">上报输入事件</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -228,7 +222,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/245a6c83.html">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/e19e1ecc.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/favicon-32x32.png">
@@ -241,12 +235,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="Ubuntu安装搜狗输入法的问题记录 | Jack's Home">
+      <meta itemprop="name" content="Linux Input子系统按键连按驱动调试记录 | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Ubuntu安装搜狗输入法的问题记录
+          Linux Input子系统按键连按驱动调试记录
         </h1>
 
         <div class="post-meta-container">
@@ -258,7 +252,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2022-06-06 09:15:55 / 修改时间：14:07:05" itemprop="dateCreated datePublished" datetime="2022-06-06T09:15:55+08:00">2022-06-06</time>
+      <time title="创建时间：2022-06-09 14:10:48 / 修改时间：15:01:06" itemprop="dateCreated datePublished" datetime="2022-06-09T14:10:48+08:00">2022-06-09</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -284,14 +278,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>790</span>
+      <span>1.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -302,29 +296,30 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <ul>
-<li>最近在帮一个客户安装搜狗输入法时遇到了安装后无候选框的问题，记录一下该问题的解决办法，今天进入官网查看，官网已经修改安装指南，建议按照官网指南安装，本文截图来自搜狗官网</li>
-</ul>
-<h4 id="Ubuntu搜狗输入法下载"><a href="#Ubuntu搜狗输入法下载" class="headerlink" title="Ubuntu搜狗输入法下载"></a>Ubuntu搜狗输入法下载</h4><ul>
-<li><a target="_blank" rel="noopener" href="https://pinyin.sogou.com/linux?r=pinyin">搜狗输入法Linux版官网</a>，目前最新版本为V4.0.1</li>
-<li><a target="_blank" rel="noopener" href="https://pinyin.sogou.com/linux/guide">搜狗输入法Linux版安装指南</a></li>
-</ul>
+        <h4 id="Linux-Input子系统介绍"><a href="#Linux-Input子系统介绍" class="headerlink" title="Linux Input子系统介绍"></a>Linux Input子系统介绍</h4><blockquote>
+<p>按键、鼠标、键盘、触摸屏等都属于输入(input)设备, Linux 内核为此专门做了一个叫做 input子系统的框架来处理输入事件。输入设备本质上还是字符设备,只是在此基础上套上了 input 框架,用户只需要负责上报输入事件,比如按键值、坐标等信息, input 核心层负责处理这些事件。</p>
+</blockquote>
+<p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609141734.png"></p>
 <span id="more"></span>
 
-<h4 id="Ubuntu20-04安装步骤"><a href="#Ubuntu20-04安装步骤" class="headerlink" title="Ubuntu20.04安装步骤"></a>Ubuntu20.04安装步骤</h4><ol>
-<li>添加中文语言支持，打开 系统设置——区域和语言——管理已安装的语言——在“语言”tab下——点击“添加或删除语言”<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092214.png"></li>
-<li>弹出“已安装语言”窗口，勾选中文（简体），点击应用<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092221.png"></li>
-<li>安装fcitx输入法框架<code>sudo apt-get install fcitx</code></li>
-<li>卸载系统ibus输入法框架<code>sudo apt purge ibus</code></li>
-<li>回到“语言支持”窗口，在键盘输入法系统中，选择<code>fcitx</code><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606092226.png"></li>
-<li>通过命令行安装搜狗输入法<code>sudo dpkg -i sogoupinyin_版本号_amd64.deb</code>，如果安装过程中提示缺少相关依赖，则执行如下命令解决：<code>sudo apt -f install</code></li>
-<li>安装输入法依赖<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">sudo</span> apt install libqt<span class="number">5</span>qml<span class="number">5</span> libqt<span class="number">5</span>quick<span class="number">5</span> libqt<span class="number">5</span>quickwidgets<span class="number">5</span> qml-module-qtquick<span class="number">2</span></span><br><span class="line"><span class="attribute">sudo</span> apt install libgsettings-qt<span class="number">1</span></span><br></pre></td></tr></table></figure></li>
-<li>点击“应用到整个系统”，关闭窗口，重启电脑</li>
-<li>查看状态栏右上角，可以看到“搜狗”字样，在输入窗口即可使用搜狗输入法。没有“搜狗”字样，选择配置，将搜狗加入输入法列表即可。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094224.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094237.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220606094048.png"></li>
+<h4 id="input驱动编写流程"><a href="#input驱动编写流程" class="headerlink" title="input驱动编写流程"></a>input驱动编写流程</h4><ul>
+<li><p>注册input_dev</p>
+<ol>
+<li>使用<em>input_allocate_device</em>申请一个<em>input_dev</em>结构体</li>
+<li>初始化<em>input_dev</em>的事件类型以及事件值</li>
+<li>使用<em>input_register_device</em>函数向系统注册<em>input_dev</em></li>
+<li><strong>按键需要实现连按时<em>evbit</em>需要设置<em>EV_REP</em>标志，调按键驱动时在调连按功能时在这里卡了很久</strong>  <figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="title">chip</span>-&gt;</span>input = input_allocate_device();</span><br><span class="line"><span class="function"><span class="title">if</span> (!chip-&gt;</span>input) </span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_ERR <span class="string">&quot;Unable to allocate the input device !!\n&quot;</span>);</span><br><span class="line">    return -ENOMEM;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="title">chip</span>-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span><span class="keyword">name</span> = <span class="string">&quot;pca953x_button&quot;</span>;</span><br><span class="line"><span class="function"><span class="title">set_bit</span>(EV_KEY, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>evbit);     <span class="comment">/* 设置产生按键事件 */</span> </span><br><span class="line"><span class="function"><span class="title">set_bit</span>(EV_REP, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>evbit);     <span class="comment">/* 设置重复事件  */</span> </span><br><span class="line"><span class="keyword">for</span>(i = <span class="number">0</span>;i &lt; ZKEY_NUM + <span class="number">5</span>; i++)	</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="title">set_bit</span>(button_info[i].code, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>keybit);	<span class="comment">//支持具体按键键码</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="title">status</span> = input_register_device(chip-&gt;</span>input);   <span class="comment">//注册input设备</span></span><br><span class="line"><span class="keyword">if</span>(status)</span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_ERR <span class="string">&quot;input_register_device\n&quot;</span>);</span><br><span class="line">    return -ENOMEM;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="上报输入事件"><a href="#上报输入事件" class="headerlink" title="上报输入事件"></a>上报输入事件</h4></li>
 </ol>
-<h4 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h4><ul>
-<li>安装完成后输入候选框不出现，只能输入英文</li>
-<li>解决办法，安装qt依赖库可以解决<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">sudo</span> apt install libqt<span class="number">5</span>qml<span class="number">5</span> libqt<span class="number">5</span>quick<span class="number">5</span> libqt<span class="number">5</span>quickwidgets<span class="number">5</span> qml-module-qtquick<span class="number">2</span></span><br><span class="line"><span class="attribute">sudo</span> apt install libgsettings-qt<span class="number">1</span></span><br></pre></td></tr></table></figure></li>
+</li>
+<li><p>使用<em>input_event</em>函数上报指定的事件及对应的值，函数原型如下</p>
+  <figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> input_event(<span class="keyword">struct</span> input_dev *dev,</span><br><span class="line">                 <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="keyword">type</span>,</span><br><span class="line">                 <span class="keyword">unsigned</span> <span class="keyword">int</span> code,</span><br><span class="line">                 <span class="keyword">int</span> value)</span><br></pre></td></tr></table></figure>
+<p>  dev:需要上报的 input_dev。<br>  type: 上报的事件类型,比如 EV_KEY。<br>  code:事件码,也就是我们注册的按键值,比如 KEY_0、KEY_1 等等。<br>  value:事件值,比如 1 表示按键按下,0 表示按键松开。</p>
+</li>
+<li><p>上报按键事件，Linux内核也提供了具体的上报函数<em>input_report_key</em></p>
+  <figure class="highlight reasonml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">static inline void input<span class="constructor">_report_key(<span class="params">struct</span> <span class="params">input_dev</span> <span class="operator">*</span><span class="params">dev</span>, <span class="params">unsigned</span> <span class="params">int</span> <span class="params">code</span>, <span class="params">int</span> <span class="params">value</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    input<span class="constructor">_event(<span class="params">dev</span>, EV_KEY, <span class="params">code</span>, !!<span class="params">value</span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>  type:事件类型,比如 EV_KEY,表示此次事件为按键事件,此成员变量为 16 位。<br>  code:事件码,比如在 EV_KEY 事件中 code 就表示具体的按键码,如:KEY_0、KEY_1等等这些按键。此成员变量为 16 位。<br>  value:值,比如 EV_KEY 事件中 value 就是按键值,表示按键有没有被按下,如果为1的话说明按键按下,如果为0的话说明按键没有被按下或者按键松开了。</p>
+</li>
 </ul>
 
     </div>
@@ -343,7 +338,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/245a6c83.html" title="Ubuntu安装搜狗输入法的问题记录">https://jackhuang021.github.io/archives/245a6c83.html</a>
+      <a href="https://jackhuang021.github.io/archives/e19e1ecc.html" title="Linux Input子系统按键连按驱动调试记录">https://jackhuang021.github.io/archives/e19e1ecc.html</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -352,22 +347,18 @@
 </div>
 
           <div class="post-tags">
-              <a href="/tags/Linux/" rel="tag"># Linux</a>
-              <a href="/tags/%E6%90%9C%E7%8B%97%E8%BE%93%E5%85%A5%E6%B3%95/" rel="tag"># 搜狗输入法</a>
+              <a href="/tags/Linux-Driver-%E6%8C%89%E9%94%AE%E9%A9%B1%E5%8A%A8/" rel="tag"># Linux Driver 按键驱动</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/e4359116.html" rel="prev" title="imx6ull OpenCV4.5 交叉编译">
-                  <i class="fa fa-chevron-left"></i> imx6ull OpenCV4.5 交叉编译
+                <a href="/archives/7803046f.html" rel="prev" title="HI3559AV100调试记录">
+                  <i class="fa fa-chevron-left"></i> HI3559AV100调试记录
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/d2c86892.html" rel="next" title="OpenCV图像容器Mat">
-                  OpenCV图像容器Mat <i class="fa fa-chevron-right"></i>
-                </a>
             </div>
           </div>
     </footer>

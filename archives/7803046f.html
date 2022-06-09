@@ -34,7 +34,7 @@
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png">
 <meta property="article:published_time" content="2022-06-09T02:02:24.000Z">
-<meta property="article:modified_time" content="2022-06-09T05:54:03.173Z">
+<meta property="article:modified_time" content="2022-06-09T06:34:51.866Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="Hi3559AV100 Linux">
 <meta name="twitter:card" content="summary">
@@ -152,7 +152,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E7%BC%96%E8%AF%91%E4%B8%8E%E7%83%A7%E5%86%99"><span class="nav-number">1.</span> <span class="nav-text">内核编译与烧写</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E7%BC%96%E8%AF%91%E4%B8%8E%E7%83%A7%E5%86%99"><span class="nav-number">1.</span> <span class="nav-text">内核编译与烧写</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E8%B0%83%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">驱动调试</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-count">13</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -255,7 +255,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2022-06-09 10:02:24 / 修改时间：13:54:03" itemprop="dateCreated datePublished" datetime="2022-06-09T10:02:24+08:00">2022-06-09</time>
+      <time title="创建时间：2022-06-09 10:02:24 / 修改时间：14:34:51" itemprop="dateCreated datePublished" datetime="2022-06-09T10:02:24+08:00">2022-06-09</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -281,7 +281,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>396</span>
+      <span>1k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -307,6 +307,14 @@
 <li>进入uboot，配置ethact ipaddr serverip环境变量<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png"></li>
 <li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
 <li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="驱动调试"><a href="#驱动调试" class="headerlink" title="驱动调试"></a>驱动调试</h4><ul>
+<li>参照正点原子教程搭建驱动调试环境，配置的<em>Makefile</em>内容如下  <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core</span><br><span class="line">CURRENT_PATH = <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">obj-m := gpio-pca953x.o</span><br><span class="line"></span><br><span class="line"><span class="section">build: kernel_modules</span></span><br><span class="line"></span><br><span class="line"><span class="section">kernel_modules: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">clean: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> clean</span><br></pre></td></tr></table></figure></li>
+<li><em>KERNEL_DIR</em>表示Linux内核源码目录，使用绝对路径</li>
+<li><em>CURRENT_PATH</em>表示当前路径，直接使用<em>pwd</em>来获取当前路径</li>
+<li><em>obj-m</em>表示将这个c文件编译为ko模块</li>
+<li><em>modules</em>表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， <em>M</em>表示模块源码目录</li>
+<li><em>make modules</em>命令中加入 M&#x3D;dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件</li>
 </ul>
 
     </div>
@@ -346,6 +354,9 @@
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/archives/e19e1ecc.html" rel="next" title="Linux Input子系统按键连按驱动调试记录">
+                  Linux Input子系统按键连按驱动调试记录 <i class="fa fa-chevron-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -377,7 +388,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9 分钟</span>
+    <span title="站点阅读时长">11 分钟</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -237,6 +237,14 @@
 <li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
 <li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
 </ul>
+<h4 id="驱动调试"><a href="#驱动调试" class="headerlink" title="驱动调试"></a>驱动调试</h4><ul>
+<li>参照正点原子教程搭建驱动调试环境，配置的<em>Makefile</em>内容如下  <figure class="highlight makefile"><table><tr><td class="code"><pre><span class="line">KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core</span><br><span class="line">CURRENT_PATH = <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">obj-m := gpio-pca953x.o</span><br><span class="line"></span><br><span class="line"><span class="section">build: kernel_modules</span></span><br><span class="line"></span><br><span class="line"><span class="section">kernel_modules: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">clean: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> clean</span><br></pre></td></tr></table></figure></li>
+<li><em>KERNEL_DIR</em>表示Linux内核源码目录，使用绝对路径</li>
+<li><em>CURRENT_PATH</em>表示当前路径，直接使用<em>pwd</em>来获取当前路径</li>
+<li><em>obj-m</em>表示将这个c文件编译为ko模块</li>
+<li><em>modules</em>表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， <em>M</em>表示模块源码目录</li>
+<li><em>make modules</em>命令中加入 M&#x3D;dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件</li>
+</ul>
 ]]></content>
       <categories>
         <category>Linux</category>
@@ -270,6 +278,42 @@
       </categories>
       <tags>
         <tag>OpenCV Core</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Linux Input子系统按键连按驱动调试记录</title>
+    <url>/archives/e19e1ecc.html</url>
+    <content><![CDATA[<h4 id="Linux-Input子系统介绍"><a href="#Linux-Input子系统介绍" class="headerlink" title="Linux Input子系统介绍"></a>Linux Input子系统介绍</h4><blockquote>
+<p>按键、鼠标、键盘、触摸屏等都属于输入(input)设备, Linux 内核为此专门做了一个叫做 input子系统的框架来处理输入事件。输入设备本质上还是字符设备,只是在此基础上套上了 input 框架,用户只需要负责上报输入事件,比如按键值、坐标等信息, input 核心层负责处理这些事件。</p>
+</blockquote>
+<p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609141734.png"></p>
+<span id="more"></span>
+
+<h4 id="input驱动编写流程"><a href="#input驱动编写流程" class="headerlink" title="input驱动编写流程"></a>input驱动编写流程</h4><ul>
+<li><p>注册input_dev</p>
+<ol>
+<li>使用<em>input_allocate_device</em>申请一个<em>input_dev</em>结构体</li>
+<li>初始化<em>input_dev</em>的事件类型以及事件值</li>
+<li>使用<em>input_register_device</em>函数向系统注册<em>input_dev</em></li>
+<li><strong>按键需要实现连按时<em>evbit</em>需要设置<em>EV_REP</em>标志，调按键驱动时在调连按功能时在这里卡了很久</strong>  <figure class="highlight xl"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="title">chip</span>-&gt;</span>input = input_allocate_device();</span><br><span class="line"><span class="function"><span class="title">if</span> (!chip-&gt;</span>input) </span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_ERR <span class="string">&quot;Unable to allocate the input device !!\n&quot;</span>);</span><br><span class="line">    return -ENOMEM;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="title">chip</span>-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span><span class="keyword">name</span> = <span class="string">&quot;pca953x_button&quot;</span>;</span><br><span class="line"><span class="function"><span class="title">set_bit</span>(EV_KEY, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>evbit);     <span class="comment">/* 设置产生按键事件 */</span> </span><br><span class="line"><span class="function"><span class="title">set_bit</span>(EV_REP, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>evbit);     <span class="comment">/* 设置重复事件  */</span> </span><br><span class="line"><span class="keyword">for</span>(i = <span class="number">0</span>;i &lt; ZKEY_NUM + <span class="number">5</span>; i++)	</span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="title">set_bit</span>(button_info[i].code, chip-&gt;</span><span class="function"><span class="title">input</span>-&gt;</span>keybit);	<span class="comment">//支持具体按键键码</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="title">status</span> = input_register_device(chip-&gt;</span>input);   <span class="comment">//注册input设备</span></span><br><span class="line"><span class="keyword">if</span>(status)</span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_ERR <span class="string">&quot;input_register_device\n&quot;</span>);</span><br><span class="line">    return -ENOMEM;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="上报输入事件"><a href="#上报输入事件" class="headerlink" title="上报输入事件"></a>上报输入事件</h4></li>
+</ol>
+</li>
+<li><p>使用<em>input_event</em>函数上报指定的事件及对应的值，函数原型如下</p>
+  <figure class="highlight verilog"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span> input_event(<span class="keyword">struct</span> input_dev *dev,</span><br><span class="line">                 <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="keyword">type</span>,</span><br><span class="line">                 <span class="keyword">unsigned</span> <span class="keyword">int</span> code,</span><br><span class="line">                 <span class="keyword">int</span> value)</span><br></pre></td></tr></table></figure>
+<p>  dev:需要上报的 input_dev。<br>  type: 上报的事件类型,比如 EV_KEY。<br>  code:事件码,也就是我们注册的按键值,比如 KEY_0、KEY_1 等等。<br>  value:事件值,比如 1 表示按键按下,0 表示按键松开。</p>
+</li>
+<li><p>上报按键事件，Linux内核也提供了具体的上报函数<em>input_report_key</em></p>
+  <figure class="highlight reasonml"><table><tr><td class="code"><pre><span class="line">static inline void input<span class="constructor">_report_key(<span class="params">struct</span> <span class="params">input_dev</span> <span class="operator">*</span><span class="params">dev</span>, <span class="params">unsigned</span> <span class="params">int</span> <span class="params">code</span>, <span class="params">int</span> <span class="params">value</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    input<span class="constructor">_event(<span class="params">dev</span>, EV_KEY, <span class="params">code</span>, !!<span class="params">value</span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>  type:事件类型,比如 EV_KEY,表示此次事件为按键事件,此成员变量为 16 位。<br>  code:事件码,比如在 EV_KEY 事件中 code 就表示具体的按键码,如:KEY_0、KEY_1等等这些按键。此成员变量为 16 位。<br>  value:值,比如 EV_KEY 事件中 value 就是按键值,表示按键有没有被按下,如果为1的话说明按键按下,如果为0的话说明按键没有被按下或者按键松开了。</p>
+</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Linux Driver 按键驱动</tag>
       </tags>
   </entry>
 </search>
