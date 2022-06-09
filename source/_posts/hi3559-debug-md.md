@@ -9,6 +9,8 @@ abbrlink: 7803046f
 date: 2022-06-09 10:02:24
 ---
 
+
+
 #### 内核编译与烧写
 + 内核版本4.9.37，Linux内核源码如下
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png)
@@ -32,3 +34,23 @@ date: 2022-06-09 10:02:24
     mmc write 0 0x42000000 800 4800
     ```
 
+#### 驱动调试
++ 参照正点原子教程搭建驱动调试环境，配置的*Makefile*内容如下
+    ```
+    KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core
+    CURRENT_PATH = $(shell pwd)
+    obj-m := gpio-pca953x.o
+
+    build: kernel_modules
+
+    kernel_modules: 
+    $(MAKE) ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C $(KERNEL_DIR) M=$(CURRENT_PATH) modules
+
+    clean: 
+    $(MAKE) ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C $(KERNEL_DIR) M=$(CURRENT_PATH) clean
+    ```
++ *KERNEL_DIR*表示Linux内核源码目录，使用绝对路径
++ *CURRENT_PATH*表示当前路径，直接使用*pwd*来获取当前路径
++ *obj-m*表示将这个c文件编译为ko模块
++ *modules*表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， *M*表示模块源码目录
++ *make modules*命令中加入 M=dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件
