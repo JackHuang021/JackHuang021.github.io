@@ -22,36 +22,30 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="交叉编译环境 Ubuntu版本：Ubuntu20.04 64bits 交叉编译工具：arm-linux-gnueabihf- 硬件平台正点原子IMX6ULL (ALPHA)">
+    <meta name="description" content="基于Mat类的图像操作  Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过cv::Mat::copyTo和cv::Mat::clone进行深度拷贝。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="imx6ull OpenCV4.5 交叉编译">
-<meta property="og:url" content="https://jackhuang021.github.io/archives/e4359116.html">
+<meta property="og:title" content="OpenCV core模块记录">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/6465c2cc.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="交叉编译环境 Ubuntu版本：Ubuntu20.04 64bits 交叉编译工具：arm-linux-gnueabihf- 硬件平台正点原子IMX6ULL (ALPHA)">
+<meta property="og:description" content="基于Mat类的图像操作  Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过cv::Mat::copyTo和cv::Mat::clone进行深度拷贝。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602095241.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100408.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100750.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101028.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101237.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101546.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602102258.png">
-<meta property="article:published_time" content="2022-06-02T01:44:44.000Z">
-<meta property="article:modified_time" content="2022-06-02T02:39:53.179Z">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png">
+<meta property="article:published_time" content="2022-06-08T07:24:15.000Z">
+<meta property="article:modified_time" content="2022-06-09T05:54:42.037Z">
 <meta property="article:author" content="Jack">
-<meta property="article:tag" content="imx6ull OpenCV 交叉编译">
+<meta property="article:tag" content="OpenCV Core">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602095241.png">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/archives/e4359116.html">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/6465c2cc.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/e4359116.html","path":"archives/e4359116.html","title":"imx6ull OpenCV4.5 交叉编译"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/6465c2cc.html","path":"archives/6465c2cc.html","title":"OpenCV core模块记录"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>imx6ull OpenCV4.5 交叉编译 | Jack's Home</title>
+<title>OpenCV core模块记录 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -155,7 +149,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">交叉编译环境</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E6%BA%90%E7%A0%81%E5%92%8C%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="nav-number">2.</span> <span class="nav-text">准备源码和交叉编译工具链</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85cmake%E5%92%8Ccmake-gui%E5%B7%A5%E5%85%B7"><span class="nav-number">3.</span> <span class="nav-text">安装cmake和cmake-gui工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E7%8E%AF%E5%A2%83"><span class="nav-number">4.</span> <span class="nav-text">配置交叉编译环境</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%85%8D%E7%BD%AEcmake%E9%80%89%E9%A1%B9"><span class="nav-number">5.</span> <span class="nav-text">配置cmake选项</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%96%E8%AF%91OpenCV"><span class="nav-number">6.</span> <span class="nav-text">编译OpenCV</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84%E9%94%99%E8%AF%AF"><span class="nav-number">7.</span> <span class="nav-text">编译过程中遇到的错误</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">8.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9F%BA%E4%BA%8EMat%E7%B1%BB%E7%9A%84%E5%9B%BE%E5%83%8F%E6%93%8D%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">基于Mat类的图像操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E5%8D%B7%E7%A7%AF%E6%93%8D%E4%BD%9C"><span class="nav-number">2.</span> <span class="nav-text">图像卷积操作</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -228,7 +222,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/e4359116.html">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/6465c2cc.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/favicon-32x32.png">
@@ -241,12 +235,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="imx6ull OpenCV4.5 交叉编译 | Jack's Home">
+      <meta itemprop="name" content="OpenCV core模块记录 | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          imx6ull OpenCV4.5 交叉编译
+          OpenCV core模块记录
         </h1>
 
         <div class="post-meta-container">
@@ -256,9 +250,15 @@
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
-      
 
-      <time title="创建时间：2022-06-02 09:44:44 / 修改时间：10:39:53" itemprop="dateCreated datePublished" datetime="2022-06-02T09:44:44+08:00">2022-06-02</time>
+      <time title="创建时间：2022-06-08 15:24:15" itemprop="dateCreated datePublished" datetime="2022-06-08T15:24:15+08:00">2022-06-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-06-09 13:54:42" itemprop="dateModified" datetime="2022-06-09T13:54:42+08:00">2022-06-09</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -302,42 +302,22 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h4 id="交叉编译环境"><a href="#交叉编译环境" class="headerlink" title="交叉编译环境"></a>交叉编译环境</h4><ul>
-<li>Ubuntu版本：Ubuntu20.04 64bits</li>
-<li>交叉编译工具：arm-linux-gnueabihf-</li>
-<li>硬件平台正点原子IMX6ULL (ALPHA)</li>
+        <h4 id="基于Mat类的图像操作"><a href="#基于Mat类的图像操作" class="headerlink" title="基于Mat类的图像操作"></a>基于Mat类的图像操作</h4><p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png"></p>
+<ul>
+<li>Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过<code>cv::Mat::copyTo</code>和<code>cv::Mat::clone</code>进行深度拷贝。<span id="more"></span></li>
+<li>Mat构造函数<code>Mat img(2, 2, CV_8UC3, Scalar(0, 0, 255))</code>， 需要明确矩阵大小、矩阵存储数据类型、像素颜色通道数、像素值。</li>
+<li>CV_8UC3含义表示8位无符号数据，颜色通道为3，含义参考：<code>CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]</code></li>
+<li>几种特殊矩阵的构造，<code>cv::Mat::eyes</code>单位矩阵、<code>cv::Mat::zeros</code>零矩阵、<code>cv::Mat::ones</code>全1矩阵</li>
 </ul>
-<span id="more"></span>
-
-<h4 id="准备源码和交叉编译工具链"><a href="#准备源码和交叉编译工具链" class="headerlink" title="准备源码和交叉编译工具链"></a>准备源码和交叉编译工具链</h4><p>Linux环境下的编译方法可以参考<a target="_blank" rel="noopener" href="https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html">Opencv安装官网教程</a></p>
-<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget -O opencv.zip https:<span class="regexp">//gi</span>thub.com<span class="regexp">/opencv/</span>opencv<span class="regexp">/archive/</span><span class="number">4</span>.x.zip</span><br><span class="line">unzip opencv.zip</span><br></pre></td></tr></table></figure>
-<p>交叉编译工具链版本<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602095241.png"></p>
-<h4 id="安装cmake和cmake-gui工具"><a href="#安装cmake和cmake-gui工具" class="headerlink" title="安装cmake和cmake-gui工具"></a>安装cmake和cmake-gui工具</h4><p>在命令行使用cmake工具确实很不方便，cmake-gui配置起来比较省时间<br><code>sudo apt-get install cmake cmake-qt-gui  cmake-curses-gui</code>  </p>
-<h4 id="配置交叉编译环境"><a href="#配置交叉编译环境" class="headerlink" title="配置交叉编译环境"></a>配置交叉编译环境</h4><ol>
-<li>运行cmake-gui<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100408.png">  </li>
-<li>在第一个框输入OpenCV源码路径，在第二个框输入OpenCV编译目录  </li>
-<li>点击<code>Configure</code>配置交叉编译环境<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602100750.png"></li>
-<li>选择<code>Spcify options for cross-compile</code>  </li>
-<li>按照下图设置交叉编译工具链<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101028.png"></li>
-<li>点击<code>Finish</code>回到cmake-gui主页面，勾选Advanced<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101237.png"></li>
-</ol>
-<h4 id="配置cmake选项"><a href="#配置cmake选项" class="headerlink" title="配置cmake选项"></a>配置cmake选项</h4><ol>
-<li>在CMAKE_EXE_LINKER_FLAGS处添加上<code>-lpthread -lrt -ldl</code><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602101546.png"></li>
-<li>在CMAKE_INSTALL_PREFIX处指定安装目录，如果不指定，它会默认安装到Ubuntu系统目录<code>/usr/local</code>下。  </li>
-<li>取消<code>BUILD_opencv_gapi</code>选项，不取消这个选项后续编译的时候会报错</li>
-<li>再依次点击<code>Configure</code>， <code>Generate</code>，击了Generate后看到信息像如下图一样，表明生成成功，一般按照上面配置后基本都不会报错。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220602102258.png"></li>
-</ol>
-<h4 id="编译OpenCV"><a href="#编译OpenCV" class="headerlink" title="编译OpenCV"></a>编译OpenCV</h4><ol>
-<li>打开之前设置的imx6编译目录，该目录下有刚才生成的Makefile  </li>
-<li>输入<code>make -j12</code>开始编译</li>
-<li>编译完成后输入<code>make install</code>，OpenCV的库和头文件会安装到之前设置的<code>CMAKE_INSTALL_PREFIX</code>目录</li>
-</ol>
-<h4 id="编译过程中遇到的错误"><a href="#编译过程中遇到的错误" class="headerlink" title="编译过程中遇到的错误"></a>编译过程中遇到的错误</h4><figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="regexp">/home/</span>tanyd<span class="regexp">/zdyz/</span>linaro494<span class="regexp">/arm-linux-gnueabihf/</span>libc<span class="regexp">/usr/i</span>nclude/features.h:<span class="number">311</span>:<span class="number">52</span>: error: operator <span class="string">&#x27;&amp;&amp;&#x27;</span> has no right operand <span class="comment">#if defined _FILE_OFFSET_BITS &amp;&amp; _FILE_OFFSET_BITS == 64</span></span><br></pre></td></tr></table></figure>
-<p>解决方法： 在<code>#if defined</code>前面加上 <code>#define _FILE_OFFSET_BITS 64</code>  </p>
-<h4 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h4><ol>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_26943851/article/details/104434130">正点原子IMX6ULL移植OpenCV3.4.1</a></li>
-<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/u011827554/article/details/123657141">imx6ull编译opencv4.4问题整理</a></li>
-</ol>
+<h4 id="图像卷积操作"><a href="#图像卷积操作" class="headerlink" title="图像卷积操作"></a>图像卷积操作</h4><ul>
+<li><p>根据kernel矩阵重新计算图像中每个像素的值，使用<code>filter2D</code>进行卷积操作</p>
+  <figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CV_EXPORTS_W <span class="type">void</span> filter2D( InputArray src, </span><br><span class="line">                            OutputArray dst, </span><br><span class="line">                            <span class="type">int</span> ddepth, </span><br><span class="line">                            InputArray kernel, </span><br><span class="line">                            <span class="type">Point</span> anchor = <span class="type">Point</span>(<span class="number">-1</span>,<span class="number">-1</span>), </span><br><span class="line">                            <span class="type">double</span> delta = <span class="number">0</span>, </span><br><span class="line">                            <span class="type">int</span> borderType = BORDER_DEFAULT );</span><br></pre></td></tr></table></figure></li>
+<li><p>两张图像融合<code>dst = src1*alpha + src2*beta + gamma</code>，使用<code>addWeighted()</code>进行融合。</p>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cv::addWeighted</span><span class="params">( InputArray src1,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> alpha,</span></span></span><br><span class="line"><span class="params"><span class="function">                      InputArray src2,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> beta,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> gamma,</span></span></span><br><span class="line"><span class="params"><span class="function">                      OutputArray dst,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">int</span> dtype = <span class="number">-1</span> )</span></span>;	</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>改变图像对比度和亮度<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</p>
+</li>
+</ul>
 
     </div>
 
@@ -351,11 +331,11 @@
 <div class="post-copyright">
 <ul>
   <li class="post-copyright-author">
-      <strong>原作者： </strong>Jack
+      <strong>原作者： </strong>jack
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/e4359116.html" title="imx6ull OpenCV4.5 交叉编译">https://jackhuang021.github.io/archives/e4359116.html</a>
+      <a href="https://jackhuang021.github.io/archives/6465c2cc.html" title="OpenCV core模块记录">https://jackhuang021.github.io/archives/6465c2cc.html</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -364,20 +344,20 @@
 </div>
 
           <div class="post-tags">
-              <a href="/tags/imx6ull-OpenCV-%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91/" rel="tag"># imx6ull OpenCV 交叉编译</a>
+              <a href="/tags/OpenCV-Core/" rel="tag"># OpenCV Core</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/37d9659b.html" rel="prev" title="ssh使用密钥实现免密登录">
-                  <i class="fa fa-chevron-left"></i> ssh使用密钥实现免密登录
+                <a href="/archives/117a3b0c.html" rel="prev" title="OpenCV图像操作">
+                  <i class="fa fa-chevron-left"></i> OpenCV图像操作
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/245a6c83.html" rel="next" title="Ubuntu安装搜狗输入法的问题记录">
-                  Ubuntu安装搜狗输入法的问题记录 <i class="fa fa-chevron-right"></i>
+                <a href="/archives/7803046f.html" rel="next" title="HI3559AV100调试记录">
+                  HI3559AV100调试记录 <i class="fa fa-chevron-right"></i>
                 </a>
             </div>
           </div>

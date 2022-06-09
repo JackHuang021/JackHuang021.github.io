@@ -225,4 +225,51 @@
         <tag>OpenCV Image</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HI3559AV100调试记录</title>
+    <url>/archives/7803046f.html</url>
+    <content><![CDATA[<h4 id="内核编译与烧写"><a href="#内核编译与烧写" class="headerlink" title="内核编译与烧写"></a>内核编译与烧写</h4><ul>
+<li>内核版本4.9.37，Linux内核源码如下<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png"><span id="more"></span></li>
+<li>编译<code>make ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- uImage -j12</code>，编译完成结果如下，编译完成后会在arch&#x2F;arm64&#x2F;boot&#x2F;生成UImage<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101926.png"></li>
+<li>arm-trusted-firmware目录中运行mk.sh生成fip.bin<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png"></li>
+<li>主机搭建tftp服务器，将fip.bin拷贝到共享目录</li>
+<li>进入uboot，配置ethact ipaddr serverip环境变量<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png"></li>
+<li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
+<li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Hi3559AV100 Linux</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>OpenCV core模块记录</title>
+    <url>/archives/6465c2cc.html</url>
+    <content><![CDATA[<h4 id="基于Mat类的图像操作"><a href="#基于Mat类的图像操作" class="headerlink" title="基于Mat类的图像操作"></a>基于Mat类的图像操作</h4><p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png"></p>
+<ul>
+<li>Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过<code>cv::Mat::copyTo</code>和<code>cv::Mat::clone</code>进行深度拷贝。<span id="more"></span></li>
+<li>Mat构造函数<code>Mat img(2, 2, CV_8UC3, Scalar(0, 0, 255))</code>， 需要明确矩阵大小、矩阵存储数据类型、像素颜色通道数、像素值。</li>
+<li>CV_8UC3含义表示8位无符号数据，颜色通道为3，含义参考：<code>CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]</code></li>
+<li>几种特殊矩阵的构造，<code>cv::Mat::eyes</code>单位矩阵、<code>cv::Mat::zeros</code>零矩阵、<code>cv::Mat::ones</code>全1矩阵</li>
+</ul>
+<h4 id="图像卷积操作"><a href="#图像卷积操作" class="headerlink" title="图像卷积操作"></a>图像卷积操作</h4><ul>
+<li><p>根据kernel矩阵重新计算图像中每个像素的值，使用<code>filter2D</code>进行卷积操作</p>
+  <figure class="highlight pgsql"><table><tr><td class="code"><pre><span class="line">CV_EXPORTS_W <span class="type">void</span> filter2D( InputArray src, </span><br><span class="line">                            OutputArray dst, </span><br><span class="line">                            <span class="type">int</span> ddepth, </span><br><span class="line">                            InputArray kernel, </span><br><span class="line">                            <span class="type">Point</span> anchor = <span class="type">Point</span>(<span class="number">-1</span>,<span class="number">-1</span>), </span><br><span class="line">                            <span class="type">double</span> delta = <span class="number">0</span>, </span><br><span class="line">                            <span class="type">int</span> borderType = BORDER_DEFAULT );</span><br></pre></td></tr></table></figure></li>
+<li><p>两张图像融合<code>dst = src1*alpha + src2*beta + gamma</code>，使用<code>addWeighted()</code>进行融合。</p>
+  <figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cv::addWeighted</span><span class="params">( InputArray src1,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> alpha,</span></span></span><br><span class="line"><span class="params"><span class="function">                      InputArray src2,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> beta,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">double</span> gamma,</span></span></span><br><span class="line"><span class="params"><span class="function">                      OutputArray dst,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">int</span> dtype = <span class="number">-1</span> )</span></span>;	</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>改变图像对比度和亮度<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</p>
+</li>
+</ul>
+]]></content>
+      <categories>
+        <category>OpenCV</category>
+      </categories>
+      <tags>
+        <tag>OpenCV Core</tag>
+      </tags>
+  </entry>
 </search>
