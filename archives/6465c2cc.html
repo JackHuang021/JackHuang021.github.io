@@ -34,9 +34,13 @@
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609163417.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609163925.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609164447.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150527.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150618.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609161302.png">
 <meta property="article:published_time" content="2022-06-08T07:24:15.000Z">
-<meta property="article:modified_time" content="2022-06-09T10:24:16.564Z">
+<meta property="article:modified_time" content="2022-06-10T07:06:28.496Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="OpenCV Core">
 <meta name="twitter:card" content="summary">
@@ -263,7 +267,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-06-09 18:24:16" itemprop="dateModified" datetime="2022-06-09T18:24:16+08:00">2022-06-09</time>
+      <time title="修改时间：2022-06-10 15:06:28" itemprop="dateModified" datetime="2022-06-10T15:06:28+08:00">2022-06-10</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -289,14 +293,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.6k</span>
+      <span>2k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -325,12 +329,14 @@
 <li>双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。</li>
 </ol>
 </li>
-<li><p>使用图像卷积进行形态学操作</p>
+<li><p>使用图像卷积进行形态学操作，主要针对阈值化后的图像</p>
 <ol>
-<li>膨胀，使用Kernel范围内最大的值替换当前像素值</li>
-<li>腐蚀，使用Kernel范围内最小的值替换当前像素值</li>
-<li>开操作，先腐蚀后膨胀，去除暗黑背景中细小的噪点</li>
-<li>闭操作，先膨胀后腐蚀，去除明亮背景中的细小噪点</li>
+<li>膨胀 Dilate，使用Kernel范围内的最大值取代当前像素值<br>  膨胀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png"><br>  膨胀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png"></li>
+<li>腐蚀 Erode，使用Kernel范围内的最小值取代当前像素值<br>  腐蚀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150527.png"><br>  腐蚀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150618.png"></li>
+<li>开操作 Opening，先腐蚀后膨胀，去除暗黑背景中细小的噪点，原理 *dst &#x3D; open(src, element) &#x3D; dilate(erode(src, element))*， <em>element</em>为kernel</li>
+<li>闭操作 Closing，先膨胀后腐蚀，去除明亮背景中的细小噪点，原理 <em>dst &#x3D; close(src, element) &#x3D; erode(dilate(src, element))</em></li>
+<li>形态梯度 Morphological Gradient，膨胀图像与腐蚀图像的差，用来找出物体轮廓，原理 <em>dst &#x3D; morphy(src, element) &#x3D; dilate(src, element) - erode(src, element)</em></li>
+<li>高帽 Top Hat，</li>
 </ol>
 </li>
 </ul>
@@ -413,7 +419,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11 分钟</span>
+    <span title="站点阅读时长">12 分钟</span>
   </span>
 </div>
 <div class="busuanzi-count">

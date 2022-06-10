@@ -274,12 +274,14 @@
 <li>双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。</li>
 </ol>
 </li>
-<li><p>使用图像卷积进行形态学操作</p>
+<li><p>使用图像卷积进行形态学操作，主要针对阈值化后的图像</p>
 <ol>
-<li>膨胀，使用Kernel范围内最大的值替换当前像素值</li>
-<li>腐蚀，使用Kernel范围内最小的值替换当前像素值</li>
-<li>开操作，先腐蚀后膨胀，去除暗黑背景中细小的噪点</li>
-<li>闭操作，先膨胀后腐蚀，去除明亮背景中的细小噪点</li>
+<li>膨胀 Dilate，使用Kernel范围内的最大值取代当前像素值<br>  膨胀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png"><br>  膨胀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png"></li>
+<li>腐蚀 Erode，使用Kernel范围内的最小值取代当前像素值<br>  腐蚀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150527.png"><br>  腐蚀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150618.png"></li>
+<li>开操作 Opening，先腐蚀后膨胀，去除暗黑背景中细小的噪点，原理 *dst &#x3D; open(src, element) &#x3D; dilate(erode(src, element))*， <em>element</em>为kernel</li>
+<li>闭操作 Closing，先膨胀后腐蚀，去除明亮背景中的细小噪点，原理 <em>dst &#x3D; close(src, element) &#x3D; erode(dilate(src, element))</em></li>
+<li>形态梯度 Morphological Gradient，膨胀图像与腐蚀图像的差，用来找出物体轮廓，原理 <em>dst &#x3D; morphy(src, element) &#x3D; dilate(src, element) - erode(src, element)</em></li>
+<li>高帽 Top Hat，</li>
 </ol>
 </li>
 </ul>
