@@ -39,11 +39,21 @@ date: 2022-06-08 15:24:15
     3. 中值滤波，将像素点周围区域内的像素进行排序，采用中间位置的像素值作为当前像素点的值
     4. 双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。
 
-+ 使用图像卷积进行形态学操作
-    1. 膨胀，使用Kernel范围内最大的值替换当前像素值
-    2. 腐蚀，使用Kernel范围内最小的值替换当前像素值
-    3. 开操作，先腐蚀后膨胀，去除暗黑背景中细小的噪点
-    4. 闭操作，先膨胀后腐蚀，去除明亮背景中的细小噪点
++ 使用图像卷积进行形态学操作，主要针对阈值化后的图像
+    1. 膨胀 Dilate，使用Kernel范围内的最大值取代当前像素值  
+    膨胀二值化图像  
+    ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png)  
+    膨胀灰度图像  
+    ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png)
+    1. 腐蚀 Erode，使用Kernel范围内的最小值取代当前像素值  
+    腐蚀二值化图像  
+    ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150527.png)  
+    腐蚀灰度图像  
+    ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150618.png)
+    2. 开操作 Opening，先腐蚀后膨胀，去除暗黑背景中细小的噪点，原理 *dst = open(src, element) = dilate(erode(src, element))*， *element*为kernel
+    3. 闭操作 Closing，先膨胀后腐蚀，去除明亮背景中的细小噪点，原理 *dst = close(src, element) = erode(dilate(src, element))*
+    4. 形态梯度 Morphological Gradient，膨胀图像与腐蚀图像的差，用来找出物体轮廓，原理 *dst = morphy(src, element) = dilate(src, element) - erode(src, element)*
+    5. 高帽 Top Hat， 
 
 
 #### 图像融合
