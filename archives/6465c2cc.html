@@ -24,7 +24,7 @@
 
     <meta name="description" content="基于Mat类的图像操作  Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过cv::Mat::copyTo和cv::Mat::clone进行深度拷贝。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="OpenCV core模块记录">
+<meta property="og:title" content="OpenCV 图像处理基本操作">
 <meta property="og:url" content="https://jackhuang021.github.io/archives/6465c2cc.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
 <meta property="og:description" content="基于Mat类的图像操作  Mat类分为两个数据部分：数据头部分（保存矩阵大小、矩阵存储方式等信息）、矩阵数据部分， 一般的Mat对象复制构造仅拷贝数据头部分，矩阵数据部分共享。也可以通过cv::Mat::copyTo和cv::Mat::clone进行深度拷贝。">
@@ -39,8 +39,16 @@
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150527.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150618.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609161302.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613132715.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613141653.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614155216.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160139.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png">
 <meta property="article:published_time" content="2022-06-08T07:24:15.000Z">
-<meta property="article:modified_time" content="2022-06-10T07:06:28.496Z">
+<meta property="article:modified_time" content="2022-06-14T08:13:15.138Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="OpenCV Core">
 <meta name="twitter:card" content="summary">
@@ -51,10 +59,10 @@
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/6465c2cc.html","path":"archives/6465c2cc.html","title":"OpenCV core模块记录"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/6465c2cc.html","path":"archives/6465c2cc.html","title":"OpenCV 图像处理基本操作"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>OpenCV core模块记录 | Jack's Home</title>
+<title>OpenCV 图像处理基本操作 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -158,7 +166,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9F%BA%E4%BA%8EMat%E7%B1%BB%E7%9A%84%E5%9B%BE%E5%83%8F%E6%93%8D%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">基于Mat类的图像操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E5%8D%B7%E7%A7%AF%E6%93%8D%E4%BD%9C"><span class="nav-number">2.</span> <span class="nav-text">图像卷积操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E8%9E%8D%E5%90%88"><span class="nav-number">3.</span> <span class="nav-text">图像融合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%94%B9%E5%8F%98%E5%9B%BE%E5%83%8F%E5%AF%B9%E6%AF%94%E5%BA%A6%E5%92%8C%E4%BA%AE%E5%BA%A6"><span class="nav-number">4.</span> <span class="nav-text">改变图像对比度和亮度</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9F%BA%E4%BA%8EMat%E7%B1%BB%E7%9A%84%E5%9B%BE%E5%83%8F%E6%93%8D%E4%BD%9C"><span class="nav-number">1.</span> <span class="nav-text">基于Mat类的图像操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E5%8D%B7%E7%A7%AF%E6%93%8D%E4%BD%9C"><span class="nav-number">2.</span> <span class="nav-text">图像卷积操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E8%9E%8D%E5%90%88"><span class="nav-number">3.</span> <span class="nav-text">图像融合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%94%B9%E5%8F%98%E5%9B%BE%E5%83%8F%E5%AF%B9%E6%AF%94%E5%BA%A6%E5%92%8C%E4%BA%AE%E5%BA%A6"><span class="nav-number">4.</span> <span class="nav-text">改变图像对比度和亮度</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E7%9A%84%E7%BC%A9%E6%94%BE"><span class="nav-number">5.</span> <span class="nav-text">图像的缩放</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E9%98%88%E5%80%BC%E6%93%8D%E4%BD%9Cthreshold%E7%9A%84%E5%87%A0%E7%A7%8D%E6%96%B9%E6%B3%95"><span class="nav-number">6.</span> <span class="nav-text">图像阈值操作threshold的几种方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9B%BE%E5%83%8F%E5%83%8F%E7%B4%A0%E6%A2%AF%E5%BA%A6%E8%AE%A1%E7%AE%97"><span class="nav-number">7.</span> <span class="nav-text">图像像素梯度计算</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -173,18 +181,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-count">10</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -244,12 +252,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="OpenCV core模块记录 | Jack's Home">
+      <meta itemprop="name" content="OpenCV 图像处理基本操作 | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          OpenCV core模块记录
+          OpenCV 图像处理基本操作
         </h1>
 
         <div class="post-meta-container">
@@ -267,7 +275,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-06-10 15:06:28" itemprop="dateModified" datetime="2022-06-10T15:06:28+08:00">2022-06-10</time>
+      <time title="修改时间：2022-06-14 16:13:15" itemprop="dateModified" datetime="2022-06-14T16:13:15+08:00">2022-06-14</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -293,7 +301,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2k</span>
+      <span>2.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -329,6 +337,12 @@
 <li>双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。</li>
 </ol>
 </li>
+<li><p>图像边界处理，使用<code>copyMakeBorder</code>给图像创建一个边框</p>
+<ol>
+<li><code>BORDER_CONTANT</code>，使用固定像素值填充创建的边框</li>
+<li><code>BORDER_REPLICATE</code>，复制原图像中的边界值</li>
+</ol>
+</li>
 <li><p>使用图像卷积进行形态学操作，主要针对阈值化后的图像</p>
 <ol>
 <li>膨胀 Dilate，使用Kernel范围内的最大值取代当前像素值<br>  膨胀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png"><br>  膨胀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png"></li>
@@ -336,8 +350,10 @@
 <li>开操作 Opening，先腐蚀后膨胀，去除暗黑背景中细小的噪点，原理 *dst &#x3D; open(src, element) &#x3D; dilate(erode(src, element))*， <em>element</em>为kernel</li>
 <li>闭操作 Closing，先膨胀后腐蚀，去除明亮背景中的细小噪点，原理 <em>dst &#x3D; close(src, element) &#x3D; erode(dilate(src, element))</em></li>
 <li>形态梯度 Morphological Gradient，膨胀图像与腐蚀图像的差，用来找出物体轮廓，原理 <em>dst &#x3D; morphy(src, element) &#x3D; dilate(src, element) - erode(src, element)</em></li>
-<li>高帽 Top Hat，</li>
+<li>高帽 Top Hat</li>
 </ol>
+</li>
+<li><p>也可以使用 <em>getStructuringElement</em> 创造指定形状和大小的Kernel，进行图像的特征提取，如官方教程<a target="_blank" rel="noopener" href="https://docs.opencv.org/4.x/dd/dd7/tutorial_morph_lines_detection.html">提取乐谱中的直线和音符</a>，就是借助形态学开操作进行直线和音符的提取。</p>
 </li>
 </ul>
 <h4 id="图像融合"><a href="#图像融合" class="headerlink" title="图像融合"></a>图像融合</h4><ul>
@@ -346,6 +362,22 @@
 <h4 id="改变图像对比度和亮度"><a href="#改变图像对比度和亮度" class="headerlink" title="改变图像对比度和亮度"></a>改变图像对比度和亮度</h4><ul>
 <li>公式<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</li>
 <li>Gamma校准，使用查找表，按照如下公式对像素值进行一个非线性的转换 <em>O &#x3D; (I &#x2F; 255)^γ × 255</em>，γ越大整体亮度降低。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609161302.png"></li>
+</ul>
+<h4 id="图像的缩放"><a href="#图像的缩放" class="headerlink" title="图像的缩放"></a>图像的缩放</h4><ul>
+<li>高斯金字塔(Gaussian Pyramid)，从底部开始计数，第 <em>i+1</em> 层表示为 <em>G(i + 1)</em><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613132715.png"></li>
+<li>*G(i + 1)<em>层的变换过程，由</em>G(i)*层先进行高斯模糊，然后丢掉偶数行和偶数列的像素，即图像缩小的操作</li>
+<li>图像放大的操作，图像放大两倍，在奇数行和奇数列填充0像素，再进行高斯模糊<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613141653.png"></li>
+</ul>
+<h4 id="图像阈值操作threshold的几种方法"><a href="#图像阈值操作threshold的几种方法" class="headerlink" title="图像阈值操作threshold的几种方法"></a>图像阈值操作<em>threshold</em>的几种方法</h4><ol>
+<li>二值化（Threshold Binary），<code>src(x, y)</code>大于阈值<code>threshold</code>则置为最大值，否则置为0</li>
+<li>反向二值化（Threshold Binary, Inverted），<code>src(x, y)</code>小于阈值<code>threshold</code>则置为最大值，否则置为0</li>
+<li>截取像素值（Truncate），<code>src(x, y)</code>大于阈值<code>threshold</code>则令<code>src(x, y)</code>等于<code>threshold</code>，否则不变</li>
+<li>只保留超过阈值部分，<code>src(x, y)</code>大于阈值<code>threshold</code>则置为原值，否则置为0</li>
+<li>只保留小于阈值部分，<code>src(x, y)</code>小于阈值<code>threshold</code>则置为0，否则不变</li>
+</ol>
+<h4 id="图像像素梯度计算"><a href="#图像像素梯度计算" class="headerlink" title="图像像素梯度计算"></a>图像像素梯度计算</h4><ul>
+<li><code>Sobel</code>边缘检测算子，利用图像边缘像素强度值变化非常显著的特点，使用特殊的卷积核计算水平方向的梯度变化和竖直方向的梯度变化。如下图是图像边缘像素强度的变化曲线的一维图像和该图像像素强度变化梯度图像（即导数图像），像素强度变化最剧烈的地方就可能是物体边缘。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614155216.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160139.png">  </li>
+<li>利用特殊的卷积核计算水平梯度变化和垂直梯度变化，然后再融合两个梯度图像<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png"></li>
 </ul>
 
     </div>
@@ -364,7 +396,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/6465c2cc.html" title="OpenCV core模块记录">https://jackhuang021.github.io/archives/6465c2cc.html</a>
+      <a href="https://jackhuang021.github.io/archives/6465c2cc.html" title="OpenCV 图像处理基本操作">https://jackhuang021.github.io/archives/6465c2cc.html</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！

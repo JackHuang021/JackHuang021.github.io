@@ -254,7 +254,7 @@
       </tags>
   </entry>
   <entry>
-    <title>OpenCV core模块记录</title>
+    <title>OpenCV 图像处理基本操作</title>
     <url>/archives/6465c2cc.html</url>
     <content><![CDATA[<h4 id="基于Mat类的图像操作"><a href="#基于Mat类的图像操作" class="headerlink" title="基于Mat类的图像操作"></a>基于Mat类的图像操作</h4><p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png"></p>
 <ul>
@@ -274,6 +274,12 @@
 <li>双边滤波，权重由两部分来决定，第一部分是类似于二维高斯，另一部分由颜色差异来决定，这样可以比较好的保留边缘信息。</li>
 </ol>
 </li>
+<li><p>图像边界处理，使用<code>copyMakeBorder</code>给图像创建一个边框</p>
+<ol>
+<li><code>BORDER_CONTANT</code>，使用固定像素值填充创建的边框</li>
+<li><code>BORDER_REPLICATE</code>，复制原图像中的边界值</li>
+</ol>
+</li>
 <li><p>使用图像卷积进行形态学操作，主要针对阈值化后的图像</p>
 <ol>
 <li>膨胀 Dilate，使用Kernel范围内的最大值取代当前像素值<br>  膨胀二值化图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150255.png"><br>  膨胀灰度图像<br>  <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220610150405.png"></li>
@@ -281,8 +287,10 @@
 <li>开操作 Opening，先腐蚀后膨胀，去除暗黑背景中细小的噪点，原理 *dst &#x3D; open(src, element) &#x3D; dilate(erode(src, element))*， <em>element</em>为kernel</li>
 <li>闭操作 Closing，先膨胀后腐蚀，去除明亮背景中的细小噪点，原理 <em>dst &#x3D; close(src, element) &#x3D; erode(dilate(src, element))</em></li>
 <li>形态梯度 Morphological Gradient，膨胀图像与腐蚀图像的差，用来找出物体轮廓，原理 <em>dst &#x3D; morphy(src, element) &#x3D; dilate(src, element) - erode(src, element)</em></li>
-<li>高帽 Top Hat，</li>
+<li>高帽 Top Hat</li>
 </ol>
+</li>
+<li><p>也可以使用 <em>getStructuringElement</em> 创造指定形状和大小的Kernel，进行图像的特征提取，如官方教程<a href="https://docs.opencv.org/4.x/dd/dd7/tutorial_morph_lines_detection.html">提取乐谱中的直线和音符</a>，就是借助形态学开操作进行直线和音符的提取。</p>
 </li>
 </ul>
 <h4 id="图像融合"><a href="#图像融合" class="headerlink" title="图像融合"></a>图像融合</h4><ul>
@@ -291,6 +299,22 @@
 <h4 id="改变图像对比度和亮度"><a href="#改变图像对比度和亮度" class="headerlink" title="改变图像对比度和亮度"></a>改变图像对比度和亮度</h4><ul>
 <li>公式<code>g(x)=αf(x)+β</code>改变α的值可以改变图像的对比度，改变β的值可以改变图像的亮度</li>
 <li>Gamma校准，使用查找表，按照如下公式对像素值进行一个非线性的转换 <em>O &#x3D; (I &#x2F; 255)^γ × 255</em>，γ越大整体亮度降低。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609161302.png"></li>
+</ul>
+<h4 id="图像的缩放"><a href="#图像的缩放" class="headerlink" title="图像的缩放"></a>图像的缩放</h4><ul>
+<li>高斯金字塔(Gaussian Pyramid)，从底部开始计数，第 <em>i+1</em> 层表示为 <em>G(i + 1)</em><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613132715.png"></li>
+<li>*G(i + 1)<em>层的变换过程，由</em>G(i)*层先进行高斯模糊，然后丢掉偶数行和偶数列的像素，即图像缩小的操作</li>
+<li>图像放大的操作，图像放大两倍，在奇数行和奇数列填充0像素，再进行高斯模糊<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220613141653.png"></li>
+</ul>
+<h4 id="图像阈值操作threshold的几种方法"><a href="#图像阈值操作threshold的几种方法" class="headerlink" title="图像阈值操作threshold的几种方法"></a>图像阈值操作<em>threshold</em>的几种方法</h4><ol>
+<li>二值化（Threshold Binary），<code>src(x, y)</code>大于阈值<code>threshold</code>则置为最大值，否则置为0</li>
+<li>反向二值化（Threshold Binary, Inverted），<code>src(x, y)</code>小于阈值<code>threshold</code>则置为最大值，否则置为0</li>
+<li>截取像素值（Truncate），<code>src(x, y)</code>大于阈值<code>threshold</code>则令<code>src(x, y)</code>等于<code>threshold</code>，否则不变</li>
+<li>只保留超过阈值部分，<code>src(x, y)</code>大于阈值<code>threshold</code>则置为原值，否则置为0</li>
+<li>只保留小于阈值部分，<code>src(x, y)</code>小于阈值<code>threshold</code>则置为0，否则不变</li>
+</ol>
+<h4 id="图像像素梯度计算"><a href="#图像像素梯度计算" class="headerlink" title="图像像素梯度计算"></a>图像像素梯度计算</h4><ul>
+<li><code>Sobel</code>边缘检测算子，利用图像边缘像素强度值变化非常显著的特点，使用特殊的卷积核计算水平方向的梯度变化和竖直方向的梯度变化。如下图是图像边缘像素强度的变化曲线的一维图像和该图像像素强度变化梯度图像（即导数图像），像素强度变化最剧烈的地方就可能是物体边缘。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614155216.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160139.png">  </li>
+<li>利用特殊的卷积核计算水平梯度变化和垂直梯度变化，然后再融合两个梯度图像<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png"></li>
 </ul>
 ]]></content>
       <categories>
@@ -334,6 +358,17 @@
       </categories>
       <tags>
         <tag>Linux Driver 按键驱动</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Marlin自动调平步骤</title>
+    <url>/archives/635b2103.html</url>
+    <content><![CDATA[]]></content>
+      <categories>
+        <category>3DPrinter</category>
+      </categories>
+      <tags>
+        <tag>Marlin 自动调平</tag>
       </tags>
   </entry>
 </search>
