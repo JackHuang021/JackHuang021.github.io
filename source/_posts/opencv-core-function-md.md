@@ -101,3 +101,6 @@ date: 2022-06-08 15:24:15
 + 利用特殊的卷积核计算水平梯度变化和垂直梯度变化，然后再融合两个梯度图像  
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png) ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png)  
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png) ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png)
+
++ 利用二级导数，像素强度变化剧烈的点二级导数接近0，拉普拉斯算子`Laplacian`计算水平方向和竖直方向上二级导数的和，OpenCV提供的`Laplacian()`函数，内部也是通过调用`Sobel()`来计算的，如下图二级导数图像和拉普拉斯公式。  
++ 
