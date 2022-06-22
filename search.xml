@@ -395,4 +395,30 @@
         <tag>Qt QSerialPort 串口</tag>
       </tags>
   </entry>
+  <entry>
+    <title>龙芯2K1000内核源码编译</title>
+    <url>/archives/67263a86.html</url>
+    <content><![CDATA[<h4 id="解压PMON源码pmon-loongson3-tar-gz"><a href="#解压PMON源码pmon-loongson3-tar-gz" class="headerlink" title="解压PMON源码pmon-loongson3.tar.gz"></a>解压PMON源码<em>pmon-loongson3.tar.gz</em></h4><figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tar</span> -xvf pmon-loongson<span class="number">3</span>-nd-<span class="number">33</span>j.tar.gz</span><br></pre></td></tr></table></figure>
+<h4 id="配置交叉编译环境"><a href="#配置交叉编译环境" class="headerlink" title="配置交叉编译环境"></a>配置交叉编译环境</h4><ul>
+<li>解压交叉编译工具<em>gcc-4.4.0-pmon.tgz</em>，配置环境<span id="more"></span>
+<figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tar</span> -xvf gcc-<span class="number">4</span>.<span class="number">4</span>.<span class="number">0</span>-pmon.tgz</span><br></pre></td></tr></table></figure>
+编辑&#x2F;etc&#x2F;profile，配置交叉编译工具路径<figure class="highlight elixir"><table><tr><td class="code"><pre><span class="line">export PATH=<span class="variable">$PATH</span><span class="symbol">:/home/jack/loongson/tools/gcc-</span><span class="number">4.4</span>.0-pmon/bin</span><br><span class="line">export LD_LIBRARY_PATH=<span class="regexp">/home/jack</span><span class="regexp">/loongson/tools</span><span class="regexp">/gcc-4.4.0-pmon/lib</span><span class="symbol">:</span><span class="variable">$LD_LIBRARY_PATH</span></span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+<li>安装makedepend，<code>sudo apt-get install xutils-dev </code></li>
+<li>进入源码目录编译安装pmoncfg<figure class="highlight vim"><table><tr><td class="code"><pre><span class="line">sudo apt-<span class="built_in">get</span> install bison flex build-essential patch</span><br><span class="line"><span class="keyword">cd</span> tools/pmoncfg </span><br><span class="line"><span class="keyword">make</span> </span><br><span class="line">sudo <span class="keyword">cp</span> pmoncfg /usr/bin</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="编译PMON源码"><a href="#编译PMON源码" class="headerlink" title="编译PMON源码"></a>编译PMON源码</h4><p>进入PMON源码目录，若只需要修改PMON，可在原来的项目目录基础上进行编译，源码内有脚本文件<em>build.sh</em>，输入格式: <code>./build.sh [cputype] [proID]</code>，比如龙芯2K1000，项目ID hm19047，输入<code>./build.sh ls2k hm19047</code>即可开始编译，编译结果在<em>zloader.ls2k-hm19047</em>目录中，会生成<em>gzrom-dtb.bin</em>，将该文件烧录进flash即可。</p>
+<h4 id="PMON网络烧录"><a href="#PMON网络烧录" class="headerlink" title="PMON网络烧录"></a>PMON网络烧录</h4><ul>
+<li>主机IP地址为192.168.0.100，搭建tftp服务器</li>
+<li>开机按C键进入PMON下，设置IP地址<code>ifconfig syn0 192.168.0.10</code></li>
+<li>烧写PMON<code>load -rf 0xbfc00000 tftp://192.168.0.100/gzrom-dtb.bin</code></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>PMON</tag>
+        <tag>Loongson</tag>
+      </tags>
+  </entry>
 </search>
