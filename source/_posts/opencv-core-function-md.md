@@ -102,5 +102,14 @@ date: 2022-06-08 15:24:15
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png) ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png)  
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png) ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png)
 
-+ 利用二级导数，像素强度变化剧烈的点二级导数接近0，拉普拉斯算子`Laplacian`计算水平方向和竖直方向上二级导数的和，OpenCV提供的`Laplacian()`函数，内部也是通过调用`Sobel()`来计算的，如下图二级导数图像和拉普拉斯公式。  
-+ 
++ 利用二级导数，像素强度变化剧烈的点即一阶导数极值点，其二级导数值接近0，拉普拉斯算子`Laplacian`计算水平方向和竖直方向上二级导数的和，OpenCV提供的`Laplacian()`函数，内部也是通过调用`Sobel()`来计算的，如下图二级导数图像和拉普拉斯公式。  
+![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220624144442.png)  
+![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220624144513.png)
+
++ `Canny`边缘检测，1986年由John F. Canny提出，被认为是最优的边缘检测算法，其具有三个主要的特点：较低的错误率、较好的边缘定位、较快的检测速度，其检测步骤如下：
+    1. 使用高斯平滑模糊图像
+    2. 计算图像亮度梯度图像，其过程与Sobel算子类似，分别计算x y方向上的梯度，再进行融合
+    3. 去掉不是很连续的像素点，认为其不属于边缘
+    4. 使用两个阈值，一大一小，其比例一般为2:1或者3:1，高于upper阈值认为其为边缘，低于lower阈值丢弃该像素点，介于upper与lower之间的像素点则看邻接像素点是否高于upper，是的话接受其为边缘
+
+#### 霍夫变换直线检测
