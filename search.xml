@@ -317,11 +317,18 @@
 </li>
 <li><p>利用特殊的卷积核计算水平梯度变化和垂直梯度变化，然后再融合两个梯度图像<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160526.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160536.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160543.png"> <img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220614160552.png"></p>
 </li>
-<li><p>利用二级导数，像素强度变化剧烈的点二级导数接近0，拉普拉斯算子<code>Laplacian</code>计算水平方向和竖直方向上二级导数的和，OpenCV提供的<code>Laplacian()</code>函数，内部也是通过调用<code>Sobel()</code>来计算的，如下图二级导数图像和拉普拉斯公式。  </p>
+<li><p>利用二级导数，像素强度变化剧烈的点即一阶导数极值点，其二级导数值接近0，拉普拉斯算子<code>Laplacian</code>计算水平方向和竖直方向上二级导数的和，OpenCV提供的<code>Laplacian()</code>函数，内部也是通过调用<code>Sobel()</code>来计算的，如下图二级导数图像和拉普拉斯公式。<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220624144442.png"><br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220624144513.png"></p>
 </li>
-<li></li>
+<li><p><code>Canny</code>边缘检测，1986年由John F. Canny提出，被认为是最优的边缘检测算法，其具有三个主要的特点：较低的错误率、较好的边缘定位、较快的检测速度，其检测步骤如下：</p>
+<ol>
+<li>使用高斯平滑模糊图像</li>
+<li>计算图像亮度梯度图像，其过程与Sobel算子类似，分别计算x y方向上的梯度，再进行融合</li>
+<li>去掉不是很连续的像素点，认为其不属于边缘</li>
+<li>使用两个阈值，一大一小，其比例一般为2:1或者3:1，高于upper阈值认为其为边缘，低于lower阈值丢弃该像素点，介于upper与lower之间的像素点则看邻接像素点是否高于upper，是的话接受其为边缘</li>
+</ol>
+</li>
 </ul>
-]]></content>
+<h4 id="霍夫变换直线检测"><a href="#霍夫变换直线检测" class="headerlink" title="霍夫变换直线检测"></a>霍夫变换直线检测</h4>]]></content>
       <categories>
         <category>OpenCV</category>
       </categories>
@@ -419,6 +426,33 @@
       <tags>
         <tag>PMON</tag>
         <tag>Loongson</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu编译QFtp并使用</title>
+    <url>/archives/1b5a9595.html</url>
+    <content><![CDATA[<h4 id="下载QFtp源码"><a href="#下载QFtp源码" class="headerlink" title="下载QFtp源码"></a>下载QFtp源码</h4><p><a href="https://github.com/qt/qtftp.git">QFtp源码</a><br><code>gti clone https://github.com/qt/qtftp.git</code></p>
+<h4 id="编译QFtp模块"><a href="#编译QFtp模块" class="headerlink" title="编译QFtp模块"></a>编译QFtp模块</h4><p>在QtCreator上编译出了点问题，只能在终端进行编译</p>
+<ul>
+<li>进入源码目录<code>cd src/qftp</code>，修改pro文件<code>qftp.pro</code>,修改如下<span id="more"></span>
+<figure class="highlight makefile"><table><tr><td class="code"><pre><span class="line">load(qt_build_config)</span><br><span class="line"></span><br><span class="line">TARGET = QtFtp</span><br><span class="line">CONFIG += static</span><br><span class="line">CONFIG -= shared</span><br><span class="line">QT = core network</span><br><span class="line"></span><br><span class="line">MODULE_PRI = ../../modules/qt_ftp.pri</span><br><span class="line">MODULE = ftp</span><br><span class="line"></span><br><span class="line">load(qt_module)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Input</span></span><br><span class="line">HEADERS += qftp.h qurlinfo.h</span><br><span class="line">SOURCES += qftp.cpp qurlinfo.cpp</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+修改<code>qurlinfo.cpp</code>中的<code>qurlinfo.h</code>路径，修改如下<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#include &quot;qurlinfo.h&quot;</span><br><span class="line"></span><br><span class="line">#include &quot;qurl.h&quot;</span><br><span class="line">#include &quot;qdir.h&quot;</span><br><span class="line">#include &lt;limits.h&gt;</span><br><span class="line"></span><br><span class="line">QT_BEGIN_NAMESPACE</span><br></pre></td></tr></table></figure></li>
+<li>在终端中进入源码目录<code>cd src/qftp</code>，运行<code>qmake</code>，之后会生成Makefile</li>
+<li><code>make</code>生成<code>libQt5Ftp.a</code>静态库，pri模块文件</li>
+<li><code>make install</code>将生成的库文件及QFtp头文件复制到Qt安装目录</li>
+<li>对于交叉编译环境下其他平台的编译也可按照上面的步骤，qmake需要替换交叉编译环境下对应的qmake</li>
+</ul>
+<h4 id="QFtp使用"><a href="#QFtp使用" class="headerlink" title="QFtp使用"></a>QFtp使用</h4><ul>
+<li>官方源码目录example文件夹下有一个例程，网上有大佬稍加修改上传到了GitHub，<a href="https://github.com/chuanstudyup/QFtpExample.git">QFtp例程</a>  </li>
+<li>下载这个例程，上述编译步骤没问题的话，直接编译运行即可<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220627150335.png"></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Linux</tag>
+        <tag>QFtp</tag>
       </tags>
   </entry>
 </search>
