@@ -328,7 +328,12 @@
 </ol>
 </li>
 </ul>
-<h4 id="霍夫变换直线检测"><a href="#霍夫变换直线检测" class="headerlink" title="霍夫变换直线检测"></a>霍夫变换直线检测</h4>]]></content>
+<h4 id="霍夫变换直线检测"><a href="#霍夫变换直线检测" class="headerlink" title="霍夫变换直线检测"></a>霍夫变换直线检测</h4><ul>
+<li>图像转化为灰度颜色，首先进行高斯模糊</li>
+<li>再进行边缘检测，使其变成了一个二值化包含边缘的图像</li>
+<li>经过该图像上像素点（x0, y0）的所有直线的方程可以表述为如下，霍夫变换检测每一个像素点的经过直线的条数，经过的直线条数到达一定阈值后可认为该</li>
+</ul>
+]]></content>
       <categories>
         <category>OpenCV</category>
       </categories>
@@ -453,6 +458,21 @@
       <tags>
         <tag>Linux</tag>
         <tag>QFtp</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>C/C++ 中宏定义中#和##的作用</title>
+    <url>/archives/57aaac13.html</url>
+    <content><![CDATA[<h4 id="宏定义中-的功能"><a href="#宏定义中-的功能" class="headerlink" title="宏定义中#的功能"></a>宏定义中#的功能</h4><p>C&#x2F;C++宏定义#中的功能是将其后面的宏参数进行字符串化操作，简单说就是在对它所引用的宏变量通过替换后在其左右各添加一个双引号。</p>
+<span id="more"></span>
+
+<h4 id="宏定义中-的功能-1"><a href="#宏定义中-的功能-1" class="headerlink" title="宏定义中##的功能"></a>宏定义中##的功能</h4><p>宏定义中##中的功能是在带参数的宏定义中将##前后的子串进行拼接。</p>
+<h4 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h4><figure class="highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;climits&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> STR(s) #s</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CONS(a, b) int(a##e##b)</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    cout &lt;&lt; <span class="built_in">STR</span>(hello) &lt;&lt; endl;</span><br><span class="line">    cout &lt;&lt; <span class="built_in">CONS</span>(<span class="number">2</span>, <span class="number">3</span>) &lt;&lt; endl;     <span class="comment">// CONS(2, 3) -&gt; 2e3 </span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 运行结果</span></span><br><span class="line">hello</span><br><span class="line"><span class="number">2000</span></span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>C/C++</category>
+      </categories>
+      <tags>
+        <tag>C/C++</tag>
       </tags>
   </entry>
 </search>
