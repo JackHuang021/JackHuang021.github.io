@@ -22,31 +22,28 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="下载QFtp源码QFtp源码gti clone https:&#x2F;&#x2F;github.com&#x2F;qt&#x2F;qtftp.git 编译QFtp模块在QtCreator上编译出了点问题，只能在终端进行编译  进入源码目录cd src&#x2F;qftp，修改pro文件qftp.pro,修改如下">
+    <meta name="description" content="malloc&#x2F;free和new&#x2F;delete  malloc&#x2F;free是C&#x2F;C++的标准库函数，new&#x2F;delete是C++的运算符 对于非内部数据类型的对象，光用malloc&#x2F;free无法满足动态对象的要求 对象在创建时需要自动执行构造函数，对象在消亡时需要自动运行析构函数，由于malloc&#x2F;free不是运算符，不在编译器控">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Ubuntu编译QFtp并使用">
-<meta property="og:url" content="https://jackhuang021.github.io/archives/1b5a9595.html">
+<meta property="og:title" content="C&#x2F;C++面试相关">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/b80e625e.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="下载QFtp源码QFtp源码gti clone https:&#x2F;&#x2F;github.com&#x2F;qt&#x2F;qtftp.git 编译QFtp模块在QtCreator上编译出了点问题，只能在终端进行编译  进入源码目录cd src&#x2F;qftp，修改pro文件qftp.pro,修改如下">
+<meta property="og:description" content="malloc&#x2F;free和new&#x2F;delete  malloc&#x2F;free是C&#x2F;C++的标准库函数，new&#x2F;delete是C++的运算符 对于非内部数据类型的对象，光用malloc&#x2F;free无法满足动态对象的要求 对象在创建时需要自动执行构造函数，对象在消亡时需要自动运行析构函数，由于malloc&#x2F;free不是运算符，不在编译器控">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220627150335.png">
-<meta property="article:published_time" content="2022-06-27T06:18:15.000Z">
-<meta property="article:modified_time" content="2022-06-27T07:04:15.886Z">
+<meta property="article:published_time" content="2022-07-04T01:26:33.000Z">
+<meta property="article:modified_time" content="2022-07-04T06:41:16.414Z">
 <meta property="article:author" content="Jack">
-<meta property="article:tag" content="Linux">
-<meta property="article:tag" content="QFtp">
+<meta property="article:tag" content="C&#x2F;C++">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220627150335.png">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/archives/1b5a9595.html">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/b80e625e.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/1b5a9595.html","path":"archives/1b5a9595.html","title":"Ubuntu编译QFtp并使用"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/b80e625e.html","path":"archives/b80e625e.html","title":"C/C++面试相关"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>Ubuntu编译QFtp并使用 | Jack's Home</title>
+<title>C/C++面试相关 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -137,7 +134,7 @@
 
   <aside class="sidebar">
 
-    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+    <div class="sidebar-inner sidebar-overview-active">
       <ul class="sidebar-nav">
         <li class="sidebar-nav-toc">
           文章目录
@@ -150,7 +147,6 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BDQFtp%E6%BA%90%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">下载QFtp源码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BC%96%E8%AF%91QFtp%E6%A8%A1%E5%9D%97"><span class="nav-number">2.</span> <span class="nav-text">编译QFtp模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#QFtp%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">QFtp使用</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -223,7 +219,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/1b5a9595.html">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/b80e625e.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/favicon-32x32.png">
@@ -236,12 +232,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="Ubuntu编译QFtp并使用 | Jack's Home">
+      <meta itemprop="name" content="C/C++面试相关 | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Ubuntu编译QFtp并使用
+          C/C++面试相关
         </h1>
 
         <div class="post-meta-container">
@@ -253,16 +249,7 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2022-06-27 14:18:15 / 修改时间：15:04:15" itemprop="dateCreated datePublished" datetime="2022-06-27T14:18:15+08:00">2022-06-27</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
-        </span>
+      <time title="创建时间：2022-07-04 09:26:33 / 修改时间：14:41:16" itemprop="dateCreated datePublished" datetime="2022-07-04T09:26:33+08:00">2022-07-04</time>
     </span>
 
   
@@ -279,14 +266,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>776</span>
+      <span>2.4k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -297,21 +284,135 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h4 id="下载QFtp源码"><a href="#下载QFtp源码" class="headerlink" title="下载QFtp源码"></a>下载QFtp源码</h4><p><a target="_blank" rel="noopener" href="https://github.com/qt/qtftp.git">QFtp源码</a><br><code>gti clone https://github.com/qt/qtftp.git</code></p>
-<h4 id="编译QFtp模块"><a href="#编译QFtp模块" class="headerlink" title="编译QFtp模块"></a>编译QFtp模块</h4><p>在QtCreator上编译出了点问题，只能在终端进行编译</p>
+        <ol>
+<li><p>malloc&#x2F;free和new&#x2F;delete</p>
 <ul>
-<li>进入源码目录<code>cd src/qftp</code>，修改pro文件<code>qftp.pro</code>,修改如下<span id="more"></span>
-<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">load(qt_build_config)</span><br><span class="line"></span><br><span class="line">TARGET = QtFtp</span><br><span class="line">CONFIG += static</span><br><span class="line">CONFIG -= shared</span><br><span class="line">QT = core network</span><br><span class="line"></span><br><span class="line">MODULE_PRI = ../../modules/qt_ftp.pri</span><br><span class="line">MODULE = ftp</span><br><span class="line"></span><br><span class="line">load(qt_module)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Input</span></span><br><span class="line">HEADERS += qftp.h qurlinfo.h</span><br><span class="line">SOURCES += qftp.cpp qurlinfo.cpp</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-修改<code>qurlinfo.cpp</code>中的<code>qurlinfo.h</code>路径，修改如下<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">#include &quot;qurlinfo.h&quot;</span><br><span class="line"></span><br><span class="line">#include &quot;qurl.h&quot;</span><br><span class="line">#include &quot;qdir.h&quot;</span><br><span class="line">#include &lt;limits.h&gt;</span><br><span class="line"></span><br><span class="line">QT_BEGIN_NAMESPACE</span><br></pre></td></tr></table></figure></li>
-<li>在终端中进入源码目录<code>cd src/qftp</code>，运行<code>qmake</code>，之后会生成Makefile</li>
-<li><code>make</code>生成<code>libQt5Ftp.a</code>静态库，pri模块文件</li>
-<li><code>make install</code>将生成的库文件及QFtp头文件复制到Qt安装目录</li>
-<li>对于交叉编译环境下其他平台的编译也可按照上面的步骤，qmake需要替换交叉编译环境下对应的qmake</li>
+<li>malloc&#x2F;free是C&#x2F;C++的标准库函数，new&#x2F;delete是C++的运算符</li>
+<li>对于非内部数据类型的对象，光用malloc&#x2F;free无法满足动态对象的要求</li>
+<li>对象在创建时需要自动执行构造函数，对象在消亡时需要自动运行析构函数，由于malloc&#x2F;free不是运算符，不在编译器控制权限内，不能将构造函数和析构函数的任务强加于malloc&#x2F;free上，因此C++需要一个能完成动态内存分配及初始化工作的运算符new，和一个能够即时完成清理和释放内存的运算符delete</li>
 </ul>
-<h4 id="QFtp使用"><a href="#QFtp使用" class="headerlink" title="QFtp使用"></a>QFtp使用</h4><ul>
-<li>官方源码目录example文件夹下有一个例程，网上有大佬稍加修改上传到了GitHub，<a target="_blank" rel="noopener" href="https://github.com/chuanstudyup/QFtpExample.git">QFtp例程</a>  </li>
-<li>下载这个例程，上述编译步骤没问题的话，直接编译运行即可<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220627150335.png"></li>
+</li>
+<li><p>malloc和new内存申请失败，怎么处理内存耗尽</p>
+<ul>
+<li>判断指针是否为null，如果是则直接报错，return终止运行该函数</li>
 </ul>
+</li>
+<li><p>C++不是类型安全的，两个类型的指针之间可以强制类型转换（用reinterpret cast）</p>
+</li>
+<li><p>const符号常量的区别：</p>
+<ul>
+<li><code>const char *p</code>：p是指向const char的指针，p可以改变指向，但是p指向的值不能变</li>
+<li><code>char* const p</code>：p是一个常指针，这个指针是指向char的const指针，指向不能改变</li>
+</ul>
+</li>
+<li><p>用C++写一段程序，判断一个系统是16位还是32位：</p>
+<ul>
+<li>定义一个指针p，打印sizeof(p)，结果为2表示是16位操作系统，结果为4，表示为32位操作系统</li>
+<li>定义一个int变量a，赋初值~0，判断a大于65536则为32位操作系统</li>
+</ul>
+</li>
+<li><p>内存的分配方式有几种</p>
+<ul>
+<li>从静态存储区分配，内存在程序编译时就已经分配好，这块内存在程序整个运行周期都存在</li>
+<li>从栈上创建，在执行函数时，函数内局部变量的存储单元都可以在栈上创建，在函数执行结束时这些存储单元自动释放</li>
+<li>从堆上分配，也称动态内存分配，程序在运行的时候用malloc&#x2F;new申请任意多的内存，用free&#x2F;delete释放内存，动态内存的生存期由我们决定，使用灵活</li>
+</ul>
+</li>
+<li><p>全局变量和局部变量的区别</p>
+<ul>
+<li>生存周期不同：</li>
+<li>使用方式不同：</li>
+</ul>
+</li>
+<li><p>堆和栈的区别</p>
+</li>
+<li><p>C++中explict的含义，protected的含义</p>
+<ul>
+<li>explict关键字用来修饰类的构造函数，表明该构造函数是显示的，要求类的使用者必须显示调用类的构造函数，反之默认类型转换可能会造成无法预期的问题</li>
+<li>protected控制的是一个函数对一个类成员的访问权限，只有该类的成员函数及派生类的成员函数可以访问</li>
+</ul>
+</li>
+<li><p>const关键词的作用：</p>
+<ul>
+<li>欲阻止一个变量被改变，可以使用const关键词，定义const变量时对其进行初始化</li>
+<li>对指针来说，可以指定指针本身为const，也可以指定指针指向的数据为const，或者两者同时指定为const</li>
+<li>在一个函数声明中，const可以修饰形参，表明它是一个输入参数，在函数内部不能修改其值</li>
+<li>对于类的成员函数，若指定其为const类型，则表明其是一个常函数，不能修改类的成员变量</li>
+<li>对于类的成员函数，有时指定其返回值为const类型，使其返回值不为左值</li>
+</ul>
+</li>
+<li><p>是不是一个父类写了一个virtual函数，如果子类覆盖它的函数不加virtual，也能实现多态？</p>
+<ul>
+<li>virtual修饰符会被隐形继承，virtual可加可不加，子类空间有父类的所有变量（static除外）同一个函数只能存在一个实体（inline除外），子类覆盖它的函数不加virtual也能实现多态</li>
+</ul>
+</li>
+<li><p>面向对象的三个基本特性</p>
+<ul>
+<li>封装：将客观事物抽象成类，每个类对自身的数据和方法实行权限管理</li>
+<li>继承：实现继承，指直接使用基类的属性和方法而无需额外编程；接口继承：仅使用属性和方法，实现滞后到子类实现</li>
+<li>多态：是将父对象设置成为一个或更多的与他子对象相等的技术，赋值之后，父对象就可以根据当前赋值给他的子对象的特性以不同的方式运作。简单的说，就是一句话：允许将子类类型的指针赋值给父类类型的指针。</li>
+</ul>
+</li>
+<li><p>重载（overload），重写（override）,重定义（redefinition）的区别</p>
+<ul>
+<li>重载：同一名字空间，指允许存在多个同名函数，而这些函数的参数表不同</li>
+<li>重写：不同名字空间，用于继承，子类重新定义父类虚函数的方法</li>
+<li>重定义：不同名字空间</li>
+</ul>
+</li>
+<li><p>多态的作用</p>
+<ul>
+<li>隐藏实现细节，使得代码能够模块化，扩展代码模块，实现代码重用</li>
+<li>接口重用：为了类在继承和派生的时候，保证家族中任一类的实例的某一属性正确调用</li>
+</ul>
+</li>
+<li><p>内联函数在编译时要做参数类型检查，这是内联函数跟宏相比的优势</p>
+</li>
+<li><p>析构函数和虚函数的用法和作用</p>
+<ul>
+<li>析构函数是特殊的类成员函数，他没有返回值，没有参数，不能随意调用，也没有重载，只有在类对象生命周期结束时，由系统自动调用，有释放内存空间的作用</li>
+<li>虚函数是C++多态的一种表现，使用虚函数，我们可以进行灵活的进行动态绑定</li>
+</ul>
+</li>
+<li><p>C++中struct和class的区别</p>
+</li>
+<li><p>C++中模板的认识：模板使程序员能够快速建立具有类型安全的类库集合和函数集合，方便大规模软件的开发</p>
+</li>
+<li><p>C++中为什么使用模板类</p>
+<ul>
+<li>可以创建动态增长和减小的模板类</li>
+<li>它是类型无关的，因此具有很高的可复用性</li>
+<li>它在编译时而不是运行时检查数据类型，保证了类型安全</li>
+<li>它是平台无光的，方便移植</li>
+<li>可用于基本数据类型</li>
+</ul>
+</li>
+<li><p>在类中如何使用const</p>
+<ul>
+<li>当我们希望某些常量只有在类中有效，使用const修饰数据成员来实现</li>
+<li>const数据成员的初始化只能在类构造函数的初始化表中进行</li>
+</ul>
+</li>
+<li><p>不能被重载的运算符</p>
+<ul>
+<li>C++内部数据类型的运算符</li>
+<li>不能重载’.’，因为’.’在类中对任何成员都有意义，已经成为标准用法</li>
+<li>对已经存在的运算符进行重载时，不能改变优先级规则</li>
+</ul>
+</li>
+<li><p>基类的析构函数不是虚函数，会带来什么问题？</p>
+<ul>
+<li>派生类的析构函数用不上，会造成资源的泄露</li>
+</ul>
+</li>
+<li><p>如何使用return语句</p>
+<ul>
+<li>return语句不可返回指向栈内存的指针或者引用，因为该内存在函数结束时被自动销毁</li>
+<li>要搞清楚返回的究竟是值、指针还是引用</li>
+<li>如果函数返回值是一个对象，要考虑return语句的效率</li>
+</ul>
+</li>
+</ol>
 
     </div>
 
@@ -329,7 +430,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/1b5a9595.html" title="Ubuntu编译QFtp并使用">https://jackhuang021.github.io/archives/1b5a9595.html</a>
+      <a href="https://jackhuang021.github.io/archives/b80e625e.html" title="C&#x2F;C++面试相关">https://jackhuang021.github.io/archives/b80e625e.html</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -338,22 +439,18 @@
 </div>
 
           <div class="post-tags">
-              <a href="/tags/Linux/" rel="tag"># Linux</a>
-              <a href="/tags/QFtp/" rel="tag"># QFtp</a>
+              <a href="/tags/C-C/" rel="tag"># C/C++</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/67263a86.html" rel="prev" title="龙芯2K1000内核源码编译">
-                  <i class="fa fa-chevron-left"></i> 龙芯2K1000内核源码编译
+                <a href="/archives/57aaac13.html" rel="prev" title="C/C++ 中宏定义中#和##的作用">
+                  <i class="fa fa-chevron-left"></i> C/C++ 中宏定义中#和##的作用
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/57aaac13.html" rel="next" title="C/C++ 中宏定义中#和##的作用">
-                  C/C++ 中宏定义中#和##的作用 <i class="fa fa-chevron-right"></i>
-                </a>
             </div>
           </div>
     </footer>
