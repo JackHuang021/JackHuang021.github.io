@@ -219,7 +219,7 @@ footer:
   copyright:
 
   # Powered by Hexo & NexT
-  powered: 
+  powered:
     enable: false
     version: true
 
