@@ -30,7 +30,7 @@
 <meta property="og:description" content="Platform平台驱动模型 由于某些外设是没有总线这个概念的，但是又要使用总线、驱动和设备模型的话，就需要使用platform这个虚拟总线，相应的就有platform_device和platform_driver">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-10-19T07:44:40.183Z">
-<meta property="article:modified_time" content="2022-10-21T09:38:02.953Z">
+<meta property="article:modified_time" content="2022-10-24T01:48:37.803Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="Linux">
 <meta property="article:tag" content="Platform">
@@ -149,7 +149,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E5%B9%B3%E5%8F%B0%E9%A9%B1%E5%8A%A8%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">Platform平台驱动模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E6%80%BB%E7%BA%BF"><span class="nav-number">2.</span> <span class="nav-text">Platform总线</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E9%A9%B1%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">Platform驱动</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E8%AE%BE%E5%A4%87"><span class="nav-number">4.</span> <span class="nav-text">Platform设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E9%A9%B1%E5%8A%A8%E5%8C%B9%E9%85%8D%E8%BF%87%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">Platform驱动匹配过程</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E5%B9%B3%E5%8F%B0%E9%A9%B1%E5%8A%A8%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">Platform平台驱动模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E6%80%BB%E7%BA%BF"><span class="nav-number">2.</span> <span class="nav-text">Platform总线</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E6%80%BB%E7%BA%BF%E5%88%9D%E5%A7%8B%E5%8C%96%E8%BF%87%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">Platform总线初始化过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E9%A9%B1%E5%8A%A8"><span class="nav-number">4.</span> <span class="nav-text">Platform驱动</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E8%AE%BE%E5%A4%87"><span class="nav-number">5.</span> <span class="nav-text">Platform设备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Platform%E9%A9%B1%E5%8A%A8%E5%8C%B9%E9%85%8D%E8%BF%87%E7%A8%8B"><span class="nav-number">6.</span> <span class="nav-text">Platform驱动匹配过程</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -164,18 +164,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-count">17</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-count">22</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -258,7 +258,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-10-21 17:38:02" itemprop="dateModified" datetime="2022-10-21T17:38:02+08:00">2022-10-21</time>
+      <time title="修改时间：2022-10-24 09:48:37" itemprop="dateModified" datetime="2022-10-24T09:48:37+08:00">2022-10-24</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -284,14 +284,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>9.1k</span>
+      <span>10k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>8 分钟</span>
+      <span>9 分钟</span>
     </span>
 </div>
 
@@ -322,6 +322,13 @@
 <li>ACPI匹配方式</li>
 <li>id_table匹配，每个platform_driver结构体有一个id_table成员变量，保留了很多id信息，这些id信息存放着这个驱动所支持的设备信息，该id_table会与platform_device中的name成员相比较</li>
 <li>如果id_table不存在的话就直接比较驱动和设备的name字段，看看是否相等</li>
+</ul>
+</li>
+</ul>
+<h4 id="Platform总线初始化过程"><a href="#Platform总线初始化过程" class="headerlink" title="Platform总线初始化过程"></a>Platform总线初始化过程</h4><ul>
+<li>内核在初始化过程中调用<em>platform_bus_init()<em>来初始化Platform总线，调用流程如下<br><code>kernel_init_freeable() -&gt; do_basic_setup() -&gt; driver_init() -&gt; platform_bus_init()</code><br>其中</em>platform_bus_init()<em>函数定义在</em>driver&#x2F;base&#x2F;platform.c</em>中，内容如下：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __init <span class="title">platform_bus_init</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> error;</span><br><span class="line"></span><br><span class="line">    early_platform_cleanup();</span><br><span class="line"></span><br><span class="line">    error = device_register(&amp;platform_bus);</span><br><span class="line">    <span class="keyword">if</span> (error) &#123;</span><br><span class="line">        put_device(&amp;platform_bus);</span><br><span class="line">        <span class="keyword">return</span> error;</span><br><span class="line">    &#125;</span><br><span class="line">    error =  bus_register(&amp;platform_bus_type);</span><br><span class="line">    <span class="keyword">if</span> (error)</span><br><span class="line">        device_unregister(&amp;platform_bus);</span><br><span class="line">    of_platform_register_reconfig_notifier();</span><br><span class="line">    <span class="keyword">return</span> error;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>先清空总线<em>early_platform_device_list</em>上的所有节点，<em>early_platform_device_list</em>定义如下<br>  <code>static __initdata LIST_HEAD(early_platform_device_list);</code><br>  其中<em>LIST_HEAD</em>是一个宏定义，定义在<em>include&#x2F;linux&#x2F;list.h</em>中，内容如下：<br>  <code>#define LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)</code><br>  展开即为<br>  <code>static struct list head early_platform_device_list = LIST_HEAD_INIT(early_platform_device_list)</code><br>  其中<em>list_head</em>结构体的定义如下：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">    </span><br><span class="line"></span><br><span class="line">    ```  </span><br><span class="line"></span><br><span class="line">其中*LIST_HEAD_INIT()*是一个函数，其定义如下  </span><br><span class="line">    ```<span class="function">c</span></span><br><span class="line"><span class="function">    <span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">INIT_LIST_HEAD</span><span class="params">(struct list_head *<span class="built_in">list</span>)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        WRITE_ONCE(<span class="built_in">list</span>-&gt;next, <span class="built_in">list</span>);</span><br><span class="line">        <span class="built_in">list</span>-&gt;prev = <span class="built_in">list</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></li>
 </ul>
 </li>
 </ul>
@@ -362,7 +369,7 @@
 </li>
 <li><p>继续来看<em>driver_register(&amp;drv-&gt;driver)<em>，该函数位于</em>driver&#x2F;base&#x2F;driver.c</em>中，其内容如下</p>
   <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">driver_register</span><span class="params">(struct device_driver *drv)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">device_driver</span> *<span class="title">other</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!drv-&gt;bus-&gt;p) &#123;</span><br><span class="line">        pr_err(<span class="string">&quot;Driver &#x27;%s&#x27; was unable to register with bus_type &#x27;%s&#x27; because the bus was not initialized.\n&quot;</span>,</span><br><span class="line">            drv-&gt;name, drv-&gt;bus-&gt;name);</span><br><span class="line">        <span class="keyword">return</span> -EINVAL;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> ((drv-&gt;bus-&gt;probe &amp;&amp; drv-&gt;probe) ||</span><br><span class="line">        (drv-&gt;bus-&gt;remove &amp;&amp; drv-&gt;remove) ||</span><br><span class="line">        (drv-&gt;bus-&gt;shutdown &amp;&amp; drv-&gt;shutdown))</span><br><span class="line">        printk(KERN_WARNING <span class="string">&quot;Driver &#x27;%s&#x27; needs updating - please use &quot;</span></span><br><span class="line">            <span class="string">&quot;bus_type methods\n&quot;</span>, drv-&gt;name);</span><br><span class="line"></span><br><span class="line">    other = driver_find(drv-&gt;name, drv-&gt;bus);</span><br><span class="line">    <span class="keyword">if</span> (other) &#123;</span><br><span class="line">        printk(KERN_ERR <span class="string">&quot;Error: Driver &#x27;%s&#x27; is already registered, &quot;</span></span><br><span class="line">            <span class="string">&quot;aborting...\n&quot;</span>, drv-&gt;name);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ret = bus_add_driver(drv);</span><br><span class="line">    <span class="keyword">if</span> (ret)</span><br><span class="line">        <span class="keyword">return</span> ret;</span><br><span class="line">    ret = driver_add_groups(drv, drv-&gt;groups);</span><br><span class="line">    <span class="keyword">if</span> (ret) &#123;</span><br><span class="line">        bus_remove_driver(drv);</span><br><span class="line">        <span class="keyword">return</span> ret;</span><br><span class="line">    &#125;</span><br><span class="line">    kobject_uevent(&amp;drv-&gt;p-&gt;kobj, KOBJ_ADD);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  <em>driver_register()<em>中调用了</em>bus_add_driver(drv)<em>，该函数位于</em>driver&#x2F;base&#x2F;bus.c</em>中，其内容如下：</p>
+<p>  <em>driver_register()<em>中调用了</em>bus_add_driver(drv)<em>，该函数位于</em>driver&#x2F;base&#x2F;bus.c</em>中，在*bus_add_driver()<em>中又调用了</em>driver_attach(drv)*，继续进入</p>
 </li>
 </ul>
 
@@ -438,7 +445,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">34 分钟</span>
+    <span title="站点阅读时长">37 分钟</span>
   </span>
 </div>
 <div class="busuanzi-count">
