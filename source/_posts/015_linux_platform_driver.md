@@ -100,6 +100,49 @@ abbrlink: f8def83d
     + id_table匹配，每个platform_driver结构体有一个id_table成员变量，保留了很多id信息，这些id信息存放着这个驱动所支持的设备信息，该id_table会与platform_device中的name成员相比较
     + 如果id_table不存在的话就直接比较驱动和设备的name字段，看看是否相等
 
+#### Platform总线初始化过程
++ 内核在初始化过程中调用*platform_bus_init()*来初始化Platform总线，调用流程如下  
+`kernel_init_freeable() -> do_basic_setup() -> driver_init() -> platform_bus_init()`  
+其中*platform_bus_init()*函数定义在*driver/base/platform.c*中，内容如下：
+    ```c
+    int __init platform_bus_init(void)
+    {
+        int error;
+
+        early_platform_cleanup();
+
+        error = device_register(&platform_bus);
+        if (error) {
+            put_device(&platform_bus);
+            return error;
+        }
+        error =  bus_register(&platform_bus_type);
+        if (error)
+            device_unregister(&platform_bus);
+        of_platform_register_reconfig_notifier();
+        return error;
+    }
+    ```
+    + 先清空总线*early_platform_device_list*上的所有节点，*early_platform_device_list*定义如下  
+    `static __initdata LIST_HEAD(early_platform_device_list);`  
+    其中*LIST_HEAD*是一个宏定义，定义在*include/linux/list.h*中，内容如下：  
+    `#define LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)`  
+    展开即为  
+    `static struct list head early_platform_device_list = LIST_HEAD_INIT(early_platform_device_list)`  
+    其中*list_head*结构体的定义如下：
+        ```c
+        
+
+        ```  
+
+    其中*LIST_HEAD_INIT()*是一个函数，其定义如下  
+        ```c
+        static inline void INIT_LIST_HEAD(struct list_head *list)
+        {
+            WRITE_ONCE(list->next, list);
+            list->prev = list;
+        }
+        ```
 
 #### Platform驱动
 + *platform_driver*结构体表示platform驱动，定义在*include/linux/platform.h*里面
@@ -278,7 +321,7 @@ abbrlink: f8def83d
         return ret;
     }
     ```
-    *driver_register()*中调用了*bus_add_driver(drv)*，该函数位于*driver/base/bus.c*中，其内容如下：
+    *driver_register()*中调用了*bus_add_driver(drv)*，该函数位于*driver/base/bus.c*中，在*bus_add_driver()*中又调用了*driver_attach(drv)*，继续进入
 
 
 
