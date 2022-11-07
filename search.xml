@@ -17,7 +17,7 @@
 <h3 id="安装最新版本node"><a href="#安装最新版本node" class="headerlink" title="安装最新版本node"></a>安装最新版本node</h3><p>安装过程中可能会因为网络问题失败，可以尝试挂梯子,安装完成后更新自带npm</p>
 <figure class="highlight crmsh"><table><tr><td class="code"><pre><span class="line">nvm install <span class="keyword">node</span></span><br><span class="line"><span class="title">npm</span> install npm -g</span><br></pre></td></tr></table></figure>
 
-<h3 id="安装Hexo"><a href="#安装Hexo" class="headerlink" title="安装Hexo"></a>安装Hexo</h3><p>安装过程中可能会因为网路问题失败，可以多重试几次或挂梯子</p>
+<h3 id="安装Hexo"><a href="#安装Hexo" class="headerlink" title="安装Hexo"></a>安装Hexo</h3><p>安装过程中可能会因为网络问题失败，可以多重试几次或挂梯子</p>
 <figure class="highlight avrasm"><table><tr><td class="code"><pre><span class="line">npm install -g hexo-<span class="keyword">cli</span></span><br></pre></td></tr></table></figure>
 
 <h3 id="安装Next主题"><a href="#安装Next主题" class="headerlink" title="安装Next主题"></a>安装Next主题</h3><p>Next主题是Hexo比较知名的第三方主题，极简风格，有相当多的使用者，维护也做得比较好<br>不过Next新旧版本的仓库地址不一样，目前最新的GitHub地址<a href="https://github.com/next-theme/hexo-theme-next.git">hexo-theme-next</a><br>Next主题安装比较简单，直接从仓库clone然后修改Hexo配置文件</p>
@@ -226,34 +226,6 @@
       </tags>
   </entry>
   <entry>
-    <title>HI3559AV100调试记录</title>
-    <url>/archives/7803046f.html</url>
-    <content><![CDATA[<h4 id="内核编译与烧写"><a href="#内核编译与烧写" class="headerlink" title="内核编译与烧写"></a>内核编译与烧写</h4><ul>
-<li>内核版本4.9.37，Linux内核源码如下<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png"><span id="more"></span></li>
-<li>编译<code>make ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- uImage -j12</code>，编译完成结果如下，编译完成后会在arch&#x2F;arm64&#x2F;boot&#x2F;生成UImage<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101926.png"></li>
-<li>arm-trusted-firmware目录中运行mk.sh生成fip.bin<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png"></li>
-<li>主机搭建tftp服务器，将fip.bin拷贝到共享目录</li>
-<li>进入uboot，配置ethact ipaddr serverip环境变量<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png"></li>
-<li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
-<li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
-</ul>
-<h4 id="驱动调试"><a href="#驱动调试" class="headerlink" title="驱动调试"></a>驱动调试</h4><ul>
-<li>参照正点原子教程搭建驱动调试环境，配置的<em>Makefile</em>内容如下  <figure class="highlight makefile"><table><tr><td class="code"><pre><span class="line">KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core</span><br><span class="line">CURRENT_PATH = <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">obj-m := gpio-pca953x.o</span><br><span class="line"></span><br><span class="line"><span class="section">build: kernel_modules</span></span><br><span class="line"></span><br><span class="line"><span class="section">kernel_modules: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">clean: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> clean</span><br></pre></td></tr></table></figure></li>
-<li><em>KERNEL_DIR</em>表示Linux内核源码目录，使用绝对路径</li>
-<li><em>CURRENT_PATH</em>表示当前路径，直接使用<em>pwd</em>来获取当前路径</li>
-<li><em>obj-m</em>表示将这个c文件编译为ko模块</li>
-<li><em>modules</em>表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， <em>M</em>表示模块源码目录</li>
-<li><em>make modules</em>命令中加入 M&#x3D;dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Linux</category>
-      </categories>
-      <tags>
-        <tag>Hi3559AV100 Linux</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>OpenCV 图像处理基本操作</title>
     <url>/archives/6465c2cc.html</url>
     <content><![CDATA[<h4 id="基于Mat类的图像操作"><a href="#基于Mat类的图像操作" class="headerlink" title="基于Mat类的图像操作"></a>基于Mat类的图像操作</h4><p><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220608085010.png"></p>
@@ -339,6 +311,34 @@
       </categories>
       <tags>
         <tag>OpenCV Core</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HI3559AV100调试记录</title>
+    <url>/archives/7803046f.html</url>
+    <content><![CDATA[<h4 id="内核编译与烧写"><a href="#内核编译与烧写" class="headerlink" title="内核编译与烧写"></a>内核编译与烧写</h4><ul>
+<li>内核版本4.9.37，Linux内核源码如下<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png"><span id="more"></span></li>
+<li>编译<code>make ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- uImage -j12</code>，编译完成结果如下，编译完成后会在arch&#x2F;arm64&#x2F;boot&#x2F;生成UImage<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101926.png"></li>
+<li>arm-trusted-firmware目录中运行mk.sh生成fip.bin<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png"></li>
+<li>主机搭建tftp服务器，将fip.bin拷贝到共享目录</li>
+<li>进入uboot，配置ethact ipaddr serverip环境变量<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png"></li>
+<li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
+<li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="驱动调试"><a href="#驱动调试" class="headerlink" title="驱动调试"></a>驱动调试</h4><ul>
+<li>参照正点原子教程搭建驱动调试环境，配置的<em>Makefile</em>内容如下  <figure class="highlight makefile"><table><tr><td class="code"><pre><span class="line">KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core</span><br><span class="line">CURRENT_PATH = <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">obj-m := gpio-pca953x.o</span><br><span class="line"></span><br><span class="line"><span class="section">build: kernel_modules</span></span><br><span class="line"></span><br><span class="line"><span class="section">kernel_modules: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">clean: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> clean</span><br></pre></td></tr></table></figure></li>
+<li><em>KERNEL_DIR</em>表示Linux内核源码目录，使用绝对路径</li>
+<li><em>CURRENT_PATH</em>表示当前路径，直接使用<em>pwd</em>来获取当前路径</li>
+<li><em>obj-m</em>表示将这个c文件编译为ko模块</li>
+<li><em>modules</em>表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， <em>M</em>表示模块源码目录</li>
+<li><em>make modules</em>命令中加入 M&#x3D;dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Hi3559AV100 Linux</tag>
       </tags>
   </entry>
   <entry>
@@ -468,7 +468,9 @@
     <title>Linux内核链表结构</title>
     <url>/archives/4896cd7d.html</url>
     <content><![CDATA[<ul>
-<li>Linux内核中，对于数据管理，提供了2种类型的双向链表，一种是使用list_head结构体构成的双向环形链表。</li>
+<li><p>Linux内核中，对于数据管理，提供了2种类型的双向链表，一种是使用list_head结构体构成的双向环形链表。</p>
+<p>  <img src="https://raw.githubusercontent.com/JackHuang021/images/master/20221103103152.png"></p>
+</li>
 </ul>
 <span id="more"></span>
 <h4 id="list-head链表"><a href="#list-head链表" class="headerlink" title="list_head链表"></a>list_head链表</h4><ul>
@@ -476,8 +478,12 @@
   <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> *<span class="title">next</span>, *<span class="title">prev</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 <p>  <em>list_head</em>组成的双向链表，仅包含两个成员，<em>next</em>和<em>prev</em>指针，分别指向下一个和前一个<em>list_head</em></p>
 </li>
-<li><p><em>list_head</em>的简单应用</p>
-  <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">my_list</span> &#123;</span></span><br><span class="line">    <span class="keyword">void</span> *item;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list1</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list2</span>;</span> </span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<li><p><code>list_head</code>不是单独使用的，一般用来嵌入到其他结构体中，知道<code>list_head</code>指针时就可以通过<code>include/linux/list.h</code>中提供的<code>list_entry</code>宏来获取它父结构的地址，其中调用了<code>container_of</code>宏，该宏定义在<code>include/linux/kernel</code></p>
+  <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* list_head 使用示例 */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">my_list</span> &#123;</span></span><br><span class="line">    <span class="keyword">void</span> *item;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list1</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list2</span>;</span> </span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* list_entry */</span></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* list_entry - get the struct for this entry</span></span><br><span class="line"><span class="comment">* @ptr:	the &amp;struct list_head pointer.</span></span><br><span class="line"><span class="comment">* @type:	the type of the struct this is embedded in.</span></span><br><span class="line"><span class="comment">* @member:	the name of the list_head within the struct.</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> list_entry(ptr, type, member) \</span></span><br><span class="line"><span class="meta">    container_of(ptr, type, member)</span></span><br><span class="line">	</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* container_of - cast a member of a structure out to the containing structure</span></span><br><span class="line"><span class="comment">* @ptr:	the pointer to the member.</span></span><br><span class="line"><span class="comment">* @type:	the type of the container struct this is embedded in.</span></span><br><span class="line"><span class="comment">* @member:	the name of the member within the struct.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> container_of(ptr, type, member) (&#123; \</span></span><br><span class="line"><span class="meta">    void *__mptr = (void *)(ptr); \</span></span><br><span class="line"><span class="meta">    ((type *)(__mptr - offsetof(type, member))); &#125;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* offsetof */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> offsetof(TYPE, MEMBER) ((size_t) &amp;((TYPE *)0)-&gt;MEMBER)</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>offsetof</code>获取结构体成员在结构体中地址的偏移量</li>
+<li><code>container_of</code>的作用是通过结构体的成员地址获取结构体变量的地址<br>  container_of一共需要传入三个参数，<code>ptr</code>指针地址，<code>type</code>结构体类型，<code>member</code>结构体成员名称，具体的做法就是通过成员的指针地址，减去成员在结构体中偏移的地址</li>
+</ul>
 </li>
 <li><p><em>list_head</em>初始化分为静态初始化和动态初始化</p>
 <ul>
@@ -485,7 +491,7 @@
   <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> LIST_HEAD_INIT(name) &#123; &amp;(name), &amp;(name) &#125;</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 例如 */</span></span><br><span class="line">LIST_HEAD(my_list);</span><br><span class="line"><span class="comment">/* 展开即为 */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mylist</span> =</span> &#123; &amp;(mylist), &amp;(mylist) &#125;;</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>动态初始化</p>
-  <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> LIST_HEAD_INIT(name) &#123; &amp;(name), &amp;(name) &#125;</span></span><br><span class="line"><span class="comment">/* 或者 */</span></span><br><span class="line"><span class="function">struct <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">INIT_LIST_HEAD</span><span class="params">(struct list_head *<span class="built_in">list</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">list</span>-&gt;next = <span class="built_in">list</span></span><br><span class="line">    <span class="built_in">list</span>-&gt;prev = <span class="built_in">list</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/* 例如 */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mylist</span> =</span> LIST_HEAD_INIT(mylist);</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mylist2</span>;</span></span><br><span class="line">INIT_LIST_HEAD(&amp;mylist2);</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> LIST_HEAD_INIT(name) &#123; &amp;(name), &amp;(name) &#125;</span></span><br><span class="line"><span class="comment">/* 或者 */</span></span><br><span class="line"><span class="function">struct <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">INIT_LIST_HEAD</span><span class="params">(struct list_head *<span class="built_in">list</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123; </span><br><span class="line">    <span class="built_in">list</span>-&gt;next = <span class="built_in">list</span></span><br><span class="line">    <span class="built_in">list</span>-&gt;prev = <span class="built_in">list</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/* 例如 */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mylist</span> =</span> LIST_HEAD_INIT(mylist);</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mylist2</span>;</span></span><br><span class="line">INIT_LIST_HEAD(&amp;mylist2);</span><br></pre></td></tr></table></figure></li>
 </ul>
 </li>
 <li><p>插入节点</p>
@@ -648,6 +654,60 @@
       <tags>
         <tag>Linux</tag>
         <tag>ASoC</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>phytium E2000搭建aarch64虚拟机</title>
+    <url>/archives/4ed0329a.html</url>
+    <content><![CDATA[<blockquote>
+<p>最近需要在E2000平台上测试虚拟化功能，需要搭建一个arm64虚拟机用于测试，记录一下搭建过程</p>
+</blockquote>
+<h3 id="系统环境"><a href="#系统环境" class="headerlink" title="系统环境"></a>系统环境</h3><ul>
+<li>E2000Q CPU，Linux内核版本4.19.246，Ubuntu 20.04</li>
+<li>清华软件源</li>
+<li>交叉编译工具，<code>gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu</code><span id="more"></span></li>
+</ul>
+<h3 id="qemu安装"><a href="#qemu安装" class="headerlink" title="qemu安装"></a>qemu安装</h3><ul>
+<li>安装qemu，<code>apt-get install qemu-system-arm</code></li>
+<li>安装aarch64 uefi固件，<code>apt-get install qemu-efi-aarch64</code></li>
+</ul>
+<h3 id="根文件系统制作"><a href="#根文件系统制作" class="headerlink" title="根文件系统制作"></a>根文件系统制作</h3><ul>
+<li><p>下载BusyBox源码，<a href="https://busybox.net/downloads/">官网下载地址</a>，这里下载<code>1.33.1</code>版本</p>
+</li>
+<li><p>解压源码，进入源码目录，进行编译</p>
+  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">tar -xvf busybox-1.33.1.tar.bz2</span><br><span class="line"><span class="built_in">cd</span> busybox-1.33.1</span><br><span class="line"><span class="built_in">export</span> ARCH=arm64</span><br><span class="line"><span class="built_in">export</span> CROSS_COMPILE=aarch64-linux-gnu-</span><br><span class="line">make menuconfig</span><br></pre></td></tr></table></figure>
+<p>  选择静态编译<br>  <img src="https://raw.githubusercontent.com/JackHuang021/images/master/20221107093137.png"></p>
+  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">make -j12</span><br><span class="line">make install</span><br></pre></td></tr></table></figure>
+<p>  编译完成后，源码目录<code>_install</code>下会生成根文件系统</p>
+</li>
+<li><p>完善根文件系统</p>
+<ul>
+<li>创建其他目录<code>mkdir dev etc lib</code></li>
+<li>创建<code>/etc/profile</code>文件  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/sh</span></span><br><span class="line"><span class="built_in">export</span> HOSTNAME=linux</span><br><span class="line"><span class="built_in">export</span> USER=root</span><br><span class="line"><span class="built_in">export</span> HOME=/home</span><br><span class="line"><span class="built_in">export</span> PS1=<span class="string">&quot;[<span class="variable">$USER</span>@<span class="variable">$HOSTNAME</span> \W]\# &quot;</span></span><br><span class="line">PATH=/bin:/sbin:/usr/bin:/usr/sbin</span><br><span class="line">LD_LIBRARY_PATH=/lib:/usr/lib:<span class="variable">$LD_LIBRARY_PATH</span></span><br><span class="line"><span class="built_in">export</span> PATH LD_LIBRARY_PATH</span><br></pre></td></tr></table></figure></li>
+<li>创建<code>/etc/inittab</code>文件  <figure class="highlight asciidoc"><table><tr><td class="code"><pre><span class="line"><span class="meta">::sysinit:/etc/init.d/rcS</span></span><br><span class="line"><span class="meta">::respawn:-/bin/sh</span></span><br><span class="line"><span class="meta">::askfirst:-/bin/sh</span></span><br><span class="line"><span class="meta">::ctrlaltdel:/bin/umount</span> -a -r</span><br></pre></td></tr></table></figure></li>
+<li>创建<code>/etc/init.d/rcS</code>文件  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mkdir -p /sys</span><br><span class="line">mkdir -p /tmp</span><br><span class="line">mkdir -p /proc</span><br><span class="line">mkdir -p /mnt</span><br><span class="line">/bin/mount -a</span><br><span class="line">mkdir -p /dev/pts</span><br><span class="line">mount -t devpts devpts /dev/pts</span><br><span class="line"><span class="built_in">echo</span> /sbin/mdev &gt; /proc/sys/kernel/hotplug</span><br><span class="line">mdev -s</span><br></pre></td></tr></table></figure></li>
+<li>制作<code>/dev</code>目录下必要的文件，<code>sudo mknod console c 5 1</code></li>
+</ul>
+</li>
+<li><p>编译内核</p>
+<ul>
+<li>Linux源码下载地址，<a href="https://mirrors.edge.kernel.org/pub/linux/kernel/">官网下载地址</a></li>
+<li>这里下载<code>4.19.262</code>版本，解压内核源码，将之前生成的根文件目录到内核源码目录  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">tar -xvf linux-4.19.262.tar.xz</span><br><span class="line"><span class="built_in">cd</span> linux-4.19.246</span><br><span class="line">cp -a ../busybox-1.33.1/_install  rootfs -a</span><br><span class="line"><span class="built_in">export</span> ARCH=arm64</span><br><span class="line"><span class="built_in">export</span> CROSS_COMPILE=aarch64-linux-gnu-</span><br><span class="line">make defconfig</span><br><span class="line">make menucofig</span><br></pre></td></tr></table></figure>
+  设置Initramfs支持<br>  <img src="https://raw.githubusercontent.com/JackHuang021/images/master/20221107112153.png">  <figure class="highlight apache"><table><tr><td class="code"><pre><span class="line"><span class="attribute">make</span> <span class="literal">all</span> -j<span class="number">12</span></span><br></pre></td></tr></table></figure></li>
+<li>将<code>arch/arm64/boot/Image</code>拷贝到E2000开发板上</li>
+</ul>
+</li>
+</ul>
+<h3 id="Qemu启动虚拟机"><a href="#Qemu启动虚拟机" class="headerlink" title="Qemu启动虚拟机"></a>Qemu启动虚拟机</h3><pre><code><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">   qemu-system-aarch64 \</span><br><span class="line">-enable-kvm \</span><br><span class="line">-m 2048 \</span><br><span class="line">-smp 4 \</span><br><span class="line">-cpu host \</span><br><span class="line">-M virt,gic-version=3 \</span><br><span class="line">-kernel Image \</span><br><span class="line">-append <span class="string">&quot;rdinit=/linuxrc console=ttyAMA0 loglevel=8&quot;</span> \</span><br><span class="line">-net none \</span><br><span class="line">-nographic </span><br></pre></td></tr></table></figure>
+</code></pre>
+]]></content>
+      <categories>
+        <category>Linux</category>
+      </categories>
+      <tags>
+        <tag>Linux</tag>
+        <tag>qemu</tag>
+        <tag>虚拟机</tag>
       </tags>
   </entry>
 </search>
