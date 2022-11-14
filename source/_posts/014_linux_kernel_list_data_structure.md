@@ -78,16 +78,19 @@ date: 2022-10-24 10:06:42
         /* 或者 */
         struct inline void INIT_LIST_HEAD(struct list_head *list)
         { 
-            list->next = list
+            WRITE_ONCE(list->next, list);
             list->prev = list;
         }
         /* 例如 */
         struct list_head mylist = LIST_HEAD_INIT(mylist);
+        
         struct list_head mylist2;
         INIT_LIST_HEAD(&mylist2);
+        
+        LIST_HEAD(mylist3);
         ```
 
-+ 插入节点
+#### 插入节点
     ```c
     static inline void __list_add(struct list_head *new,
                       struct list_head *prev,
@@ -113,5 +116,26 @@ date: 2022-10-24 10:06:42
         __list_add(new, head->prev, head);
     }
     ```
+
+#### 遍历链表
+
++ 类型安全的遍历整个链表
+    ```c
+    /**
+    * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
+    * @pos:	    the type * to use as a loop cursor.
+    * @n:		another type * to use as temporary storage
+    * @head:	the head for your list.
+    * @member:	the name of the list_head within the struct.
+    */
+    #define list_for_each_entry_safe(pos, n, head, member)			\
+        for (pos = list_first_entry(head, typeof(*pos), member),	\
+            n = list_next_entry(pos, member);			\
+            !list_entry_is_head(pos, head, member); 			\
+            pos = n, n = list_next_entry(n, member))
+    
+    /* 在platform总线初始化过程中，
+    ```
+    
 
 

@@ -123,8 +123,8 @@ abbrlink: f8def83d
         return error;
     }
     ```
-    + 先清空总线`early_platform_device_list`上的所有节点，`early_platform_device_list`定义如下  
-    `static __initdata LIST_HEAD(early_platform_device_list);` 
++ 首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表
+
 
 #### Platform驱动
 + `platform_driver`结构体表示`platform`驱动，定义在`include/linux/platform.h`里面
@@ -376,8 +376,6 @@ abbrlink: f8def83d
     	bus_put(bus);
     	return error;
     }
-
-
     ```
 
 
