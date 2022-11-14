@@ -66,7 +66,7 @@ categories:
     + `int (*fsync) (int, struct file *, int)`：用于刷新待处理的数据，将缓冲区的数据刷新到磁盘中
 
 #### sysfs文件系统目录结构
-
++ `sysfs`文件系统提供了一种用户与内核数据结构进行交互的方式，Linux设备模型中，设备、驱动、总线组织成拓扑结构，通过`sysfs`文件系统以目录结构进行展示与管理
 + `devices`：内核对系统中所有设备的分层次表达模型，也是`/sys`文件系统管理设备的最重要的目录结构
 + `dev`：这个目录下维护一个按字符设备和块设备的设备号文件(major:minor)链接到真实的设备
 + `bus`：内核按照总线类型分层放置的目录结构，`devices`中的所有设备都是连接于某种总线之下，每一种具体总线之下可以找到每一个具体设备的符号链接，是构成Linux统一设备模型的一部分
@@ -132,16 +132,88 @@ categories:
         unsigned int uevent_suppress:1;
     };
     ```
-+ `const char *name;`：`kobject`名字
-+ `struct list_head entry;`
-+ `struct kobject *parent;`
-+ `struct kset *kset;`
-+ `struct kobj_type *ktype;`
-+ `struct kernfs_node *sd;`
-+ `struct kref kref;`
-+ `unsigned int state_initialized:1;`
-+ `unsigned int state_in_sysfs:1;`
-+ `unsigned int state_add_uevent_sent:1`
-+ `unsigned int state_remove_uevent_sent:1`
-+ `unsigned int uevent_suppress:1`
++ `const char *name;`：`kobject`名字，对应`sysfs`下的一个目录
++ `struct list_head entry;`：`kobject`中插入的的`list_head`链表结构，用于构造双向链表
++ `struct kobject *parent;`：指向当前`kobject`父对象的指针，体现在`sysfs`中就是包含当前`kobject`对象的目录对象
++ `struct kset *kset;`：当前`kobject`对象所属的集合
++ `struct kobj_type *ktype;`：当前`kobject`对象的类型
++ `struct kernfs_node *sd;`：VFS文件系统的目录项，是设备和文件之间的桥梁，`sysfs`中的符号链接是通过`kernel_node`内的联合体实现的
++ `struct kref kref;`：`kobject`的引用计数，当计数为0时，回调之前注册的`release`方法释放对象
++ `unsigned int state_initialized:1;`：初始化标志位，初始化时被置位
++ `unsigned int state_in_sysfs:1;`：`kobject`在`sysfs`中的状态，在目录中创建则为1，否则为0
++ `unsigned int state_add_uevent_sent:1`：添加设备的`uevent`事件是否发送标志，添加设备时向用户控件发送`uevent`事件，请求新增设备
++ `unsigned int state_remove_uevent_sent:1`：删除设备的`uevent`事件是否发送标志，删除设备时向用户控件发送`uevent`事件，请求卸载设备
++ `unsigned int uevent_suppress:1`：是否忽略上报`uevent`
+
+#### `kobject`集合 `kset`
++ `kset`是包含多个`kobject`的集合，如果在`sysfs`的目录中包含多个子目录，那需要将它定义成一个`kset`
+    ```c
+    /**
+     * struct kset - a set of kobjects of a specific type, belonging to a specific subsystem.
+     *
+     * A kset defines a group of kobjects.  They can be individually
+     * different "types" but overall these kobjects all want to be grouped
+     * together and operated on in the same manner.  ksets are used to
+     * define the attribute callbacks and other common events that happen to
+     * a kobject.
+     *
+     * @list: the list of all kobjects for this kset
+     * @list_lock: a lock for iterating over the kobjects
+     * @kobj: the embedded kobject for this kset (recursion, isn't it fun...)
+     * @uevent_ops: the set of uevent operations for this kset.  These are
+     * called whenever a kobject has something happen to it so that the kset
+     * can add new environment variables, or filter out the uevents if so
+     * desired.
+     */
+    struct kset {
+        struct list_head list;
+        spinlock_t list_lock;
+        struct kobject kobj;
+        const struct kset_uevent_ops *uevent_ops;
+    };
+    ```
++ `struct list_head list;`：包含在`kset`在内的所有`kobject`构成的一个双向链表
++ `spinlock_t list_lock;`：遍历`kobject`时的锁
++ `struct kobject kobj;`：归属于该`kset`的所有的`kobject`的parent
++ `const struct kset_uevent_ops *uevent_ops;`：`kset`的`uevent`操作函数集，当`kset`中的`kobject`有状态变化时，会回调这个函数集
+
+
+#### `kobject`类型 `ktype`
++ `kobj_type`用于表征`kobject`的类型，指定了删除`kobject`时要调用的函数，`kobject`结构体中有`struct kref`字段对`kobject`进行引用计数，当计数值为0时，就会调用`kobj_type`中的`release`函数对`kobject`进行释放
++ `kobj_type`指定了通过`sysfs`显示或修改有关`kobject`的信息时要处理的操作，实际是调用`show/store`函数
+    ```c
+    struct kobj_type {
+        void (*release)(struct kobject *kobj);
+        const struct sysfs_ops *sysfs_ops;
+        struct attribute **default_attrs;
+        const struct kobj_ns_type_operations *(*child_ns_type)(struct kobject *kobj);
+        const void *(*namespace)(struct kobject *kobj);
+    };
+
+    struct sysfs_ops {
+        ssize_t	(*show)(struct kobject *, struct attribute *, char *);
+        ssize_t	(*store)(struct kobject *, struct attribute *, const char *, size_t);
+    }
+
+    struct attribute {
+        const char		*name;
+        umode_t			mode;
+    #ifdef CONFIG_DEBUG_LOCK_ALLOC
+        bool			ignore_lockdep:1;
+        struct lock_class_key	*key;
+        struct lock_class_key	skey;
+    #endif
+    };
+    ```
++ `void (*release)(struct koject *kobj);` 释放`kobject`对象的接口，有点类似面向对象中的析构
++ `const struct sysfs_ops *sysfs_ops;` 操作`kobject`的方法集
++ `struct attribute **default_attrs;` 所谓的`attribute`就是内核控件和用户空间进行信息交互的一种方法，例如某个driver定义了一个变量，却希望用户空间程序可以修改该变量，那么可以将该变量以`sysfs attribute`的形式开放出来
+
+
+
+
+
+
+
+
 
