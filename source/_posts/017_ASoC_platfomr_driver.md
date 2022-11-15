@@ -10,8 +10,9 @@ date: 2022-10-26 13:42:24
 ---
 
 ### 概述
-+ ALSA是Advanced Linux Sound Architecture的缩写，[ALSA官网地址](https://www.alsa-project.org/)
-+ ALSA作为Linux现在主流的音频体系架构，提供了内核的驱动框架，也提供了应用层的
+ALSA是Advanced Linux Sound Architecture的缩写，[ALSA官网地址](https://www.alsa-project.org/)  
+
+ALSA作为Linux现在主流的音频体系架构，提供了内核的驱动框架，也提供了应用层的
 `alsa-lib`库，ALSA还提供了`alsa-utils`应用程序，方便进行音频控制
 + 音频设备文件结构如下
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221108112754.png)

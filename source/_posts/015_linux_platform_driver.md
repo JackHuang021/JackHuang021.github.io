@@ -10,120 +10,118 @@ abbrlink: f8def83d
 ---
 
 #### Platform平台驱动模型
-+ 由于某些外设是没有总线这个概念的，但是又要使用总线、驱动和设备模型的话，就需要使用`platform`这个虚拟总线，相应的就有`platform_device`和`platform_driver`
+由于某些外设是没有总线这个概念的，但是又要使用总线、驱动和设备模型的话，就需要使用`platform`这个虚拟总线，相应的就有`platform_device`和`platform_driver`
 <!-- more -->
 
 #### Platform总线
-+ Linux内核使用`bus_type`结构体表示总线，该结构体定义在`include/linux/device.h`
-    ```c
-    struct bus_type {
-        const char		*name;
-        const char		*dev_name;
-        struct device		*dev_root;
-        const struct attribute_group **bus_groups;
-        const struct attribute_group **dev_groups;
-        const struct attribute_group **drv_groups;
+Linux内核使用`bus_type`结构体表示总线，该结构体定义在`include/linux/device.h`
+```c
+struct bus_type {
+    const char		*name;
+    const char		*dev_name;
+    struct device		*dev_root;
+    const struct attribute_group **bus_groups;
+    const struct attribute_group **dev_groups;
+    const struct attribute_group **drv_groups;
 
-        int (*match)(struct device *dev, struct device_driver *drv);
-        int (*uevent)(struct device *dev, struct kobj_uevent_env *env);
-        int (*probe)(struct device *dev);
-        int (*remove)(struct device *dev);
-        void (*shutdown)(struct device *dev);
+    int (*match)(struct device *dev, struct device_driver *drv);
+    int (*uevent)(struct device *dev, struct kobj_uevent_env *env);
+    int (*probe)(struct device *dev);
+    int (*remove)(struct device *dev);
+    void (*shutdown)(struct device *dev);
 
-        int (*online)(struct device *dev);
-        int (*offline)(struct device *dev);
+    int (*online)(struct device *dev);
+    int (*offline)(struct device *dev);
 
-        int (*suspend)(struct device *dev, pm_message_t state);
-        int (*resume)(struct device *dev);
+    int (*suspend)(struct device *dev, pm_message_t state);
+    int (*resume)(struct device *dev);
 
-        int (*num_vf)(struct device *dev);
+    int (*num_vf)(struct device *dev);
 
-        int (*dma_configure)(struct device *dev);
+    int (*dma_configure)(struct device *dev);
 
-        const struct dev_pm_ops *pm;
+    const struct dev_pm_ops *pm;
 
-        const struct iommu_ops *iommu_ops;
+    const struct iommu_ops *iommu_ops;
 
-        struct subsys_private *p;
-        struct lock_class_key lock_key;
+    struct subsys_private *p;
+    struct lock_class_key lock_key;
 
-        bool need_parent_lock;
-    };
-    ```
-    设备和驱动的匹配函数：
-    `int (*match)(struct device *dev, struct device_driver*drv)`
-    match函数有两个参数dev和driver，这两个参数分别为`device`和`device_driver`类型，也就是设备和驱动
+    bool need_parent_lock;
+};
+```
+设备和驱动的匹配函数：  
+`int (*match)(struct device *dev, struct device_driver*drv)`  
+match函数有两个参数dev和driver，这两个参数分别为`device`和`device_driver`类型，也就是设备和驱动
 
-+ platform总线是`bus_type`的一个具体实例，定义在`driver/base/platform.c`中
-    ```c
-    struct bus_type platform_bus_type = {
-        .name		= "platform",
-        .dev_groups	= platform_dev_groups,
-        .match		= platform_match,
-        .uevent		= platform_uevent,
-        .dma_configure	= platform_dma_configure,
-        .pm		= &platform_dev_pm_ops,
-    };
-    ```
-    其中`platform_match`为驱动和设备的匹配函数
+platform总线是`bus_type`的一个具体实例，定义在`driver/base/platform.c`中
+```c
+struct bus_type platform_bus_type = {
+    .name		= "platform",
+    .dev_groups	= platform_dev_groups,
+    .match		= platform_match,
+    .uevent		= platform_uevent,
+    .dma_configure	= platform_dma_configure,
+    .pm		= &platform_dev_pm_ops,
+};
+```
+其中`platform_match`为驱动和设备的匹配函数，`platform_match`函数如下
+```c
+static int platform_match(struct device *dev, struct device_driver *drv)
+{
+    struct platform_device *pdev = to_platform_device(dev);
+    struct platform_driver *pdrv = to_platform_driver(drv);
 
-+ `platform_match`函数如下
-    ```c
-    static int platform_match(struct device *dev, struct device_driver *drv)
-    {
-        struct platform_device *pdev = to_platform_device(dev);
-        struct platform_driver *pdrv = to_platform_driver(drv);
+    /* When driver_override is set, only bind to the matching driver */
+    if (pdev->driver_override)
+        return !strcmp(pdev->driver_override, drv->name);
 
-        /* When driver_override is set, only bind to the matching driver */
-        if (pdev->driver_override)
-            return !strcmp(pdev->driver_override, drv->name);
+    /* Attempt an OF style match first */
+    if (of_driver_match_device(dev, drv))
+        return 1;
 
-        /* Attempt an OF style match first */
-        if (of_driver_match_device(dev, drv))
-            return 1;
+    /* Then try ACPI style match */
+    if (acpi_driver_match_device(dev, drv))
+        return 1;
 
-        /* Then try ACPI style match */
-        if (acpi_driver_match_device(dev, drv))
-            return 1;
+    /* Then try to match against the id table */
+    if (pdrv->id_table)
+        return platform_match_id(pdrv->id_table, pdev) != NULL;
 
-        /* Then try to match against the id table */
-        if (pdrv->id_table)
-            return platform_match_id(pdrv->id_table, pdev) != NULL;
-
-        /* fall-back to driver name match */
-        return (strcmp(pdev->name, drv->name) == 0);
-    }
-    ```
-    platform驱动和设备匹配一共有四种方法：
+    /* fall-back to driver name match */
+    return (strcmp(pdev->name, drv->name) == 0);
+}
+```
++ platform驱动和设备匹配一共有四种方法:
     + OF类型的匹配，也就是采用设备树的方式，`of_driver_match_device()`定义在文件 `/include/linux/of_device`中，`device_drive`结构体中有一个名为`of_match_table`的成员变量，该成员保存着驱动的compatible匹配表，设备树中的每个设备节点的compatible属性会和of_match_table中的所有成员比较，查看是否有相同的条目，如果有的话表示设备和驱动相匹配，设备和驱动匹配成功后，probe函数就会执行
     + ACPI匹配方式
     + `id_table`匹配，每个`platform_driver`结构体有一个`id_table`成员变量，保留了很多id信息，这些id信息存放着这个驱动所支持的设备信息，该`id_table`会与`platform_device`中的`name`成员相比较
     + 如果`id_table`不存在的话就直接比较驱动和设备的`name`字段，看看是否相等
 
-#### Platform总线初始化过程
-+ 内核在初始化过程中调用`platform_bus_init()`来初始化Platform总线，调用流程如下  
+##### Platform总线初始化过程
+内核在初始化过程中调用`platform_bus_init()`来初始化Platform总线，调用流程如下  
 `kernel_init_freeable() -> do_basic_setup() -> driver_init() -> platform_bus_init()`  
 其中`platform_bus_init()`函数定义在`driver/base/platform.c`中，内容如下：
-    ```c
-    int __init platform_bus_init(void)
-    {
-        int error;
+```c
+int __init platform_bus_init(void)
+{
+    int error;
 
-        early_platform_cleanup();
+    early_platform_cleanup();
 
-        error = device_register(&platform_bus);
-        if (error) {
-            put_device(&platform_bus);
-            return error;
-        }
-        error =  bus_register(&platform_bus_type);
-        if (error)
-            device_unregister(&platform_bus);
-        of_platform_register_reconfig_notifier();
+    error = device_register(&platform_bus);
+    if (error) {
+        put_device(&platform_bus);
         return error;
     }
-    ```
-+ 首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表
+    error =  bus_register(&platform_bus_type);
+    if (error)
+        device_unregister(&platform_bus);
+    of_platform_register_reconfig_notifier();
+    return error;
+}
+```
+首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表
 
 
 #### Platform驱动
