@@ -208,12 +208,3 @@ categories:
 + `void (*release)(struct koject *kobj);` 释放`kobject`对象的接口，有点类似面向对象中的析构
 + `const struct sysfs_ops *sysfs_ops;` 操作`kobject`的方法集
 + `struct attribute **default_attrs;` 所谓的`attribute`就是内核控件和用户空间进行信息交互的一种方法，例如某个driver定义了一个变量，却希望用户空间程序可以修改该变量，那么可以将该变量以`sysfs attribute`的形式开放出来
-
-
-
-
-
-
-
-
-
