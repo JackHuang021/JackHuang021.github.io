@@ -121,8 +121,7 @@ int __init platform_bus_init(void)
     return error;
 }
 ```
-首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表
-
+首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表，然后向内核注册`platform_bus`这个设备和`platform_bus_type`总线
 
 #### Platform驱动
 + `platform_driver`结构体表示`platform`驱动，定义在`include/linux/platform.h`里面

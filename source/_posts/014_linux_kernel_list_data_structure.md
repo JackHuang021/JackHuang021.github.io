@@ -60,9 +60,37 @@ struct my_list {
 的做法就是通过成员的指针地址，减去成员在结构体中偏移的地址
 
 #### `list_head`链表操作
+
++ `list_head`初始化，`list_head`初始化分为静态初始化和动态初始化
+  + 静态初始化
+      ```c
+      #define LIST_HEAD_INIT(name) { &(name), &(name) }
+      #define LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)
+
+      /* 例如 */
+      LIST_HEAD(my_list);
+      /* 展开即为 */
+      struct list_head mylist = { &(mylist), &(mylist) };
+      ```
+
+  + 动态初始化
+      ```c
+      #define LIST_HEAD_INIT(name) { &(name), &(name) }
+      /* 或者 */
+      struct inline void INIT_LIST_HEAD(struct list_head *list)
+      { 
+          WRITE_ONCE(list->next, list);
+          list->prev = list;
+      }
+      /* 例如 */
+      struct list_head mylist = LIST_HEAD_INIT(mylist);
+      
+      struct list_head mylist2;
+      INIT_LIST_HEAD(&mylist2);
+      ```
+
 + 从`list_head`中获取对象结构体
     ```c
-
     /**
      * @ptr:	the list head to take the element from.
      * @type:	the type of the struct this is embedded in.
@@ -96,42 +124,9 @@ struct my_list {
     #define list_next_entry(pos, member) \
         list_entry((pos)->member.next, typeof(*(pos)), member)
 
-    
-
-
-    ```
-+ `list_head`初始化，`list_head`初始化分为静态初始化和动态初始化
-  + 静态初始化
-      ```c
-      #define LIST_HEAD_INIT(name) { &(name), &(name) }
-      #define LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)
-
-      /* 例如 */
-      LIST_HEAD(my_list);
-      /* 展开即为 */
-      struct list_head mylist = { &(mylist), &(mylist) };
-      ```
-
-  + 动态初始化
-      ```c
-      #define LIST_HEAD_INIT(name) { &(name), &(name) }
-      /* 或者 */
-      struct inline void INIT_LIST_HEAD(struct list_head *list)
-      { 
-          WRITE_ONCE(list->next, list);
-          list->prev = list;
-      }
-      /* 例如 */
-      struct list_head mylist = LIST_HEAD_INIT(mylist);
-      
-      struct list_head mylist2;
-      INIT_LIST_HEAD(&mylist2);
-      ```
-
-+ 从`list_head`中取得目标结构体
-    ```
-    
-
+    // 通过结构体对象的指针来获取链表中上一个节点的结构体对象地址
+    #define list_prev_entry(pos, member) \
+        list_entry((pos)->member.prev, typeof(*(pos)), member)
     ```
 
 + `list_head`增加节点
@@ -161,8 +156,82 @@ struct my_list {
     }
     ```
 
-+ 遍历链表
-    + 类型安全的遍历整个链表
++ 遍历`list_head`
+    + 通过`list_head`的头节点向后遍历整个链表
+    ```c
+    /**
+     * @pos:    the &struct list_head to use as a loop cursor
+     * @head:   the head for your list
+     */
+    #define list_for_each(pos, head) \
+        for (pos = (head)->next; pos != (head); pos = pos->next)
+    ```
+
+    + 通过`list_head`的头节点向前遍历整个链表
+    ```c
+    #define list_for_each_prev(pos, head) \
+        for (pos = (head)->prev; pos != (head); pos = pos->prev)
+    ```
+
+    + 通过`list_head`的头节点向后遍历链表，这里使用`n`来存储`pos`指向的下一个节点的原因主要就是若：当前循环对`pos`进行了删除操作，因为`n`存储了下一个节点，那么可以保证遍历安全的进行下去
+    ```c
+    /**
+     * @pos:    the &struct list_head to use as a loop cursor
+     * @n:      another &struct list_head to use a temporary storage
+     * @head:   the head for your list
+     */ 
+    #define list_for_each_safe(pos, n, head) \
+        for (pos = (head)->next, n = pos->next; pos != head; \
+            pos = n, n = pos->next)
+    ```
+
+    + 通过`list_head`的头节点向前遍历链表
+    ```c
+    #define list_for_each_prev_safe(pos, n, head) \
+        for (pos = (head)->prev, n = pos->prev; pos != head; \
+            pos = n, n = pos->prev)
+    ```
+
+    + 通过`list_head`指针来向后遍历链表上的所有结构体对象
+    ```c
+    #define list_for_each_entry(pos, head, member) \
+        for (pos = list_first_entry((head), typeof(*pos), member); \
+            &pos->member != (head); \
+            pos = list_next_entry(pos, member))
+    ```
+
+    + 通过`list_head`指针来向前遍历链表上的所有的结构体对象
+    ```c
+    #define list_for_each_entry_reverse(pos, head, member) \
+        for (pos = list_last_entry((head), typeof(*pos), member); \
+            &pos->member != (head); \
+            pos = list_prev_entry(pos, member))
+    ```
+
+    + 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从下一个节点开始继续向后遍历链表
+    ```c
+    #define list_for_each_entry_continue(pos, head, member) \
+        for (pos = list_next_entry(pos, member); \
+            &pos->member != (head); \
+            pos = list_next_entry(pos, member))
+    ```
+
+    + 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从上一个节点开始继续向前遍历链表
+    ```c
+    #define list_for_each_entry_continue_reverse(pos, head, member) \
+        for (pos = list_prev_entry(pos, member); \
+            &pos->member != (head); \
+            pos = list_prev_entry(pos, member))
+    ```
+
+    + 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从当前节点开始继续向后遍历链表
+    ```c
+    #define list_for_each_entry_from(pos, head, member) \
+        for (; &pos->member != (head); \
+            pos = list_next_entry(pos, member))
+    ```
+
+    + 通过给定的结构体指针`pos`和链表头，来安全的遍历链表，可以在循环中对当前遍历的结构体进行删除操作
     ```c
     /**
     * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
@@ -179,7 +248,6 @@ struct my_list {
     ```
     `platform`总线初始化的时候`platform_bus_init()`会调用`early_platform_clean()`来清除`early_platform_device_list`链表，代码如下：
     ```c
-
     static __initdata LIST_HEAD(early_platform_device_list);
 
     /**
@@ -196,24 +264,8 @@ struct my_list {
             memset(&pd->dev.devres_head, 0, sizeof(pd->dev.devres_head));
         }
     }
-
-    // 展开即为
-    void __init early_platform_cleanup(void)
-    {
-        struct platform_device *pd, pd2;
-
-        for (pd = list_first_entry(&early_platform_device_list, 
-                            typeof(*pd), dev.devres_head), 
-             pd2 = list_next_entry(pd, dev.devres_head);
-             !list_entry_is_head(pd, &early_platform_device_list, 
-                                dev.devres_head);
-             pd = pd2, pd2 = list_next_entry(pd2, dev.devres_head))
-        {
-            list_del(&pd->dev.devres_head);
-            memset(&pd->dev.devres_head, 0, sizeof(pd->dev.devres_head));
-        }
-    }
     ```
+    采用这种遍历的方式可以安全的删除当前遍历的节点
 
     
 
