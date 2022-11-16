@@ -10,7 +10,7 @@ date: 2022-10-24 10:06:42
 ---
 
 Linux内核中，对于数据管理，提供了2种类型的双向链表，一种是使用list_head结构体构成的双向环形链表。
-    ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221103103152.png)
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221103103152.png)
 
 <!-- more -->
 #### list_head链表
@@ -55,9 +55,51 @@ struct my_list {
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 ```
 `offsetof`获取结构体成员在结构体中地址的偏移量  
-`container_of`的作用是通过结构体的成员地址获取结构体变量的地址，container_of一共需要传入三个参数，`ptr`指针地址，`type`结构体类型，`member`结构体成员名称，具体的做法就是通过成员的指针地址，减去成员在结构体中偏移的地址
+`container_of`的作用是通过结构体的成员地址获取结构体变量的地址，container_of一共
+需要传入三个参数，`ptr`指针地址，`type`结构体类型，`member`结构体成员名称，具体
+的做法就是通过成员的指针地址，减去成员在结构体中偏移的地址
 
 #### `list_head`链表操作
++ 从`list_head`中获取对象结构体
+    ```c
+
+    /**
+     * @ptr:	the list head to take the element from.
+     * @type:	the type of the struct this is embedded in.
+     * @member:	the name of the list_head within the struct.
+     */
+
+    // 实际就是使用container_of通过list_head地址来获取原结构体的地址
+    #define list_entry(ptr, type, member) \
+        container_of(ptr, type, member)
+
+    // 获取链表上的第一个节点，这里ptr传入的默认应该是链表头节点，且传入的这个ptr不能为空指针
+    #define list_first_enrty(ptr, type, member) \
+        container_of((ptr)->next, type, member)
+
+    // 获取链表上的最后一个节点，通过双向链表的prev指针来获取
+    #define list_last_entry(ptr, type, member) \
+        container_of((ptr)->prev, type, member)
+
+    // 判断当前给入的链表是否为空链表，不为空表返回下一个节点对应的结构体地址
+    #define list_first_enrty_or_null(ptr, type, member) ({ \
+        struct list_head *head__ = (ptr); \
+        struct list_head *pos__ = READ_ONCE(head__->next); \
+        pos__ != head__ ? list_entry(pos__, type, member) : NULL; \
+    })
+
+    /**
+    * @pos:     含list_head结构体对象的指针
+    * @member:  list_head在这个结构体中的成员名
+    */
+    // 通过结构体对象的指针来获取链表中下一个节点的结构体对象地址
+    #define list_next_entry(pos, member) \
+        list_entry((pos)->member.next, typeof(*(pos)), member)
+
+    
+
+
+    ```
 + `list_head`初始化，`list_head`初始化分为静态初始化和动态初始化
   + 静态初始化
       ```c
@@ -85,6 +127,12 @@ struct my_list {
       struct list_head mylist2;
       INIT_LIST_HEAD(&mylist2);
       ```
+
++ 从`list_head`中取得目标结构体
+    ```
+    
+
+    ```
 
 + `list_head`增加节点
     ```c
