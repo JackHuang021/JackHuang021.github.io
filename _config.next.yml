@@ -144,7 +144,7 @@ avatar:
   # If true, the avatar will be displayed in circle.
   rounded: true
   # If true, the avatar will be rotated with the cursor.
-  rotated: false
+  rotated: true
 
 # Posts / Categories / Tags in sidebar.
 site_state: true
@@ -220,11 +220,11 @@ footer:
 
   # Powered by Hexo & NexT
   powered: 
-    enable: true
+    enable: false
     version: true
 
   theme:
-    enable: true
+    enable: false
     version: true
 
   # Beian ICP and gongan information for Chinese users. See: https://beian.miit.gov.cn, http://www.beian.gov.cn
@@ -249,7 +249,7 @@ excerpt_description: true
 
 # Read more button
 # If true, the read more button will be displayed in excerpt section.
-read_more_btn: true
+read_more_btn: false
 
 # Post meta display settings
 post_meta:
@@ -277,13 +277,13 @@ tag_icon: false
 # Front-matter variable (nonsupport animation).
 reward_settings:
   # If true, a donate button will be displayed in every article by default.
-  enable: false
+  enable: true
   animation: false
-  #comment: Buy me a coffee
+  comment: Buy me a coffee
 
 reward:
-  #wechatpay: /images/wechatpay.png
-  #alipay: /images/alipay.png
+  wechatpay: /images/wechatpay.png
+  alipay: /images/alipay.png
   #paypal: /images/paypal.png
   #bitcoin: /images/bitcoin.png
 
@@ -375,7 +375,7 @@ codeblock:
   # Code Highlight theme
   # All available themes: https://theme-next.js.org/highlight/
   theme:
-    light: rainbow
+    light: solarized-light
     dark: rainbow
   prism:
     light: prism
@@ -416,8 +416,8 @@ bookmark:
 
 # `Follow me on GitHub` banner in the top-right corner.
 github_banner:
-  enable: false
-  permalink: https://github.com/yourname
+  enable: true
+  permalink: https://github.com/JackHuang021
   title: Follow me on GitHub
 
 

@@ -1,11 +1,12 @@
 ---
 title: rootfs
-date: 2022-10-28 22:46:39
 tags:
-    - Linux
-    - rootfs
+  - Linux
+  - rootfs
 categories:
-    - Linux
+  - Linux
+abbrlink: 265c268b
+date: 2022-10-28 22:46:39
 ---
 
 ### 根文件系统简介
