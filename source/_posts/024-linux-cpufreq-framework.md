@@ -1,10 +1,11 @@
 ---
 title: Linux Cpufreq 框架
-date: 2022-11-24 10:23:01
 tags:
-    - Linux
-    - Cpufreq
+  - Linux
+  - Cpufreq
 categories: Linux
+abbrlink: fbf46cf3
+date: 2022-11-24 10:23:01
 ---
 
 
@@ -12,6 +13,8 @@ Linux Kernel主要通过三类机制来实现SMP（Symmetric Multiprocessing，�
 + cpu hotplug: 根据应用场景来up/down CPU
 + cpuidle framework: 
 + cpufreq framework: 根据使用场景和系统负荷来调整CPU的电压和频率
+
+<!-- more -->
 
 > 由于调整是在系统运行的过程中，因此cpufreq framework的功能也称作为Dynamic Voltage/Frequency Scaling（动态电压/频率调整）
 
