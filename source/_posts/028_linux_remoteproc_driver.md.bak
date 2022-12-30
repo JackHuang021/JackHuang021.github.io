@@ -1,0 +1,265 @@
+---
+title: Linux remoteproc驱动框架
+tags:
+  - Linux
+  - Debug
+categories: Linux
+abbrlink: 15fcf5f5
+date: 2022-12-22 15:47:56
+---
+
+#### 背景
+AMP（Asymmetric  非对称多处理器）嵌入式系统指的是将多个异构处理内核集成到一个片上系统，这些核心通常运行独立的软件环境，例如Linux、RTOS、裸机程序等，他们之间协同工作，实现一个符合最终设计目标的应用程序，如今的多核应用程序越来越需要异构处理能力，
+
+
+#### RPMsg通信协议
+在AMP(asymmetric multiprocessor systems 非对称多处理器系统)，不同核间主要是使用共享内存进行通信
+
+#### 协议层
+整个协议实现可以分为三个层：传输层、媒体访问层、物理层，每一个层都可以单独实现，协议层的描述如下
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221105640.png)
+
+#### 物理层（共享内存）
+物理层的实现需要两个组件：共享内存与核间中断，核间中断主要是用来同步共享内存数据状态
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221111517.png)
+
+#### 媒体访问层（VirtIO）
+这一层是比较关键的一层，通过单独单写环形缓冲可以不再需要核进行读写同步，这种缓冲区可以支持多个异步上下文交换数据，这种技术只适用单和对单核的通信，不适用于单核对多核的通信，在单核对多核通信的情况下，在IN buffer中会存在多个写入，这就需要一个同步机制
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221114056.png)  
+上图描述的就是一个vring组件，vring由三个部分组成，缓冲区描述符池、可以用的环形缓冲区（也称为输入环形缓冲区）、已使用的环形缓冲区（也称为free环形缓冲区）
+
+每个buffer描述符由64位的缓冲区地址（保存缓冲区在共享内存中存储位置），32bit为缓冲区长度，16bit标志位，16bit链接到下一个缓冲区描述符（未使用），其在标志字段中设置了一个`F_NEXT`标志用来表示链接到了下一个缓冲区描述符
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221133452.png)
+
+输入环形缓冲区有独有的标志位，当中仅使用到了BIT0，当该位被设置时，当读出端从输入环形缓冲区读取数据后，不会通知到写入端，默认该位不置位。
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221134349.png)
+
+输入环形缓冲区的下一个区域是头节点索引，写入端将新的数据写入ring[x]后，由写入段将该索引更新，已使用环形缓冲区，也包含了标志位，其中仅BIT0使用，当置位后，读出端更新了这个头部索引后不会通知到写入端，已使用的环形缓冲区还存放这缓冲区的ID和长度信息。
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221134412.png)
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221135614.png)
+
+#### 传输层（RPMsg）
+RPMsg头定义，每个RPMsg信息都包含在共享内存的一个缓冲区中，vring缓冲区描述符中的地址字段指向这个缓冲区，这个缓冲区的前16个字节被传输层使用，最开始32bit用来表示发送方的地址，接下来32bit表示接收方地址
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20221221140928.png)
+
+##### RPMsg通道
+RPMsg中的每个远程核都由RPMsg设备表示，它提供主设备和远程设备之间的通信通道，
+
+
+
+#### remoteproc驱动框架
+
+远程核状态
+```c
+struct rproc_vdev {
+	struct kref refcount;
+
+	struct rproc_subdev subdev;
+	struct device dev;
+
+	unsigned int id;
+	struct list_head node;
+	struct rproc *rproc;
+	struct rproc_vring vring[RVDEV_NUM_VRINGS];
+	u32 rsc_offset;
+	u32 index;
+};
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```c
+
+/**
+ * struct rproc_mem_entry - memory entry descriptor
+ * @va:	virtual address
+ * @dma: dma address
+ * @len: length, in bytes
+ * @da: device address
+ * @release: release associated memory
+ * @priv: associated data
+ * @name: associated memory region name (optional)
+ * @node: list node
+ * @rsc_offset: offset in resource table
+ * @flags: iommu protection flags
+ * @of_resm_idx: reserved memory phandle index
+ * @alloc: specific memory allocator function
+ */
+struct rproc_mem_entry {
+	void *va;
+	dma_addr_t dma;
+	size_t len;
+	u32 da;
+	void *priv;
+	char name[32];
+	struct list_head node;
+	u32 rsc_offset;
+	u32 flags;
+	u32 of_resm_idx;
+	int (*alloc)(struct rproc *rproc, struct rproc_mem_entry *mem);
+	int (*release)(struct rproc *rproc, struct rproc_mem_entry *mem);
+};
+
+
+static rproc_handle_resource_t rproc_loading_handlers[RSC_LAST] = {
+	[RSC_CARVEOUT] = (rproc_handle_resource_t)rproc_handle_carveout,
+	[RSC_DEVMEM] = (rproc_handle_resource_t)rproc_handle_devmem,
+	[RSC_TRACE] = (rproc_handle_resource_t)rproc_handle_trace,
+	[RSC_VDEV] = (rproc_handle_resource_t)rproc_handle_vdev,
+};
+
+// 用来通信的连续物理请求
+struct fw_rsc_carveout {
+	u32 da;             // 设备地址
+	u32 pa;             // 物理内存地址
+	u32 len;            // 内存长度
+	u32 flags;          // iommu保护标志
+	u32 reserved;
+	u8 name[32];        // 申请内存区域
+} __packed;
+
+// iommu映射后的内存请求
+struct fw_rsc_devmem {
+	u32 da;
+	u32 pa;
+	u32 len;
+	u32 flags;
+	u32 reserved;
+	u8 name[32];
+} __packed;
+
+
+// virtio设备头，提供vdev的一些信息
+struct fw_rsc_vdev {
+	u32 id;
+	u32 notifyid;
+	u32 dfeatures;
+	u32 gfeatures;
+	u32 config_len;
+	u8 status;
+	u8 num_of_vrings;
+	u8 reserved[2];
+	struct fw_rsc_vdev_vring vring[];
+} __packed;
+
+
+// 用来表示一个远程处理器设备
+struct rproc {
+	struct list_head node;
+	struct iommu_domain *domain;
+	const char *name;
+	const char *firmware;                   // 固件名称
+	void *priv;                             // 驱动模块私有数据
+	struct rproc_ops *ops;                  // 
+	struct device dev;
+	atomic_t power;                         // 使用计数
+	unsigned int state;                     // 远程处理器状态
+	enum rproc_dump_mechanism dump_conf;    
+	struct mutex lock;
+	struct dentry *dbg_dir;                 // 该设备debugfs目录
+	struct list_head traces;                
+	int num_traces;
+	struct list_head carveouts;             // 连续物理分配地址链表
+	struct list_head mappings;
+	u64 bootaddr;
+	struct list_head rvdevs;                // 远程vdev链表
+	struct list_head subdevs;               
+	struct idr notifyids;
+	int index;
+	struct work_struct crash_handler;
+	unsigned int crash_cnt;
+	bool recovery_disabled;
+	int max_notifyid;
+	struct resource_table *table_ptr;
+	struct resource_table *cached_table;
+	size_t table_sz;
+	bool has_iommu;
+	bool auto_boot;
+	bool autonomous;
+	struct list_head dump_segments;
+	int nb_vdev;
+	u8 elf_class;
+	u16 elf_machine;
+	struct cdev cdev;
+	bool cdev_put_on_release;
+};
+
+rproc_fw_boot();
+    rproc_handle_resources(rproc, rproc_loading_handlers);
+        rproc_handle_vdev();
+            rproc_alloc_vring();
+                struct rproc_mem_entry mem;
+                mem = rproc_mem_entry_init();
+    rproc_alloc_registered_carveouts(rproc);
+        rproc_alloc_carveout();  
+```
+
+```
+[   70.842440] remoteproc remoteproc0: powering up remoteproc
+[   70.855092] remoteproc remoteproc0: Booting fw image openamp_core0.elf, size 1295128
+[   70.855101] phytium-rproc remoteproc@0: iommu not present
+[   70.855109] remoteproc remoteproc0: rsc: type 3
+[   70.855115] remoteproc remoteproc0: vdev rsc: id 7, dfeatures 0x1, cfg len 0, 2 vrings
+[   70.855120] remoteproc remoteproc0: vdev rsc: vring0: da 0xc0020000, qsz 256, align 4096
+[   70.855124] remoteproc remoteproc0: vdev rsc: vring1: da 0xc0024000, qsz 256, align 4096
+[   70.855289] remoteproc remoteproc0: vring0: va ffff00000f86b000 dma 0x00000000fa378000 size 0x3000 idr 0
+[   70.855369] remoteproc remoteproc0: vring1: va ffff00000f86f000 dma 0x00000000fa37c000 size 0x3000 idr 1
+[   70.894563] CPU3: shutdown
+[   70.919079] psci: CPU3 killed (polled 24 ms)
+[   71.033785] virtio virtio0: reset !
+[   71.033793] virtio virtio0: status: 1
+[   71.033933] virtio_rpmsg_bus virtio0: status: 3
+[   71.033947] remoteproc remoteproc0: vring0: va ffff00000f86b000 qsz 256 notifyid 0
+[   71.033959] remoteproc remoteproc0: vring1: va ffff00000f86f000 qsz 256 notifyid 1
+[   71.040791] virtio_rpmsg_bus virtio0: status: 7
+[   71.040800] remoteproc remoteproc0: kicking vq index: 0
+[   71.040805] virtio_rpmsg_bus virtio0: rpmsg host is online
+[   71.046953] remoteproc remoteproc0: registered virtio0 (type 7)
+[   71.047851] remoteproc remoteproc0: remote processor remoteproc is now up
+```
+
+```
+[   46.295134] remoteproc remoteproc0: powering up remoteproc
+[   46.317422] remoteproc remoteproc0: Booting fw image openamp_core0.elf, size 1295128
+[   46.317470] phytium-rproc remoteproc@0: iommu not present
+[   46.317517] remoteproc remoteproc0: rsc: type 3
+[   46.317555] remoteproc remoteproc0: vdev rsc: id 7, dfeatures 0x1, cfg len 0, 2 vrings
+[   46.317800] num_vrings: 2
+[   46.317845] remoteproc remoteproc0: vdev rsc: vring0: da 0xc0020000, qsz 256, align 4096
+[   46.317883] remoteproc remoteproc0: vdev rsc: vring1: da 0xc0024000, qsz 256, align 4096
+[   46.320359] remoteproc remoteproc0: carveout va ffff800011f61000, dma 0x00000000fa540000, len 0x3000
+[   46.320390] phytium-rproc remoteproc@0: Allocated carveout doesn't fit device address request
+[   46.320403] rsc->offset: -1
+[   46.321099] remoteproc remoteproc0: carveout va ffff800011f75000, dma 0x00000000fa544000, len 0x3000
+[   46.321125] phytium-rproc remoteproc@0: Allocated carveout doesn't fit device address request
+[   46.321138] rsc->offset: -1
+[   46.384974] CPU3: shutdown
+[   46.409738] psci: CPU3 killed (polled 24 ms)
+[   46.823479] virtio virtio0: reset !
+[   46.823485] virtio virtio0: status: 1
+[   46.823577] virtio_rpmsg_bus virtio0: status: 3
+[   46.823589] remoteproc remoteproc0: vring0: va ffff800011f61000 qsz 256 notifyid 0
+[   46.823615] remoteproc remoteproc0: vring1: va ffff800011f75000 qsz 256 notifyid 1
+[   46.823944] virtio_rpmsg_bus virtio0: status: 7
+[   46.823950] remoteproc remoteproc0: kicking vq index: 0
+[   46.823953] virtio_rpmsg_bus virtio0: rpmsg host is online
+[   46.823995]  remoteproc0#vdev0buffer: registered virtio0 (type 7)
+[   46.823999] remoteproc remoteproc0: remote processor remoteproc is now up
+```
