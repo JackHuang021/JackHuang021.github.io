@@ -11,15 +11,16 @@ date: 2022-11-24 10:23:01
 
 Linux Kernel主要通过三类机制来实现SMP（Symmetric Multiprocessing，对称多核）系统CPU core的电源管理：
 + cpu hotplug: 根据应用场景来up/down CPU
-+ cpuidle framework: 
++ cpuidle framework: 当cpu上没有可执行任务时，就会进入空闲状态
 + cpufreq framework: 根据使用场景和系统负荷来调整CPU的电压和频率
 
 <!-- more -->
+cpufreq framework的核心功能，是通过调整CPU core的电压或频率，兼顾系统的性能和功耗。在不需要高性能时，降低电压或频率，以降低功耗；在需要高性能时，提高电压或频率，以提高性能。
 
 cpufreq framework中的几个重要概念：
-1. policy（策略）：同一个簇的CPU动态调频的一个集合结构体，里面包含了当前使用的governor和cpufreq driver
-2. governor（调节器）：决定如何计算合适的功率
-3. cpufreq driver：来实现真正的调频工作（平台相关）
+1. policy（策略）：同一个簇的CPU动态调频的一个集合结构体，包含了当前使用的governor和cpufreq driver
+2. governor（调节器）：决定如何计算合适的频率或电压
+3. cpufreq driver：来实现真正的调频执行工作（与平台相关）
 
 常用的governor类型
 1. Performance：总是将CPU置于最高性能的状态，即硬件所支持的最高频率、电压
@@ -27,7 +28,7 @@ cpufreq framework中的几个重要概念：
 3. Ondemand：设置CPU负载的阈值T，当负载低于T时，调节至一个刚好能够满足当前负载需求的最低频/最低压；当负载高于T时，立即提升到最高性能状态
 4. Conservative：跟Ondemand策略类似，设置CPU负载的阈值T，当负载低于T时，调节至一个刚好能够满足当前负载需求的最低频/最低压；但当负载高于T时，不是立即设置为最高性能状态，而是逐级升高主频/电压
 5. Userspace：将控制接口通过sysfs开放给用户，由用户进行自定义策略
-6. Schedutil：这是从Linux-4.7版本开始才引入的策略，其原理是根据调度器所提供的CPU利用率信息进行电压/频率调节
+6. Schedutil：这是从Linux-4.7版本开始才引入的策略，其原理是根据调度器所提供的CPU利用率信息进行电压/频率调节，EAS使用schedutil进行调频
 
 sysfs用户层接口，目录位于`/sys/devices/system/cpu/cpufreq/policy`
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221124110212.png)
@@ -48,13 +49,16 @@ sysfs用户层接口，目录位于`/sys/devices/system/cpu/cpufreq/policy`
 | scaling_setspeed | 在userspace模式下才能使用，手动设置频率 |
 
 #### cpufreq软件架构
-cpufreq core：把一些公共的逻辑和接口代码抽象出来
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103092146.png)
+cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑和接口代码抽象出来
 + `cpufreq`作为所有cpu设备的一个功能，注册到了`cpu_subsys`总线上
 + 对上以sysfs的形式向用户空间提供统一的接口，以notifier的形式向其他driver提供频率变化的通知
-+ 对下提供CPU品频率和电压控制的驱动框架，方便底层driver的开发，同时提供governor框架，用于实现不同的频率调整机制
++ 对下提供CPU频率和电压控制的驱动框架，方便底层driver的开发，同时提供governor框架，用于实现不同的频率调整机制
 + 内部封装各种逻辑，主要围绕`struct cpufreq_policy` `struct cpufreq_driver` `struct cpufreq_governor`三个数据结构进行
 
-**`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个簇CPU的cpufreq的属性**
+kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个簇CPU的cpufreq的属性
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103093856.png)
+
 
 `cpufreq_policy`结构体
 ```c
@@ -83,11 +87,7 @@ struct cpufreq_policy {
 	unsigned int		max;    /* in kHz */
 	unsigned int		cur;    /* in kHz, only needed if cpufreq
 					 * governors are used */
-	unsigned int		restore_freq; /* = policy->cur before transition */
-	unsigned int		suspend_freq; /* freq to set during suspend */
 
-	unsigned int		policy; /* see above */
-	unsigned int		last_policy; /* policy before unplug */
 	struct cpufreq_governor	*governor; /* see below */
 	void			*governor_data;
 	char			last_governor[CPUFREQ_NAME_LEN]; /* last governor used */
@@ -102,27 +102,6 @@ struct cpufreq_policy {
 	struct list_head        policy_list;
 	struct kobject		kobj;
 	struct completion	kobj_unregister;
-
-	/*
-	 * The rules for this semaphore:
-	 * - Any routine that wants to read from the policy structure will
-	 *   do a down_read on this semaphore.
-	 * - Any routine that will write to the policy structure and/or may take away
-	 *   the policy altogether (eg. CPU hotplug), will hold this lock in write
-	 *   mode before doing so.
-	 */
-	struct rw_semaphore	rwsem;
-
-	/*
-	 * Fast switch flags:
-	 * - fast_switch_possible should be set by the driver if it can
-	 *   guarantee that frequency can be changed on any CPU sharing the
-	 *   policy and that the change will affect all of the policy CPUs then.
-	 * - fast_switch_enabled is to be set by governors that support fast
-	 *   frequency switching with the help of cpufreq_enable_fast_switch().
-	 */
-	bool			fast_switch_possible;
-	bool			fast_switch_enabled;
 
 	/*
 	 * Preferred average time interval between consecutive invocations of
@@ -144,17 +123,13 @@ struct cpufreq_policy {
 	unsigned int cached_target_freq;
 	int cached_resolved_idx;
 
-	/* Synchronization for frequency transitions */
-	bool			transition_ongoing; /* Tracks transition status */
-	spinlock_t		transition_lock;
-	wait_queue_head_t	transition_wait;
-	struct task_struct	*transition_task; /* Task which is doing the transition */
-
 	/* cpufreq-stats */
 	struct cpufreq_stats	*stats;
 
 	/* For cpufreq driver's internal use */
 	void			*driver_data;
+
+	...
 };
 ```
 
@@ -162,9 +137,12 @@ struct cpufreq_policy {
 ```c
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 ```
+这里对应E2000 sysfs中3个policy文件夹，两个小核在一个簇中，使用1个policy，另外两个大核分别对应1个policy
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103094857.png)
 
+> per-CPU变量是linux系统一个非常重要的特性，它为系统中的每个处理器都分配了该变量的副本。这样做的好处是，在多处理器系统中，当处理器操作属于它的变量副本时，不需要考虑与其他处理器的竞争的问题，同时该副本还可以充分利用处理器本地的硬件缓冲cache来提供访问速度
 
-#### cpufreq_driver初始化过程
+#### cpufreq初始化过程
 `cpufreq_driver`结构体如下：
 ```c
 struct cpufreq_driver {
@@ -175,50 +153,10 @@ struct cpufreq_driver {
 	/* needed by all drivers */
 	int		(*init)(struct cpufreq_policy *policy);
 	int		(*verify)(struct cpufreq_policy_data *policy);
-
-	/* define one out of two */
-	int		(*setpolicy)(struct cpufreq_policy *policy);
-
-	/*
-	 * On failure, should always restore frequency to policy->restore_freq
-	 * (i.e. old freq).
-	 */
-	int		(*target)(struct cpufreq_policy *policy,
-				  unsigned int target_freq,
-				  unsigned int relation);	/* Deprecated */
 	int		(*target_index)(struct cpufreq_policy *policy,
 					unsigned int index);
 	unsigned int	(*fast_switch)(struct cpufreq_policy *policy,
 				       unsigned int target_freq);
-
-	/*
-	 * Caches and returns the lowest driver-supported frequency greater than
-	 * or equal to the target frequency, subject to any driver limitations.
-	 * Does not set the frequency. Only to be implemented for drivers with
-	 * target().
-	 */
-	unsigned int	(*resolve_freq)(struct cpufreq_policy *policy,
-					unsigned int target_freq);
-
-	/*
-	 * Only for drivers with target_index() and CPUFREQ_ASYNC_NOTIFICATION
-	 * unset.
-	 *
-	 * get_intermediate should return a stable intermediate frequency
-	 * platform wants to switch to and target_intermediate() should set CPU
-	 * to that frequency, before jumping to the frequency corresponding
-	 * to 'index'. Core will take care of sending notifications and driver
-	 * doesn't have to handle them in target_intermediate() or
-	 * target_index().
-	 *
-	 * Drivers can return '0' from get_intermediate() in case they don't
-	 * wish to switch to intermediate frequency for some target frequency.
-	 * In that case core will directly call ->target_index().
-	 */
-	unsigned int	(*get_intermediate)(struct cpufreq_policy *policy,
-					    unsigned int index);
-	int		(*target_intermediate)(struct cpufreq_policy *policy,
-					       unsigned int index);
 
 	/* should be defined, if possible */
 	unsigned int	(*get)(unsigned int cpu);
@@ -226,117 +164,34 @@ struct cpufreq_driver {
 	/* Called to update policy limits on firmware notifications. */
 	void		(*update_limits)(unsigned int cpu);
 
-	/* optional */
-	int		(*bios_limit)(int cpu, unsigned int *limit);
-
 	int		(*online)(struct cpufreq_policy *policy);
 	int		(*offline)(struct cpufreq_policy *policy);
 	int		(*exit)(struct cpufreq_policy *policy);
-	void		(*stop_cpu)(struct cpufreq_policy *policy);
-	int		(*suspend)(struct cpufreq_policy *policy);
-	int		(*resume)(struct cpufreq_policy *policy);
-
-	/* Will be called after the driver is fully initialized */
-	void		(*ready)(struct cpufreq_policy *policy);
 
 	struct freq_attr **attr;
-
-	/* platform specific boost support code */
-	bool		boost_enabled;
-	int		(*set_boost)(struct cpufreq_policy *policy, int state);
 };
 ```
 
-`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`
+##### cpufreq大概的初始化流程
+`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
 
-scmi cpufreq driver初始化过程
+
+##### Performance Domain opp（Operating Performance Points）表初始化
+OPP表的定义：域中每个设备支持的电压和频率的离散元组的集合称为Operating Performance Points（OPP）,内核设备树opp文档`Documentation/devicetree/bindings/opp/opp.txt`  
+
+假设一个CPU设备支持如下的电压和频率关系：  
+{300MHz at minimum voltage of 1V}  
+{800MHz at minimum voltage of 1.2V}  
+{1GHz at minimum voltage of 1.3V}  
+用OPP表示就可以用{Hz,  uV}方式表示如下:  
+{300000000, 1000000}  
+{800000000, 1200000}  
+{1000000000, 1300000}
+
+这里初始化的就是各个性能域（即不同CPU簇）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的数据交互源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
 ```c
-// driver/base/cpu.c
-struct bus_type cpu_subsys = {
-	.name = "cpu",
-	.dev_name = "cpu",
-	.match = cpu_subsys_match,
-	.online = cpu_subsys_online,
-	.offline = cpu_subsys_offline,
-};
-
-static struct cpufreq_driver *cpufreq_driver;
-
-static struct subsys_interface cpufreq_interface = {
-	.name		= "cpufreq",
-	.subsys		= &cpu_subsys,
-	.add_dev	= cpufreq_add_dev,
-	.remove_dev	= cpufreq_remove_dev,
-};
-
-// scmi cpufreq_driver结构体定义
-static struct cpufreq_driver scmi_cpufreq_driver = {
-	.name	= "scmi",
-	.flags	= CPUFREQ_STICKY | CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
-		  CPUFREQ_NEED_INITIAL_FREQ_CHECK,
-	.verify	= cpufreq_generic_frequency_table_verify,
-	.attr	= cpufreq_generic_attr,
-	.target_index	= scmi_cpufreq_set_target,
-	.fast_switch	= scmi_cpufreq_fast_switch,
-	.get	= scmi_cpufreq_get_rate,
-	.init	= scmi_cpufreq_init,
-	.exit	= scmi_cpufreq_exit,
-	.ready	= scmi_cpufreq_ready,
-};
-
-// 为每个cluster定义一个cpufreq_policy结构体，对每个cluster上的CPU进行调频管理
-// 其中又分别进行cpufreq_driver的初始化和governor的初始化
-static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
-
-// cpufreq驱动框架初始化过程，整个过程都围绕着policy这个结构体进行，逐步进行初始化
-cpufreq_register_driver(&scmi_cpufreq_driver);
-	subsys_interface_register(&cpufreq_interface);
-		cpufreq_add_dev(dev, sif);
-			cpufreq_online(cpu);
-				policy = cpufreq_policy_alloc(cpu);
-				// 调用驱动init接口，初始化policy结构体
-				cpufreq_driver->init(policy) -> scmi_cpufreq_init(policy)
-				cpufreq_table_validate_and_sort(policy);
-				add_cpu_dev_symlink();
-				freq_qos_and_request();
-				blocking_notifier_call_chain();
-				// CPU进行频率调整，使当前运行频率在频率表中
-				__cpufreq_driver_target();
-				// 创建sys节点
-				cpufreq_add_dev_interface(policy);
-				cpufreq_stats_create_table(policy);
-				list_add(&policy->polic_list, &cpufreq_policy_list);
-				// 初始化governor
-				cpufreq_init_policy();
-```
-
-cpufreq_driver的初始化过程，这里是调用cpufreq_driver的init接口进行初始化
-```c
-// scmi_cpufreq_init(policy)初始化过程
-/**
- * struct scmi_handle - Handle returned to ARM SCMI clients for usage.
- *
- * @dev: pointer to the SCMI device
- * @version: pointer to the structure containing SCMI version information
- * @power_ops: pointer to set of power protocol operations
- * @perf_ops: pointer to set of performance protocol operations
- * @clk_ops: pointer to set of clock protocol operations
- * @sensor_ops: pointer to set of sensor protocol operations
- * @reset_ops: pointer to set of reset protocol operations
- * @notify_ops: pointer to set of notifications related operations
- * @perf_priv: pointer to private data structure specific to performance
- *	protocol(for internal use only)
- * @clk_priv: pointer to private data structure specific to clock
- *	protocol(for internal use only)
- * @power_priv: pointer to private data structure specific to power
- *	protocol(for internal use only)
- * @sensor_priv: pointer to private data structure specific to sensors
- *	protocol(for internal use only)
- * @reset_priv: pointer to private data structure specific to reset
- *	protocol(for internal use only)
- * @notify_priv: pointer to private data structure specific to notifications
- *	(for internal use only)
- */
+// include/linux/scmi_protocol.h
+// 抽象描述scmi协议的结构体，相应的ops操作集对应scmi的一个协议
 struct scmi_handle {
 	struct device *dev;
 	struct scmi_revision_info *version;
@@ -356,6 +211,10 @@ struct scmi_handle {
 	void *system_priv;
 };
 
+// scmi_handle这个结构体实现的就是scmi整个协议的处理
+static const struct scmi_handle *handle;	
+
+// include/linux/scmi_protocol.h
 /**
  * struct scmi_perf_ops - represents the various operations provided
  *	by SCMI Performance Protocol
@@ -398,28 +257,198 @@ struct scmi_perf_ops {
 				     struct device *dev);
 };
 
-// scmi协议 protocol: 0x13, messageid: 0x03
+// scmi performance domain management protocol(性能域管理相关协议 0x13), messageid: 0x03
+// scmi opp结构体定义
 struct scmi_opp {
-	u32 perf;
-	u32 power;
-	u32 trans_latency_us;
+	u32 perf;		// 性能级别，单位KHz
+	u32 power;		// 当前性能级别的功耗
+	u32 trans_latency_us;	// 切换延时
 };
 
-// scmi_handle这个结构体实现的就是scmi整个协议的处理
-static const struct scmi_handle *handle;	
+// scmi performance domain management protocol(性能域管理相关协议 0x13)对应操作函数集
+// scmi cpufreq_driver 主要利用这个函数集进行调频相关操作
+// 对应Performace domain management protocol各个message_id
+static const struct scmi_perf_ops perf_ops = {
+	.limits_set = scmi_perf_limits_set,
+	.limits_get = scmi_perf_limits_get,
+	.level_set = scmi_perf_level_set,
+	.level_get = scmi_perf_level_get,
+	.device_domain_id = scmi_dev_domain_id,
+	.transition_latency_get = scmi_dvfs_transition_latency_get,
+	.device_opps_add = scmi_dvfs_device_opps_add,
+	.freq_set = scmi_dvfs_freq_set,
+	.freq_get = scmi_dvfs_freq_get,
+	.est_power_get = scmi_dvfs_est_power_get,
+	.fast_switch_possible = scmi_fast_switch_possible,
+};
 
-scmi_cpufreq_init(policy)
-	cpu_dev = get_cpu_device(policy->cpu);
-	handle->perf_ops->device_opps_add(handle, cpu_dev);
+// 在这个宏进行SCMI performance domain management protocol协议的初始化
+DEFINE_SCMI_PROTOCOL_REGISTER_UNREGISTER(SCMI_PROTOCOL_PERF, perf)
+
+#define DEFINE_SCMI_PROTOCOL_REGISTER_UNREGISTER(id, name) \
+int __init scmi_##name##_register(void) \
+{ \
+	return scmi_protocol_register((id), &scmi_##name##_protocol_init); \
+} \
+\
+void __exit scmi_##name##_unregister(void) \
+{ \
+	scmi_protocol_unregister((id)); \
+}
+// 展开该宏
+int __init scmi_perf_register(void)
+{
+	return scmi_protocol_register(SCMI_PROTOCOL_PER, &scmi_perf_protocol_init);
+}
+
+// 初始化过程中调用了scmi_perf_protocol_init();
+static int scmi_perf_protocol_init(struct scmi_handle *handle)
+{
+	int domain;
+	u32 version;
+	struct scmi_perf_info *pinfo;
+
+	// 获取当前perf domain management协议版本
+	scmi_version_get(handle, SCMI_PROTOCOL_PERF, &version);
+
+	dev_dbg(handle->dev, "Performance Version %d.%d\n",
+		PROTOCOL_REV_MAJOR(version), PROTOCOL_REV_MINOR(version));
+
+	pinfo = devm_kzalloc(handle->dev, sizeof(*pinfo), GFP_KERNEL);
+	if (!pinfo)
+		return -ENOMEM;
+
+	scmi_perf_attributes_get(handle, pinfo);
+
+	pinfo->dom_info = devm_kcalloc(handle->dev, pinfo->num_domains,
+				       sizeof(*pinfo->dom_info), GFP_KERNEL);
+	if (!pinfo->dom_info)
+		return -ENOMEM;
+
+	// 遍历每个performance_domain，获取performance domain的属性和performance level参数
+	for (domain = 0; domain < pinfo->num_domains; domain++) {
+		struct perf_dom_info *dom = pinfo->dom_info + domain;
+
+		// 获取performance domain属性
+		scmi_perf_domain_attributes_get(handle, domain, dom);
+		// 获取performance level参数即opp表
+		scmi_perf_describe_levels_get(handle, domain, dom);
+
+		if (dom->perf_fastchannels)
+			scmi_perf_domain_init_fc(handle, domain, &dom->fc_info);
+	}
+
+	scmi_register_protocol_events(handle,
+				      SCMI_PROTOCOL_PERF, SCMI_PROTO_QUEUE_SZ,
+				      &perf_event_ops, perf_events,
+				      ARRAY_SIZE(perf_events),
+				      pinfo->num_domains);
+
+	pinfo->version = version;
+	handle->perf_ops = &perf_ops;
+	handle->perf_priv = pinfo;
+
+	return 0;
+}
+```
+最终获取得到的OPP表如下
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103140116.png)
+
+
+##### cpufreq初始化过程
+```c
+// driver/base/cpu.c
+struct bus_type cpu_subsys = {
+	.name = "cpu",
+	.dev_name = "cpu",
+	.match = cpu_subsys_match,
+	.online = cpu_subsys_online,
+	.offline = cpu_subsys_offline,
+};
+
+// driver/cpufreq/cpufreq.c
+// 指向当前使用的cpufreq_driver
+static struct cpufreq_driver *cpufreq_driver;
+
+// cpufreq subsys接口，用来挂到CPU subsys总线上
+static struct subsys_interface cpufreq_interface = {
+	.name		= "cpufreq",
+	.subsys		= &cpu_subsys,
+	.add_dev	= cpufreq_add_dev,
+	.remove_dev	= cpufreq_remove_dev,
+};
+
+// scmi cpufreq_driver结构体定义
+static struct cpufreq_driver scmi_cpufreq_driver = {
+	.name	= "scmi",
+	.flags	= CPUFREQ_STICKY | CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
+		  CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+	.verify	= cpufreq_generic_frequency_table_verify,
+	.attr	= cpufreq_generic_attr,
+	.target_index	= scmi_cpufreq_set_target,
+	.fast_switch	= scmi_cpufreq_fast_switch,
+	.get	= scmi_cpufreq_get_rate,
+	.init	= scmi_cpufreq_init,
+	.exit	= scmi_cpufreq_exit,
+	.ready	= scmi_cpufreq_ready,
+};
+
+// 为每个cluster定义一个cpufreq_policy结构体，对每个cluster上的CPU进行调频管理
+// 其中又分别进行cpufreq_driver的初始化和governor的初始化
+static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
+
+// cpufreq驱动框架初始化过程，整个过程都围绕着policy这个结构体进行，逐步进行初始化
+cpufreq_register_driver(&scmi_cpufreq_driver);
+	subsys_interface_register(&cpufreq_interface);
+		cpufreq_add_dev(dev, sif);
+			cpufreq_online(cpu);
+				// 初步初始化policy
+				policy = cpufreq_policy_alloc(cpu);
+				// 调用cpufreq_drvier init接口，完善policy结构体
+				// 将opp表添加到对应的device，通过dev_pm_opp_add接口
+				// 生成频率表 freq_table
+				cpufreq_driver->init(policy) -> scmi_cpufreq_init(policy)
+				cpufreq_table_validate_and_sort(policy);
+				// 创建/sys/device/system/cpu/cpux目录下的cpufreq符号链接
+				add_cpu_dev_symlink();
+				freq_qos_and_request();
+				blocking_notifier_call_chain();
+				// CPU进行频率调整，使当前运行频率在频率表中
+				__cpufreq_driver_target();
+				// 创建sys节点，/sys/device/system/cpu/cpufreq/policyx目录下的一些可选属性
+				cpufreq_add_dev_interface(policy);
+				cpufreq_stats_create_table(policy);
+				list_add(&policy->polic_list, &cpufreq_policy_list);
+				// 使用默认governor初始化policy
+				cpufreq_init_policy();
 ```
 
+#### cpufreq_governor的初始化过程
 cpufreq governor的初始化过程，在cpufreq_init_policy(policy)中进行，这里以ondemand为例进行分析
 ```c
+// include/linux/cpufreq.h
+struct cpufreq_governor {
+	char	name[CPUFREQ_NAME_LEN];
+	int	(*init)(struct cpufreq_policy *policy);
+	void	(*exit)(struct cpufreq_policy *policy);
+	int	(*start)(struct cpufreq_policy *policy);
+	void	(*stop)(struct cpufreq_policy *policy);
+	void	(*limits)(struct cpufreq_policy *policy);
+	ssize_t	(*show_setspeed)	(struct cpufreq_policy *policy,
+					 char *buf);
+	int	(*store_setspeed)	(struct cpufreq_policy *policy,
+					 unsigned int freq);
+	struct list_head	governor_list;
+	struct module		*owner;
+	u8			flags;
+};
+
 /* Common Governor data across policies */
+// 抽象出的governor调度器结构体
+// drivers/cpufreq/cpufreq_governor.h
 struct dbs_governor {
 	struct cpufreq_governor gov;
 	struct kobj_type kobj_type;
-
 	/*
 	 * Common data for platforms that don't set
 	 * CPUFREQ_HAVE_GOVERNOR_PER_POLICY
@@ -434,6 +463,7 @@ struct dbs_governor {
 	void (*start)(struct cpufreq_policy *policy);
 };
 
+// drivers/cpufreq/cpufreq_governor.h
 #define CPUFREQ_DBS_GOVERNOR_INITIALIZER(_name_)			\
 	{								\
 		.name = _name_,						\
@@ -447,6 +477,7 @@ struct dbs_governor {
 	}
 
 // ondemand调节器定义
+// driver/cpufreq/cpufreq_ondemand.c
 static struct dbs_governor od_dbs_gov = {
 	.gov = CPUFREQ_DBS_GOVERNOR_INITIALIZER("ondemand"),
 	.kobj_type = { .default_attrs = od_attributes },
@@ -458,13 +489,20 @@ static struct dbs_governor od_dbs_gov = {
 	.start = od_start,
 };
 
-#define CPU_FREQ_GOV_ONDEMAND	(od_dbs_gov.gov)
-
-// 从这里开始初始化governor
-// 该函数会在所有governor模块驱动的入口函数调用，
+// 初始化governor
+// 该函数会在governor模块驱动的入口函数调用
 // 只要编译该模块，就会注册到cpufreq framework中
+#define CPU_FREQ_GOV_ONDEMAND	(od_dbs_gov.gov)
 cpufreq_governor_init(CPU_FREQ_GOV_ONDEMAND);
 
+#define cpufreq_governor_init(__governor)			\
+static int __init __governor##_init(void)			\
+{								\
+	return cpufreq_register_governor(&__governor);	\
+}								\
+core_initcall(__governor##_init)
+
+// 在cpufreq_online()中调用默认governor对policy进行完善，启动当前governor
 cpufreq_init_policy(policy);
 	gov = get_governor(default_governor);
 	// 设置新的governor
@@ -474,15 +512,16 @@ cpufreq_init_policy(policy);
 				gov->init(dbs_data); -> odinit(dbs_data);
 		cpufreq_start_governor(policy);
 			policy->governor->start(); -> cpufreq_dbs_governor_start(policy);
-				// 设置governor回调函数
+				// 设置governor回调函数， 以ondemand为例
 				gov_set_update_util(policy_dbs, sampling_rate);
 					cpufreq_add_update_util_hook(cpu, &cdbs->updata_util,
 									dbs_update_util_handler);
 ```
+
 启动governor中比较重要的是设置调频回调函数,该函数是真正调频时计算合适频率的函数
 
-schedutil调度器代码分析
-
+#### schedutil调度器代码分析
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103174117.png)
 sugov作为一种内核调频策略模块，它主要是根据当前CPU的利用率进行调频。因此，sugov会注册一个callback函数（sugov_update_shared/sugov_update_single）到调度器负载跟踪模块，当CPU util发生变化的时候就会调用该callback函数，检查一下当前CPU频率是否和当前的CPU util匹配，如果不匹配，那么就进行升频或者降频。
 
 `sugov_tunables`结构体，用来描述sugov的可调参数
@@ -495,7 +534,7 @@ struct sugov_tunables {
 };
 ```
 
-`sugov_policy`结构体，sugov为每个cluster构建了该数据结构，记录per-cluster的调频数据信息
+`sugov_policy`结构体，sugov为每个cluster构建了该数据结构，记录每个cluster的调频数据信息
 ```c
 // sugov_policy结构体
 struct sugov_policy {
@@ -505,10 +544,10 @@ struct sugov_policy {
 	struct sugov_tunables	*tunables;
 	struct list_head	tunables_hook;
 
-	// 保护sugov对象的自旋锁，一旦要修改
 	raw_spinlock_t		update_lock;	/* For shared policies */
 	u64			last_freq_update_time;
 	s64			freq_update_delay_ns;
+	// 下一个需要调整到的频率值
 	unsigned int		next_freq;
 	unsigned int		cached_raw_freq;
 
@@ -549,6 +588,23 @@ struct sugov_cpu {
 	unsigned long		saved_idle_calls;
 #endif
 };
+```
+
+sugov初始化过程和ondemand初始化过程相似，当内核设定默认governor为sugov时，在`cpufreq_init_governor(policy);`中会调用`sugov_init()`初始化sugov，然后调用`sugov_start()`设置调频回调函数，在`cpufreq_update_util()`被调用时，会调用sugov的回调函数进行调频，`sugov_update_shared()`当一个簇中有多个CPU是调用该回调，遍历簇上的CPU找到当前最大util的CPU，然后根据该util映射到频率；`sugov_update_single()`即一个簇上单个CPU的情况直接根据该CPU util计算频率
+
+```c
+static int sugov_start(struct cpufreq_policy *policy)
+{
+	...
+	for_each_cpu(cpu, policy->cpus) {
+		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
+
+		cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
+					     policy_is_shared(policy) ?
+							sugov_update_shared :
+							sugov_update_single);
+	}
+}
 ```
 
 `schedutil_cpu_util()`函数分析，用来计算cpu util的
@@ -656,16 +712,14 @@ EAS整体框架
 
 EAS在CPU调度领域，在为任务选核是起作用，目的是保证性能的情况下尽可能节省功耗，EAS涉及内核的几个子系统（任务调度、能源管理、CPU动态调频），EAS代码主要位于`kernel/sched.fair.c`，能源感知的任务调度需要调度器评估各个任务在CPU上运行带来的能耗影响
 
-
-归一化CPU capacity，`topology_normalize_cpu_scale()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
-
-EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
-
 EAS负载跟踪有两种模式，一种是“每实体负载跟踪（Per_Entity Load Track）”，通常用于负载跟踪，然后该信息用于确定频率以及如何在CPU上委派任务，另一种是“窗口辅助的负载跟踪（Window-Assisted Load Tracking）”，WALT更具有突发性，而PELT试图让频率保持连贯性，负载跟踪器实际上并不影响CPU频率，它只是告诉系统CPU使用率是多少
 
-ARM推荐的测试CPU的性能工具：Dhrystone 2.1以上版本
+##### CPU算力归一化过程
+归一化CPU capacity，`topology_normalize_cpu_scale()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
 
 `topology_normalize_cpu_scale()`在CPU初始化`parse_dt_topology()`中被调用，capacity归一化的前提条件是需要在设备树中CPU节点设置`capacity-dmips-mhz`属性，该属性表示不同CPU的计算能力，内核读取该属性设置CPU的`raw_capacity`为`capacity-dmips-mhz`，参考内核文档`Documentation/devicetree/bindings/arm/cpu-capacity.txt`
+
+> ARM推荐的测试CPU的性能工具：Dhrystone 2.1以上版本，可以通过单核跑分成绩作为`capacity-dmips-mhz`属性的参考
 
 CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到capacity，CPU的频率也参与到了计算中
 ` capacity = (own(capacity-dmips-mhz) * own(max_freq)) / (max(capacity-dmips-mhz) * max(max_freq)) * 1024`
@@ -679,6 +733,8 @@ CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到ca
 [    2.532432] sustained_freq_khz = 1500000
 [    2.536434] sustained_perf_level = 1500000
 ```
+
+EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
 
 相关结构体
 
