@@ -56,7 +56,7 @@ cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑�
 + 对下提供CPU频率和电压控制的驱动框架，方便底层driver的开发，同时提供governor框架，用于实现不同的频率调整机制
 + 内部封装各种逻辑，主要围绕`struct cpufreq_policy` `struct cpufreq_driver` `struct cpufreq_governor`三个数据结构进行
 
-kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个簇CPU的cpufreq的属性
+kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个CPU簇的cpufreq的属性
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103093856.png)
 
 
@@ -172,9 +172,11 @@ struct cpufreq_driver {
 };
 ```
 
-##### cpufreq大概的初始化流程
-`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
+##### cpufreq初始化概述
+在kconfig中(CPU Power Management -> CPU Frequency scaling)可以对cpufreq进行配置，可以配置支持的governor及系统默认的governor，以及cpufreq调频driver，例如Phytium E2000 5.10内核的配置如下，默认使用schedutil governor，根据调度器所提供的CPU利用率信息进行电压/频率调节，EAS能源感知依赖该governor工作：
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105110139.png)
 
+cpufreq的初始化从cpufreq_drvier注册开始，`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
 
 ##### Performance Domain opp（Operating Performance Points）表初始化
 OPP表的定义：域中每个设备支持的电压和频率的离散元组的集合称为Operating Performance Points（OPP）,内核设备树opp文档`Documentation/devicetree/bindings/opp/opp.txt`  
@@ -188,7 +190,7 @@ OPP表的定义：域中每个设备支持的电压和频率的离散元组的�
 {800000000, 1200000}  
 {1000000000, 1300000}
 
-这里初始化的就是各个性能域（即不同CPU簇）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的数据交互源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
+这里初始化的就是各个性能域（即不同CPU簇）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的协议实现源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
 ```c
 // include/linux/scmi_protocol.h
 // 抽象描述scmi协议的结构体，相应的ops操作集对应scmi的一个协议
@@ -464,6 +466,7 @@ struct dbs_governor {
 };
 
 // drivers/cpufreq/cpufreq_governor.h
+// governor初始化宏
 #define CPUFREQ_DBS_GOVERNOR_INITIALIZER(_name_)			\
 	{								\
 		.name = _name_,						\
@@ -476,7 +479,7 @@ struct dbs_governor {
 		.limits = cpufreq_dbs_governor_limits,			\
 	}
 
-// ondemand调节器定义
+// ondemand governor定义
 // driver/cpufreq/cpufreq_ondemand.c
 static struct dbs_governor od_dbs_gov = {
 	.gov = CPUFREQ_DBS_GOVERNOR_INITIALIZER("ondemand"),
@@ -517,10 +520,9 @@ cpufreq_init_policy(policy);
 					cpufreq_add_update_util_hook(cpu, &cdbs->updata_util,
 									dbs_update_util_handler);
 ```
-
 启动governor中比较重要的是设置调频回调函数,该函数是真正调频时计算合适频率的函数
 
-#### schedutil调度器代码分析
+#### schedutil调节器
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103174117.png)
 sugov作为一种内核调频策略模块，它主要是根据当前CPU的利用率进行调频。因此，sugov会注册一个callback函数（sugov_update_shared/sugov_update_single）到调度器负载跟踪模块，当CPU util发生变化的时候就会调用该callback函数，检查一下当前CPU频率是否和当前的CPU util匹配，如果不匹配，那么就进行升频或者降频。
 
@@ -536,7 +538,7 @@ struct sugov_tunables {
 
 `sugov_policy`结构体，sugov为每个cluster构建了该数据结构，记录每个cluster的调频数据信息
 ```c
-// sugov_policy结构体
+// sugov_policy结构体，为每个簇构建了该数据结构，记录每个簇的调频数据信息
 struct sugov_policy {
 	// 指向cpufreq framework层的policy对象
 	struct cpufreq_policy	*policy;
@@ -545,10 +547,13 @@ struct sugov_policy {
 	struct list_head	tunables_hook;
 
 	raw_spinlock_t		update_lock;	/* For shared policies */
+	// 记录上次进行频率调整的时间点
 	u64			last_freq_update_time;
+	// 最小调频时间间隔
 	s64			freq_update_delay_ns;
-	// 下一个需要调整到的频率值
+	// 下一个需要调整到的频率值，回调函数主要是计算这个参数
 	unsigned int		next_freq;
+	// 根据CPU util计算出来的原始频率，在频率表中向上找最接近的频率进行调整
 	unsigned int		cached_raw_freq;
 
 	/* The next fields are only needed if fast switch cannot be used: */
@@ -567,7 +572,7 @@ struct sugov_policy {
 `sugov_cpu`结构体，sugov为每个cpu构建了该数据结构，记录per-cpu的调频数据信息
 ```c
 struct sugov_cpu {
-	// 保存了cpu util变化后的callback函数
+	// 保存了cpu util变化后的回调函数
 	struct update_util_data	update_util;
 	// 该sugov_cpu对应的sugov_policy对象
 	struct sugov_policy	*sg_policy;
@@ -590,31 +595,42 @@ struct sugov_cpu {
 };
 ```
 
-sugov初始化过程和ondemand初始化过程相似，当内核设定默认governor为sugov时，在`cpufreq_init_governor(policy);`中会调用`sugov_init()`初始化sugov，然后调用`sugov_start()`设置调频回调函数，在`cpufreq_update_util()`被调用时，会调用sugov的回调函数进行调频，`sugov_update_shared()`当一个簇中有多个CPU是调用该回调，遍历簇上的CPU找到当前最大util的CPU，然后根据该util映射到频率；`sugov_update_single()`即一个簇上单个CPU的情况直接根据该CPU util计算频率
+sugov初始化过程和ondemand初始化过程相似，当内核设定默认governor为sugov时，在`cpufreq_init_governor(policy);`中会调用`sugov_init()`初始化sugov，然后调用`sugov_start()`设置调频回调函数，每当CPU利用率发生变化的时候，调度器都会调用`cpufreq_update_util()`通知sugov，在`cpufreq_update_util()`被调用时，即任务调度后CPU当前的util发生变化，会调用sugov的回调函数进行调频，`sugov_update_shared()`当一个簇中有多个CPU调用该回调，遍历簇上的CPU找到当前最大util的CPU，然后根据该util映射到频率；`sugov_update_single()`即一个簇上单个CPU的情况直接根据该CPUte_shared()` util计算频率
 
+调度事件的发生还是非常密集的，特别是在重载的情况下，很多任务可能执行若干个us就切换出去了。如果每次都计算CPU util看看是否需要调整频率，那么本身sugov就给系统带来较重的负荷，因此并非每次调频时机都会真正执行调频检查，sugov设置了一个最小调频间隔，小于这个间隔的调频请求会被过滤掉。
+
+##### schedutil频率计算过程
 ```c
+// sugov_start会遍历该sugov policy（cluster）中的所有cpu
+// 调用cpufreq_add_update_util_hook为sugov cpu注册调频回调函数，代码逻辑如下：
 static int sugov_start(struct cpufreq_policy *policy)
 {
 	...
 	for_each_cpu(cpu, policy->cpus) {
 		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
-
+		// 设置governor 计算回调函数，cpufreq_update_util()被调用时
+		// 即任务调度后CPU当前的util发生变化，会调用sugov的回调函数进行调频计算
 		cpufreq_add_update_util_hook(cpu, &sg_cpu->update_util,
 					     policy_is_shared(policy) ?
 							sugov_update_shared :
 							sugov_update_single);
 	}
+	...
 }
-```
 
-`schedutil_cpu_util()`函数分析，用来计算cpu util的
-```c
-// 调用过程
+// schedutil频率计算过程
 sugov_update_single();
+	// 调频最小间隔时间检查，小于设定时间，直接返回
+	sugov_should_update_freq();
 	util = sugov_get_util(sg_cpuu);
 		schedutil_cpu_util(sg_cpu->cpu, util, max, FREQUENCY_UTIL, NULL);
+	// 根据当前CPU的util映射到具体的频率上
+	next_f = get_next_freq(sg_policy, util, max);
+	// 调用cpufreq_driver进行调频
+	sugov_deferred_update(sg_policy, time, next_f);
+		__cpufreq_driver_target()
 
-
+// 计算cpu当前的utility
 unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 					unsigned long max, enum schedutil_type type,
 					struct task_struct *p)
@@ -627,43 +643,18 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 		return max;
 	}
 
-	/*
-	 * Early check to see if IRQ/steal time saturates the CPU, can be
-	 * because of inaccuracies in how we track these -- see
-	 * update_irq_load_avg().
-	 */
+	// 如果CPU处理了过多的中断服务函数，irq负载已经高过CPU最大算力，直接返回最大算力
 	irq = cpu_util_irq(rq);
 	if (unlikely(irq >= max))
 		return max;
 
-	/*
-	 * Because the time spend on RT/DL tasks is visible as 'lost' time to
-	 * CFS tasks and we use the same metric to track the effective
-	 * utilization (PELT windows are synchronized) we can directly add them
-	 * to obtain the CPU's actual utilization.
-	 *
-	 * CFS and RT utilization can be boosted or capped, depending on
-	 * utilization clamp constraints requested by currently RUNNABLE
-	 * tasks.
-	 * When there are no CFS RUNNABLE tasks, clamps are released and
-	 * frequency will be gracefully reduced with the utilization decay.
-	 */
-	// 累加了cfs和rt任务的utility，根据当前的
+	// 累加了cfs和rt任务的utility
 	util = util_cfs + cpu_util_rt(rq);
 	if (type == FREQUENCY_UTIL)
 		util = uclamp_rq_util_with(rq, util, p);
 
 	dl_util = cpu_util_dl(rq);
 
-	/*
-	 * For frequency selection we do not make cpu_util_dl() a permanent part
-	 * of this sum because we want to use cpu_bw_dl() later on, but we need
-	 * to check if the CFS+RT+DL sum is saturated (ie. no idle time) such
-	 * that we select f_max when there is no idle time.
-	 *
-	 * NOTE: numerical errors or stop class might cause us to not quite hit
-	 * saturation when we should -- something for later.
-	 */
 	if (util + dl_util >= max)
 		return max;
 
@@ -683,6 +674,8 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 	 *   U' = irq + --------- * U
 	 *                 max
 	 */
+	// irq会偷走一部分的cpu算力，从而让其capacity没有那么大。
+	// 这里通过scale_irq_capacity对任务的utility进行调整
 	util = scale_irq_capacity(util, irq, max);
 	util += irq;
 
@@ -701,46 +694,81 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 
 	return min(max, util);
 }
+
+// 根据当前CPU计算的util映射对应频率
+static unsigned int get_next_freq(struct sugov_policy *sg_policy,
+				  unsigned long util, unsigned long max)
+{
+	struct cpufreq_policy *policy = sg_policy->policy;
+	// 先取得当前CPU的最大频率
+	unsigned int freq = arch_scale_freq_invariant() ?
+				policy->cpuinfo.max_freq : policy->cur;
+	// 计算当前util对应频率，计算公式: freq = (1.25) * freq * util / max
+	// 这里冗余了25%的算力余量
+	freq = map_util_freq(util, freq, max);
+
+	// 若计算出的freq和上次缓存的一样，则实际调整的next_freq计算后肯定也是一样的，直接返回
+	// 上次记录的频率值
+	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
+		return sg_policy->next_freq;
+
+	sg_policy->cached_raw_freq = freq;
+
+	// 根据当前算的freq，在CPU频率表上查找对应的频率
+	freq = cpufreq_driver_resolve_freq(policy, freq);
+
+	return freq;
+}
 ```
 
-#### EAS相关
+#### EAS能源感知调度
 
 EAS整体框架
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221216104706.png)
 
 完全公平调度（Completely Fair Scheduler CFS）实现了面向吞吐量的的任务调度策略，EAS为这个调度器添加了一个基于能耗的调度策略，在优化CPU算力冗余的同时实现了节能，EAS在系统中、低度负载情况下工作，CFS在系统满负载情况下工作。
 
-EAS在CPU调度领域，在为任务选核是起作用，目的是保证性能的情况下尽可能节省功耗，EAS涉及内核的几个子系统（任务调度、能源管理、CPU动态调频），EAS代码主要位于`kernel/sched.fair.c`，能源感知的任务调度需要调度器评估各个任务在CPU上运行带来的能耗影响
+EAS在CPU调度领域，在为任务选核是起作用，目的是保证性能的情况下尽可能节省功耗，EAS涉及内核的几个子系统（任务调度、能源管理、CPU动态调频），EAS代码主要位于`kernel/sched/fair.c`，能源感知的任务调度需要调度器评估各个任务在CPU上运行带来的能耗影响
 
 EAS负载跟踪有两种模式，一种是“每实体负载跟踪（Per_Entity Load Track）”，通常用于负载跟踪，然后该信息用于确定频率以及如何在CPU上委派任务，另一种是“窗口辅助的负载跟踪（Window-Assisted Load Tracking）”，WALT更具有突发性，而PELT试图让频率保持连贯性，负载跟踪器实际上并不影响CPU频率，它只是告诉系统CPU使用率是多少
 
+EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
+
 ##### CPU算力归一化过程
-归一化CPU capacity，`topology_normalize_cpu_scale()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
+当前，Linux无法凭自身算出CPU算力，因此必须要有把这个信息传递给Linux的方式，它是从`capacity-dmips-mhz` CPU 设备树binding中衍生计算出来的
+
+归一化CPU capacity，`topology_normalize_cpu_scale()`定义在`drivers/base/arch_topology()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
 
 `topology_normalize_cpu_scale()`在CPU初始化`parse_dt_topology()`中被调用，capacity归一化的前提条件是需要在设备树中CPU节点设置`capacity-dmips-mhz`属性，该属性表示不同CPU的计算能力，内核读取该属性设置CPU的`raw_capacity`为`capacity-dmips-mhz`，参考内核文档`Documentation/devicetree/bindings/arm/cpu-capacity.txt`
 
-> ARM推荐的测试CPU的性能工具：Dhrystone 2.1以上版本，可以通过单核跑分成绩作为`capacity-dmips-mhz`属性的参考
+> ARM推荐的测试CPU的性能工具：Dhrystone 2.1以上版本，可以通过单核跑分成绩作为`capacity-dmips-mhz`属性的参考，DMIPS： Dhrystone Million Instructions executed Per Second，表示了在Dhrystone这样一种测试方法下的MIPS，Dhrystone是一种整数运算测试程序。MIPS/MHz，就是说每MHz频率能产生多大的MIPS，CPU性能通常由每秒百万指令（Millions of Instructions Per Second，MIPS）表示，设备树里表示为dmips/mhz
 
 CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到capacity，CPU的频率也参与到了计算中
 ` capacity = (own(capacity-dmips-mhz) * own(max_freq)) / (max(capacity-dmips-mhz) * max(max_freq)) * 1024`
 
-目前从scmi读到的cpu频率对应的performance level
-```bash
-[    2.515964] sustained_freq_khz = 2000000
-[    2.519971] sustained_perf_level = 2000000
-[    2.524201] sustained_freq_khz = 2000000
-[    2.528203] sustained_perf_level = 2000000
-[    2.532432] sustained_freq_khz = 1500000
-[    2.536434] sustained_perf_level = 1500000
+根据测试部测试的E2000QCPU单核性能数据，E2000Q的`capacity-dmips-mhz`属性值可以设置为如下，放大1000倍：
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105152415.png)
+```c
+	// 小核
+	cpu_l0: cpu@0 {
+		...
+		capacity-dmips-mhz = <2850>;
+		...
+	};
+	// 大核
+	cpu_b0: cpu@0 {
+		...
+		capacity-dmips-mhz = <5660>;
+		...
+	};
 ```
+实际经过CPU算力归一化到1024之后，对应的小核CPU算力为386，大核为1024
 
-EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
-
-相关结构体
-
+##### EAS代码相关结构体
 perf_domain结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的，性能域之间形成链，链表头存放在root_domian中
 ```c
 // kernel/sched/sched.h
+// perf_comain 结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的
 struct perf_domain {
 	struct em_perf_domain *em_pd;
 	struct perf_domain *next;
@@ -814,7 +842,7 @@ struct em_perf_domain {
 };
 ```
 
-perf_domain_debug 打印信息
+E2000Q 5.10内核，perf_domain_debug 打印信息
 ```bash
 [    2.574534] root_domain 0-3: pd3:{ cpus=3 nr_pstate=4 }
 [    2.574540] freq: 250000, power: 79, cost: 632
@@ -840,28 +868,23 @@ root_domain的overload和overutilized说明：
 + overutilized 状态非常重要，它决定了调度器是否启用EAS，只有在系统没有 overutilized 的情况下EAS才会生效。overload和newidle balance的频次控制相关，当系统在overload的情况下，newidle balance才会启动进行均衡。
 
 
-EAS的调度过程：  
-在任务被重新唤醒或者fork新建时，会通过`select_task_rq_fair()`将任务进行balance，达到充分利用CPU的目的。在`select_task_rq_fair()`，若任务是被重新唤醒就会调用`find_energy_efficient_cpu()`进行选核执行
-```c
-/*
-CPU在某个performance state(ps)下的计算能力
-	ps->cap = ps->freq * scale_cpu / cpu_max_freq		(1)
+##### EAS能量计算方法
+CPU在某个performance state(ps)下的计算能力：  
+ps->cap = ps->freq * scale_cpu / cpu_max_freq	（1）
 
-CPU在该频点performace state(ps)下的能量消耗
-	cpu_nrg = ps->power * cpu_util / ps->cap			(2)
-	cpu_util / ps->cap 也可以表示为一个CPU的busy time
+CPU在该频点performace state(ps)下的能量消耗：  
+cpu_nrg = ps->power * cpu_util / ps->cap  （2）
 
 结合(1) (2)可以得出CPU在该ps下的能量消耗
 	cpu_nrg = ps->power * cpu_max_freq * cpu_util / ps->freq * scale_cpu (3)
 
 其中 ps->power * cpu_max_freq / ps->freq 是一个固定数据存放在频点表的cost成员中
 
-一个pd内的CPU，拥有相同的cost，所以一个pd内所有CPU的能量消耗可以表示为
-	pd_nrg = ps->cost * sum(cpu_util) / scale_cpu
-	
-*/
-``` 
+一个pd内的CPU，拥有相同的cost，所以一个pd内所有CPU的能量消耗可以表示为  
+pd_nrg = ps->cost * sum(cpu_util) / scale_cpu
 
+##### EAS的调度过程
+在任务被重新唤醒或者fork新建时，会通过`select_task_rq_fair()`将任务进行balance，达到充分利用CPU的目的。在`select_task_rq_fair()`，若任务是被重新唤醒就会调用`find_energy_efficient_cpu()`进行选核执行
 ```c
 /*
  * compute_energy(): Estimates the energy that @pd would consume if @p was
@@ -1031,7 +1054,6 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 			 * much capacity we can get out of the CPU; this is
 			 * aligned with schedutil_cpu_util().
 			 */
-			// 对util进行下一步uclamp，若clamp后CPU算力不满足需求了，就放弃该CPU的继续探测
 			util = uclamp_rq_util_with(cpu_rq(cpu), util, p);
 			// CPU需要保留20%左右的算力，不满足需求后进行下一个CPU的探测
 			if (!fits_capacity(util, cpu_cap))
