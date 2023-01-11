@@ -8,7 +8,8 @@ abbrlink: fbf46cf3
 date: 2022-11-24 10:23:01
 ---
 
-
+### cpufreq动态调频
+#### cpufreq概述
 Linux Kernel主要通过三类机制来实现SMP（Symmetric Multiprocessing，对称多核）系统CPU core的电源管理：
 + cpu hotplug: 根据应用场景来up/down CPU
 + cpuidle framework: 当cpu上没有可执行任务时，就会进入空闲状态
@@ -59,8 +60,8 @@ cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑�
 kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个CPU簇的cpufreq的属性
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103093856.png)
 
-
 `cpufreq_policy`结构体
+
 ```c
 struct cpufreq_cpuinfo {
 	unsigned int		max_freq;			// cpu最大频率
@@ -134,6 +135,7 @@ struct cpufreq_policy {
 ```
 
 `driver/cpufreq/cpufreq.c`中定义了一个全局的percpu变量
+
 ```c
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 ```
@@ -142,43 +144,13 @@ static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 
 > per-CPU变量是linux系统一个非常重要的特性，它为系统中的每个处理器都分配了该变量的副本。这样做的好处是，在多处理器系统中，当处理器操作属于它的变量副本时，不需要考虑与其他处理器的竞争的问题，同时该副本还可以充分利用处理器本地的硬件缓冲cache来提供访问速度
 
-#### cpufreq初始化过程
-`cpufreq_driver`结构体如下：
-```c
-struct cpufreq_driver {
-	char		name[CPUFREQ_NAME_LEN];
-	u16		    flags;
-	void		*driver_data;
+#### cpufreq初始化
+##### 内核配置
 
-	/* needed by all drivers */
-	int		(*init)(struct cpufreq_policy *policy);
-	int		(*verify)(struct cpufreq_policy_data *policy);
-	int		(*target_index)(struct cpufreq_policy *policy,
-					unsigned int index);
-	unsigned int	(*fast_switch)(struct cpufreq_policy *policy,
-				       unsigned int target_freq);
-
-	/* should be defined, if possible */
-	unsigned int	(*get)(unsigned int cpu);
-
-	/* Called to update policy limits on firmware notifications. */
-	void		(*update_limits)(unsigned int cpu);
-
-	int		(*online)(struct cpufreq_policy *policy);
-	int		(*offline)(struct cpufreq_policy *policy);
-	int		(*exit)(struct cpufreq_policy *policy);
-
-	struct freq_attr **attr;
-};
-```
-
-##### cpufreq初始化概述
 在kconfig中(CPU Power Management -> CPU Frequency scaling)可以对cpufreq进行配置，可以配置支持的governor及系统默认的governor，以及cpufreq调频driver，例如Phytium E2000 5.10内核的配置如下，默认使用schedutil governor，根据调度器所提供的CPU利用率信息进行电压/频率调节，EAS能源感知依赖该governor工作：
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105110139.png)
 
-cpufreq的初始化从cpufreq_drvier注册开始，`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
-
-##### Performance Domain opp（Operating Performance Points）表初始化
+##### OPP表初始化
 OPP表的定义：域中每个设备支持的电压和频率的离散元组的集合称为Operating Performance Points（OPP）,内核设备树opp文档`Documentation/devicetree/bindings/opp/opp.txt`  
 
 假设一个CPU设备支持如下的电压和频率关系：  
@@ -356,9 +328,38 @@ static int scmi_perf_protocol_init(struct scmi_handle *handle)
 最终获取得到的OPP表如下
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103140116.png)
 
-
 ##### cpufreq初始化过程
+
+cpufreq的初始化从cpufreq_drvier注册开始，`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
+
 ```c
+// cpufreq_drvier结构体
+struct cpufreq_driver {
+	char		name[CPUFREQ_NAME_LEN];
+	u16		    flags;
+	void		*driver_data;
+
+	/* needed by all drivers */
+	int		(*init)(struct cpufreq_policy *policy);
+	int		(*verify)(struct cpufreq_policy_data *policy);
+	int		(*target_index)(struct cpufreq_policy *policy,
+					unsigned int index);
+	unsigned int	(*fast_switch)(struct cpufreq_policy *policy,
+				       unsigned int target_freq);
+
+	/* should be defined, if possible */
+	unsigned int	(*get)(unsigned int cpu);
+
+	/* Called to update policy limits on firmware notifications. */
+	void		(*update_limits)(unsigned int cpu);
+
+	int		(*online)(struct cpufreq_policy *policy);
+	int		(*offline)(struct cpufreq_policy *policy);
+	int		(*exit)(struct cpufreq_policy *policy);
+
+	struct freq_attr **attr;
+};
+
 // driver/base/cpu.c
 struct bus_type cpu_subsys = {
 	.name = "cpu",
@@ -425,10 +426,12 @@ cpufreq_register_driver(&scmi_cpufreq_driver);
 				cpufreq_init_policy();
 ```
 
-#### cpufreq_governor的初始化过程
+##### governor初始化过程
+
 cpufreq governor的初始化过程，在cpufreq_init_policy(policy)中进行，这里以ondemand为例进行分析
 ```c
 // include/linux/cpufreq.h
+// 内核governor描述结构体，形成链表
 struct cpufreq_governor {
 	char	name[CPUFREQ_NAME_LEN];
 	int	(*init)(struct cpufreq_policy *policy);
@@ -463,6 +466,46 @@ struct dbs_governor {
 	int (*init)(struct dbs_data *dbs_data);
 	void (*exit)(struct dbs_data *dbs_data);
 	void (*start)(struct cpufreq_policy *policy);
+};
+
+/* Governor demand based switching data (per-policy or global). */
+// governor计算频率使用的相关参数，包括阈值 采样率等
+// dbs(demand based switching)按需切换
+struct dbs_data {
+	struct gov_attr_set attr_set;
+	void *tuners;
+	unsigned int ignore_nice_load;
+	unsigned int sampling_rate;
+	unsigned int sampling_down_factor;
+	unsigned int up_threshold;
+	unsigned int io_is_busy;
+};
+
+/* Common to all CPUs of a policy */
+// driver/cpufreq/cpufreq_governor.h
+// policy和governor传递的私有数据
+struct policy_dbs_info {
+	struct cpufreq_policy *policy;
+	/*
+	 * Per policy mutex that serializes load evaluation from limit-change
+	 * and work-handler.
+	 */
+	struct mutex update_mutex;
+
+	u64 last_sample_time;
+	s64 sample_delay_ns;
+	atomic_t work_count;
+	struct irq_work irq_work;
+	struct work_struct work;
+	/* dbs_data may be shared between multiple policy objects */
+	struct dbs_data *dbs_data;
+	struct list_head list;
+	/* Multiplier for increasing sample delay temporarily. */
+	unsigned int rate_mult;
+	unsigned int idle_periods;	/* For conservative */
+	/* Status indicators */
+	bool is_shared;		/* This object is used by multiple CPUs */
+	bool work_in_progress;	/* Work is being queued up or in progress */
 };
 
 // drivers/cpufreq/cpufreq_governor.h
@@ -522,11 +565,373 @@ cpufreq_init_policy(policy);
 ```
 启动governor中比较重要的是设置调频回调函数,该函数是真正调频时计算合适频率的函数
 
+#### ondemand调节器
+
+ondemand调节器也会根据当前的CPU负载来进行CPU频率计算，ondemand工作过程如下
+
+```c
+// include/linux/sched/cpufreq.h
+struct update_util_data {
+    void (*func)(struct update_util_data *data, u64 time, unsigned int flags);
+};
+
+// drivers/cpufreq/cpufreq_governor.c
+// 设置governor回调函数update_util_data->func = dbs_update_util_handler
+cpufreq_dbs_governor_start()
+    gov_set_update_util(policy_dbs, sampling_rate);
+		cpufreq_add_update_util_hook(cpu, &cdbs->update_util,
+                                    dbs_update_util_handler);
+
+/**
+ * cpufreq_update_util - Take a note about CPU utilization changes.
+ * @rq: Runqueue to carry out the update for.
+ * @flags: Update reason flags.
+ *
+ * This function is called by the scheduler on the CPU whose utilization is
+ * being updated.
+ *
+ * It can only be called from RCU-sched read-side critical sections.
+ *
+ * The way cpufreq is currently arranged requires it to evaluate the CPU
+ * performance state (frequency/voltage) on a regular basis to prevent it from
+ * being stuck in a completely inadequate performance level for too long.
+ * That is not guaranteed to happen if the updates are only triggered from CFS
+ * and DL, though, because they may not be coming in if only RT tasks are
+ * active all the time (or there are RT tasks only).
+ *
+ * As a workaround for that issue, this function is called periodically by the
+ * RT sched class to trigger extra cpufreq updates to prevent it from stalling,
+ * but that really is a band-aid.  Going forward it should be replaced with
+ * solutions targeted more specifically at RT tasks.
+ */
+// kernel/sched/sched.h
+// 当cpufreq_update_util()被调用时执行上面设置的回调函数update_util_data->func
+// 为了考虑RT任务的影响，目前在RT调度中会周期性调用该函数，避免CPU频率更新不及时
+static inline void cpufreq_update_util(struct rq *rq, unsigned int flags)
+{
+    struct update_util_data *data;
+    data = rcu_dereference_sched(*per_cpu_ptr(&cpufreq_update_util_data,
+                                cpu_of(rq)));
+    if (data)
+        data->func(data, rq_clock(rq), flags);
+}
+
+// drivers/cpufreq/cpufreq_governor.c
+// data: 为了后续计算过程能够使用container_of取到cpu_dbs_info地址
+// time: 运行队列更新的时间
+// flags: 更新的原因标志
+static void dbs_update_util_handler(struct update_util_data *data, u64 time,
+				    unsigned int flags)
+{
+	struct cpu_dbs_info *cdbs = container_of(data, struct cpu_dbs_info, update_util);
+	struct policy_dbs_info *policy_dbs = cdbs->policy_dbs;
+	u64 delta_ns, lst;
+
+    // 检查当前工作的CPU可否对该policy对应的CPU进行调频，E2000是支持的
+	if (!cpufreq_this_cpu_can_update(policy_dbs->policy))
+		return;
+
+	/*
+	 * The work may not be allowed to be queued up right now.
+	 * Possible reasons:
+	 * - Work has already been queued up or is in progress.
+	 * - It is too early (too little time from the previous sample).
+	 */
+	if (policy_dbs->work_in_progress)
+		return;
+
+	/*
+	 * If the reads below are reordered before the check above, the value
+	 * of sample_delay_ns used in the computation may be stale.
+	 */
+    // 判断更新的时间间隔，假如小于smaple_delay_ns直接返回
+	smp_rmb();
+	lst = READ_ONCE(policy_dbs->last_sample_time);
+	delta_ns = time - lst;
+	if ((s64)delta_ns < policy_dbs->sample_delay_ns)
+		return;
+
+	/*
+	 * If the policy is not shared, the irq_work may be queued up right away
+	 * at this point.  Otherwise, we need to ensure that only one of the
+	 * CPUs sharing the policy will do that.
+	 */
+    // 若policy是被多个CPU共享的，那么要判断一下是不是已经有CPU对其进行处理过了
+	if (policy_dbs->is_shared) {
+		if (!atomic_add_unless(&policy_dbs->work_count, 1, 1))
+			return;
+
+		/*
+		 * If another CPU updated last_sample_time in the meantime, we
+		 * shouldn't be here, so clear the work counter and bail out.
+		 */
+		if (unlikely(lst != READ_ONCE(policy_dbs->last_sample_time))) {
+			atomic_set(&policy_dbs->work_count, 0);
+			return;
+		}
+	}
+
+    // 更新标志位
+	policy_dbs->last_sample_time = time;
+	policy_dbs->work_in_progress = true;
+	irq_work_queue(&policy_dbs->irq_work);
+}
+
+// drivers/cpufreq/cpufreq_governor.c
+// init_irq_work(&policy_dbs->irq_work, dbs_irq_work)
+static void dbs_irq_work(struct irq_work *irq_work)
+{
+	struct policy_dbs_info *policy_dbs;
+
+	policy_dbs = container_of(irq_work, struct policy_dbs_info, irq_work);
+    // 调度policy_dbs->work执行
+	schedule_work_on(smp_processor_id(), &policy_dbs->work);
+}
+
+// drivers/cpufreq/cpufreq_governor.c
+// INIT_WORK(&policy_dbs->work, dbs_work_handler)
+static void dbs_work_handler(struct work_struct *work)
+{
+	struct policy_dbs_info *policy_dbs;
+	struct cpufreq_policy *policy;
+	struct dbs_governor *gov;
+
+	policy_dbs = container_of(work, struct policy_dbs_info, work);
+	policy = policy_dbs->policy;
+	gov = dbs_governor_of(policy);
+
+	/*
+	 * Make sure cpufreq_governor_limits() isn't evaluating load or the
+	 * ondemand governor isn't updating the sampling rate in parallel.
+	 */
+    // 调用gov->gov_dbs_update()接口
+	mutex_lock(&policy_dbs->update_mutex);
+	gov_update_sample_delay(policy_dbs, gov->gov_dbs_update(policy));
+	mutex_unlock(&policy_dbs->update_mutex);
+
+	/* Allow the utilization update handler to queue up more work. */
+	atomic_set(&policy_dbs->work_count, 0);
+	/*
+	 * If the update below is reordered with respect to the sample delay
+	 * modification, the utilization update handler may end up using a stale
+	 * sample delay value.
+	 */
+	smp_wmb();
+	policy_dbs->work_in_progress = false;
+}
+
+// drivers/cpufreq/cpufreq_ondemand.c
+// ondemand回调函数，按照CPU负载计算频率
+static unsigned int od_dbs_update(struct cpufreq_policy *policy)
+{
+	struct policy_dbs_info *policy_dbs = policy->governor_data;
+	struct dbs_data *dbs_data = policy_dbs->dbs_data;
+	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy_dbs);
+	int sample_type = dbs_info->sample_type;
+
+	/* Common NORMAL_SAMPLE setup */
+	dbs_info->sample_type = OD_NORMAL_SAMPLE;
+	/*
+	 * OD_SUB_SAMPLE doesn't make sense if sample_delay_ns is 0, so ignore
+	 * it then.
+	 */
+	if (sample_type == OD_SUB_SAMPLE && policy_dbs->sample_delay_ns > 0) {
+		__cpufreq_driver_target(policy, dbs_info->freq_lo,
+					CPUFREQ_RELATION_H);
+		return dbs_info->freq_lo_delay_us;
+	}
+
+	od_update(policy);
+
+	if (dbs_info->freq_lo) {
+		/* Setup SUB_SAMPLE */
+		dbs_info->sample_type = OD_SUB_SAMPLE;
+		return dbs_info->freq_hi_delay_us;
+	}
+
+	return dbs_data->sampling_rate * policy_dbs->rate_mult;
+}
+
+/*
+ * Every sampling_rate, we check, if current idle time is less than 20%
+ * (default), then we try to increase frequency. Else, we adjust the frequency
+ * proportional to load.
+ */
+// drivers/cpufreq/cpufreq_ondemand.c
+static void od_update(struct cpufreq_policy *policy)
+{
+	struct policy_dbs_info *policy_dbs = policy->governor_data;
+	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy_dbs);
+	struct dbs_data *dbs_data = policy_dbs->dbs_data;
+	struct od_dbs_tuners *od_tuners = dbs_data->tuners;
+	unsigned int load = dbs_update(policy);
+
+	dbs_info->freq_lo = 0;
+
+	/* Check for frequency increase */
+    // 检查当前的CPU负载，负载大于80%（也可以在sysfs中设置）
+	if (load > dbs_data->up_threshold) {
+		/* If switching to max speed, apply sampling_down_factor */
+		if (policy->cur < policy->max)
+			policy_dbs->rate_mult = dbs_data->sampling_down_factor;
+		dbs_freq_increase(policy, policy->max);
+	} else {
+		/* Calculate the next frequency proportional to load */
+		unsigned int freq_next, min_f, max_f;
+
+		min_f = policy->cpuinfo.min_freq;
+		max_f = policy->cpuinfo.max_freq;
+        // 按照CPU负载计算调频频率
+		freq_next = min_f + load * (max_f - min_f) / 100;
+
+		/* No longer fully busy, reset rate_mult */
+		policy_dbs->rate_mult = 1;
+
+        // 为了进一步节省电力，在计算出的新频率上再乘以一个powersave_bias设定的百分比
+        // powersave_bias的值从0-1000，每一步表示0.1%
+		if (od_tuners->powersave_bias)
+			freq_next = od_ops.powersave_bias_target(policy,
+								 freq_next,
+								 CPUFREQ_RELATION_L);
+
+		__cpufreq_driver_target(policy, freq_next, CPUFREQ_RELATION_C);
+	}
+}
+
+// drivers/cpufreq/cpufreq_governor.c
+// 计算当前域CPU负载 cpu_load = 100 * (time_elapsed - idle_time) / time_elapsed
+unsigned int dbs_update(struct cpufreq_policy *policy)
+{
+	struct policy_dbs_info *policy_dbs = policy->governor_data;
+	struct dbs_data *dbs_data = policy_dbs->dbs_data;
+	unsigned int ignore_nice = dbs_data->ignore_nice_load;
+	unsigned int max_load = 0, idle_periods = UINT_MAX;
+	unsigned int sampling_rate, io_busy, j;
+
+	/*
+	 * Sometimes governors may use an additional multiplier to increase
+	 * sample delays temporarily.  Apply that multiplier to sampling_rate
+	 * so as to keep the wake-up-from-idle detection logic a bit
+	 * conservative.
+	 */
+	sampling_rate = dbs_data->sampling_rate * policy_dbs->rate_mult;
+	/*
+	 * For the purpose of ondemand, waiting for disk IO is an indication
+	 * that you're performance critical, and not that the system is actually
+	 * idle, so do not add the iowait time to the CPU idle time then.
+	 */
+	io_busy = dbs_data->io_is_busy;
+
+	/* Get Absolute Load */
+    // 计算当前policy中CPU的最大负载
+	for_each_cpu(j, policy->cpus) {
+		struct cpu_dbs_info *j_cdbs = &per_cpu(cpu_dbs, j);
+		u64 update_time, cur_idle_time;
+		unsigned int idle_time, time_elapsed;
+		unsigned int load;
+
+        // 获取当前idle时间
+		cur_idle_time = get_cpu_idle_time(j, &update_time, io_busy);
+
+        // time_elapsed = 本次总运行时间 - 上次总运行时间
+		time_elapsed = update_time - j_cdbs->prev_update_time;
+		j_cdbs->prev_update_time = update_time;
+
+        // idle_time = 本次idle时间 - 上次idle时间
+		idle_time = cur_idle_time - j_cdbs->prev_cpu_idle;
+		j_cdbs->prev_cpu_idle = cur_idle_time;
+
+		if (ignore_nice) {
+			u64 cur_nice = kcpustat_field(&kcpustat_cpu(j), CPUTIME_NICE, j);
+
+			idle_time += div_u64(cur_nice - j_cdbs->prev_cpu_nice, NSEC_PER_USEC);
+			j_cdbs->prev_cpu_nice = cur_nice;
+		}
+
+		if (unlikely(!time_elapsed)) {
+			/*
+			 * That can only happen when this function is called
+			 * twice in a row with a very short interval between the
+			 * calls, so the previous load value can be used then.
+			 */
+			load = j_cdbs->prev_load;
+		} else if (unlikely((int)idle_time > 2 * sampling_rate &&
+				    j_cdbs->prev_load)) {
+			/*
+			 * If the CPU had gone completely idle and a task has
+			 * just woken up on this CPU now, it would be unfair to
+			 * calculate 'load' the usual way for this elapsed
+			 * time-window, because it would show near-zero load,
+			 * irrespective of how CPU intensive that task actually
+			 * was. This is undesirable for latency-sensitive bursty
+			 * workloads.
+			 *
+			 * To avoid this, reuse the 'load' from the previous
+			 * time-window and give this task a chance to start with
+			 * a reasonably high CPU frequency. However, that
+			 * shouldn't be over-done, lest we get stuck at a high
+			 * load (high frequency) for too long, even when the
+			 * current system load has actually dropped down, so
+			 * clear prev_load to guarantee that the load will be
+			 * computed again next time.
+			 *
+			 * Detecting this situation is easy: an unusually large
+			 * 'idle_time' (as compared to the sampling rate)
+			 * indicates this scenario.
+			 */
+			load = j_cdbs->prev_load;
+			j_cdbs->prev_load = 0;
+		} else {
+			if (time_elapsed >= idle_time) {
+				load = 100 * (time_elapsed - idle_time) / time_elapsed;
+			} else {
+				/*
+				 * That can happen if idle_time is returned by
+				 * get_cpu_idle_time_jiffy().  In that case
+				 * idle_time is roughly equal to the difference
+				 * between time_elapsed and "busy time" obtained
+				 * from CPU statistics.  Then, the "busy time"
+				 * can end up being greater than time_elapsed
+				 * (for example, if jiffies_64 and the CPU
+				 * statistics are updated by different CPUs),
+				 * so idle_time may in fact be negative.  That
+				 * means, though, that the CPU was busy all
+				 * the time (on the rough average) during the
+				 * last sampling interval and 100 can be
+				 * returned as the load.
+				 */
+				load = (int)idle_time < 0 ? 100 : 0;
+			}
+			j_cdbs->prev_load = load;
+		}
+
+		if (unlikely((int)idle_time > 2 * sampling_rate)) {
+			unsigned int periods = idle_time / sampling_rate;
+
+			if (periods < idle_periods)
+				idle_periods = periods;
+		}
+		// 取当前policy中CPU负载最大的值
+		if (load > max_load)
+			max_load = load;
+	}
+
+	policy_dbs->idle_periods = idle_periods;
+
+	return max_load;
+}
+```
+
+
+
+
+
 #### schedutil调节器
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103174117.png)
-sugov作为一种内核调频策略模块，它主要是根据当前CPU的利用率进行调频。因此，sugov会注册一个callback函数（sugov_update_shared/sugov_update_single）到调度器负载跟踪模块，当CPU util发生变化的时候就会调用该callback函数，检查一下当前CPU频率是否和当前的CPU util匹配，如果不匹配，那么就进行升频或者降频。
+sugov（schedutil governor）作为一种内核调频策略模块，它主要是根据当前CPU的利用率进行调频。因此，sugov会注册一个callback函数（sugov_update_shared/sugov_update_single)到调度器负载跟踪模块，当CPU util发生变化的时候就会调用该callback函数，检查一下当前CPU频率是否和当前的CPU util匹配，如果不匹配，那么就进行升频或者降频。
 
 `sugov_tunables`结构体，用来描述sugov的可调参数
+
 ```c
 // sugov_tunables结构体
 struct sugov_tunables {
@@ -721,9 +1126,9 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 }
 ```
 
-#### EAS能源感知调度
+### EAS能源感知调度
 
-EAS整体框架
+#### EAS整体框架
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221216104706.png)
 
 完全公平调度（Completely Fair Scheduler CFS）实现了面向吞吐量的的任务调度策略，EAS为这个调度器添加了一个基于能耗的调度策略，在优化CPU算力冗余的同时实现了节能，EAS在系统中、低度负载情况下工作，CFS在系统满负载情况下工作。
@@ -734,7 +1139,8 @@ EAS负载跟踪有两种模式，一种是“每实体负载跟踪（Per_Entity 
 
 EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
 
-##### CPU算力归一化过程
+#### CPU算力归一化过程
+
 当前，Linux无法凭自身算出CPU算力，因此必须要有把这个信息传递给Linux的方式，它是从`capacity-dmips-mhz` CPU 设备树binding中衍生计算出来的
 
 归一化CPU capacity，`topology_normalize_cpu_scale()`定义在`drivers/base/arch_topology()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
@@ -764,7 +1170,8 @@ CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到ca
 ```
 实际经过CPU算力归一化到1024之后，对应的小核CPU算力为386，大核为1024
 
-##### EAS代码相关结构体
+#### EAS代码相关结构体
+
 perf_domain结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的，性能域之间形成链，链表头存放在root_domian中
 ```c
 // kernel/sched/sched.h
@@ -867,8 +1274,8 @@ root_domain的overload和overutilized说明：
 + 对于 root domain，overload 表示至少有一个 cpu 处于 overload 状态。overutilized 表示至少有一个 cpu 处于 overutilized 状态
 + overutilized 状态非常重要，它决定了调度器是否启用EAS，只有在系统没有 overutilized 的情况下EAS才会生效。overload和newidle balance的频次控制相关，当系统在overload的情况下，newidle balance才会启动进行均衡。
 
+#### EAS能量计算方法
 
-##### EAS能量计算方法
 CPU在某个performance state(ps)下的计算能力：  
 ps->cap = ps->freq * scale_cpu / cpu_max_freq	（1）
 
@@ -883,7 +1290,8 @@ cpu_nrg = ps->power * cpu_util / ps->cap  （2）
 一个pd内的CPU，拥有相同的cost，所以一个pd内所有CPU的能量消耗可以表示为  
 pd_nrg = ps->cost * sum(cpu_util) / scale_cpu
 
-##### EAS的调度过程
+#### EAS的调度过程
+
 在任务被重新唤醒或者fork新建时，会通过`select_task_rq_fair()`将任务进行balance，达到充分利用CPU的目的。在`select_task_rq_fair()`，若任务是被重新唤醒就会调用`find_energy_efficient_cpu()`进行选核执行
 ```c
 /*

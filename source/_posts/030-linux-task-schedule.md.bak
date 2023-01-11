@@ -8,12 +8,12 @@ abbrlink: c7062853
 date: 2023-01-09 09:14:23
 ---
 
-#### 环境：
+### 环境：
 1. Kernel版本： 5.10
 2. Phytium E2000Q armv8 aarch64
 
-#### 概述
-##### 概念
+### 概述
+#### 概念
 在Linux中，每个CPU都会有一个队列来存储处于TASK_RUNNING状态的任务，任务调度就是从这些队列中取出优先级最高的任务作为下一个放入CPU执行的任务
 
 任务的调度需要经过两个过程：上下文切换和选择算法
@@ -763,7 +763,7 @@ struct task_struct {
 
 ```
 
-##### 进程状态
+#### 进程状态
 进程三状态模和Linux内核对应的进程状态切换，Linux中进程的就绪态和运行态对应的都是`TASK_RUNNING`标志位，就绪态表示进程正处在队列中，尚未被调度，运行态则表示进程正在CPU上运行
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/process_state.drawio2.png)
@@ -808,7 +808,7 @@ struct task_struct {
                                 TASK)
 ```
 
-##### Linux进程调度器
+#### Linux进程调度器
 所谓调度，就是按照某种调度的算法，从进程的就绪队列中选取进程分配CPU，主要是协调对CPU等的资源使用，进程调度的目标是最大限度利用CPU时间
 
 Linux内核提供了5种进程调度器，使用`struct sched_class`来对调度器进行抽象
@@ -889,7 +889,7 @@ Linux内核提供了一些调度策略（policy）供用户程序来选择调度
 #define SCHED_DEADLINE		6
 ```
 
-##### 运行队列
+#### 运行队列
 每个CPU都有一个运行队列，每个调度器都最作用于运行队列，分配给CPU的task最为调度实体加入到运行队列中
 
 Linux内核使用`struct rq`结构体来描述运行队列
@@ -1062,7 +1062,7 @@ struct rq {
 };
 ```
 
-##### 任务分组task_group
+#### 任务分组task_group
 引入任务分组机制，可以设置或限制任务组对CPU的利用率，比如将某些任务限制在某个区间内，从而不去影响其他任务的执行效率，引入task_group后，调度器的调度对象不仅仅是进程了，Linux内核抽象出了sched_entity、sched_rt_entity、sched_dl_entity描述调度实体，调度实体可以是进程或task_group
 
 Linux内核使用`struct task_group`来描述任务组，任务组在每个CPU上都会维护一个CFS调度实体、CFS运行队列、RT调度实体、RT运行队列
@@ -1121,3 +1121,21 @@ struct task_group {
 };
 ```
 
+### 调度程序
+
+
+### CPU负载
+#### CPU负载介绍
+CPU负载（cpu load）指的是某个时间点进程对系统产生的压力
++ CPU的运行能力就如同大桥的通行能力，分别有满负载、非满负载、超负荷等状态，这几种状态对应不通的cpu load值
++ 单CPU满负荷运行时cpu_load为1，当多个CPU或多核时，相当于大桥有多个车道，满负荷运行时cpu_load值为CPU数或多核数
++ CPU负载的计算，假设一分钟以内执行10个任务代表满负荷，当一分钟给出30个任务时，CPU只能处理10个，剩余20个不能处理，此时cpu_load等于3
+
+在Linux内核中查看cpu最近1分钟、5分钟、15分钟的平均负载：`cat /proc/loadavg`
+
+计算CPU负载，可以让调度器更好的进行负载均衡处理，以便提高系统的运行效率，此外，内核中的其他子系统也可以参考这些CPU负载值来进行相应的调整，比如DVFS等，目前内核中有以下几种方式来跟踪CPU负载
+1. 全局CPU平均负载
+2. 运行队列CPU负载
+3. PELT（per entity load tracking）
+
+#### 全局CPU平均负载
