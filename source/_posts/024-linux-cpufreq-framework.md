@@ -61,7 +61,6 @@ kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上�
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103093856.png)
 
 `cpufreq_policy`结构体
-
 ```c
 struct cpufreq_cpuinfo {
 	unsigned int		max_freq;			// cpu最大频率
@@ -135,11 +134,10 @@ struct cpufreq_policy {
 ```
 
 `driver/cpufreq/cpufreq.c`中定义了一个全局的percpu变量
-
 ```c
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 ```
-这里对应E2000 sysfs中3个policy文件夹，两个小核在一个簇中，使用1个policy，另外两个大核分别对应1个policy
+这里对应E2000 sysfs中3个policy文件夹，两个小核在一个簇中，使用1个policy，另外两个大核分别对应1个policy  
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103094857.png)
 
 > per-CPU变量是linux系统一个非常重要的特性，它为系统中的每个处理器都分配了该变量的副本。这样做的好处是，在多处理器系统中，当处理器操作属于它的变量副本时，不需要考虑与其他处理器的竞争的问题，同时该副本还可以充分利用处理器本地的硬件缓冲cache来提供访问速度
@@ -758,6 +756,7 @@ static unsigned int od_dbs_update(struct cpufreq_policy *policy)
  * proportional to load.
  */
 // drivers/cpufreq/cpufreq_ondemand.c
+// 根据CPU负载，调整频率
 static void od_update(struct cpufreq_policy *policy)
 {
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
@@ -800,6 +799,7 @@ static void od_update(struct cpufreq_policy *policy)
 
 // drivers/cpufreq/cpufreq_governor.c
 // 计算当前域CPU负载 cpu_load = 100 * (time_elapsed - idle_time) / time_elapsed
+// 返回当前域中最大的CPU负载
 unsigned int dbs_update(struct cpufreq_policy *policy)
 {
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
@@ -1154,6 +1154,7 @@ CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到ca
 
 根据测试部测试的E2000QCPU单核性能数据，E2000Q的`capacity-dmips-mhz`属性值可以设置为如下，放大1000倍：
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105152415.png)
+
 ```c
 	// 小核
 	cpu_l0: cpu@0 {

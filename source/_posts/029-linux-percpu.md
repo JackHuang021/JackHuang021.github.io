@@ -32,7 +32,7 @@ date: 2022-12-30 10:17:56
 静态地定义一个percpu变量
 ```c
 DEFINE_PER_CPU(type, name);
-
+// include/linux/percpu-defs.h
 #define DEFINE_PER_CPU(type, name) \
     DEFINE_PER_CPU_SECTION(type, name, "")
 
@@ -43,11 +43,16 @@ DEFINE_PER_CPU(type, name);
     __percpu __attribute__((section(PER_CPU_BASE_SECTION sec))) \
     PER_CPU_ATTRIBUTES
 
+// include/asm-generic/percpu.h
 #define PER_CPU_BASE_SECTION ".data..percpu"
 
-DEFINE_PER_CPU(int, val)；
-// 展开后为
-__percpu __attribute__((section(".data..percpu"))) __typeof__(int) val;
+// 宏展开后为
+#ifdef CONFIG_SMP
+#define DEFINE_PER_CPU(type, name) \
+    __percpu __attribute__((section(".data..percpu"))) __typeof__(type) name;\
+#else \
+    __percpu __attribute__((section(".data"))) __typeof__(type) name; \
+#endif
 ```
 整个定义翻译过来就是：在SMP架构下，被定义的percpu变量在编译后放在`.data..percpu`这个section中
 
@@ -128,5 +133,4 @@ void __init setup_per_cpu_areas(void)
 	for_each_possible_cpu(cpu)
 		__per_cpu_offset[cpu] = delta + pcpu_unit_offsets[cpu];
 }
-
 ```
