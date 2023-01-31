@@ -21,6 +21,17 @@ Linux内核电源管理的组成：
 8. Regulator Framework，电压和电流
 9. Power Supply，电源供电状态
 
+### Linux内核电源状态
+在Linux内核中，将电源划分为如下几个状态
+| ACPI | State | Linux State Drscription |
+| :-: | :-: | :- |
+| S0 | On | Working |
+| S1 | Standby | CPU and RAM are powered but not executed |
+| S2 | N/A | N/A |
+| S3 | Suspend to RAM | CPU is off, RAM is powered and the running content is saved to RAM |
+| S4 | Suspend to Disk | All content is saved to Disk and power down |
+| S5 | Shutdown | Shutdown the system |
+
 ### power supply子系统
 #### power supply软件架构
 Linux内核抽象出来power supply子系统为驱动提供了统一的框架，功能包括：

@@ -1,10 +1,11 @@
 ---
 title: ARMv8 寄存器组
-date: 2023-01-18 14:22:33
 tags:
   - ARMv8
   - Register
 categories: ARM
+abbrlink: 17165b72
+date: 2023-01-18 14:22:33
 ---
 
 ### ARMv8-A架构及其对应处理器特性

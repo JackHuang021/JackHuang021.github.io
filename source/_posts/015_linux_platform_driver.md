@@ -1,5 +1,5 @@
 ---
-title: Platform设备驱动
+title: Platform设备驱动模型
 author: Jack
 tags:
   - Linux
@@ -10,8 +10,12 @@ abbrlink: f8def83d
 ---
 
 #### Platform平台驱动模型
-由于某些外设是没有总线这个概念的，但是又要使用总线、驱动和设备模型的话，就需要使用`platform`这个虚拟总线，相应的就有`platform_device`和`platform_driver`
+Linux内核在2.6版本引入设备驱动模型，简化了驱动程序的编写，Linux设备驱动模型包含**设备（device）、总线（bus）、类（class）和驱动（driver）**，其中**设备**和**驱动**通过**总线**绑定在一起，由于某些外设是没有总线这个概念的，但是又要使用总线、驱动和设备模型的话，就需要使用`platform`这个虚拟总线，相应的就有`platform_device`和`platform_driver`
+
 <!-- more -->
+
+Linux内核中，分别用`bus_type`、`device_driver`和`device`结构体来描述总线、驱动和设备，结构体定义在`include/linux/device.h`，设备和对应的驱动必须依附于同一种总线，因此`device_driver`和`device`结构体中都包含`bus_type`指针
+
 
 #### Platform总线
 Linux内核使用`bus_type`结构体表示总线，该结构体定义在`include/linux/device.h`
@@ -54,7 +58,7 @@ struct bus_type {
 `int (*match)(struct device *dev, struct device_driver*drv)`  
 match函数有两个参数dev和driver，这两个参数分别为`device`和`device_driver`类型，也就是设备和驱动
 
-platform总线是`bus_type`的一个具体实例，定义在`driver/base/platform.c`中
+platform总线是`bus_type`的一个具体实例，定义在`driver/base/platform.c`中，同时也定义了设备`platform_bus`，用来管理所有挂载在platform总线下的设备，定义如下：
 ```c
 struct bus_type platform_bus_type = {
     .name		= "platform",
@@ -63,6 +67,10 @@ struct bus_type platform_bus_type = {
     .uevent		= platform_uevent,
     .dma_configure	= platform_dma_configure,
     .pm		= &platform_dev_pm_ops,
+};
+
+struct device platform_bus = {
+    .init_name = "platform",
 };
 ```
 其中`platform_match`为驱动和设备的匹配函数，`platform_match`函数如下
@@ -101,8 +109,9 @@ static int platform_match(struct device *dev, struct device_driver *drv)
 ##### Platform总线初始化过程
 内核在初始化过程中调用`platform_bus_init()`来初始化Platform总线，调用流程如下  
 `kernel_init_freeable() -> do_basic_setup() -> driver_init() -> platform_bus_init()`  
-其中`platform_bus_init()`函数定义在`driver/base/platform.c`中，内容如下：
+其中`platform_bus_init()`函数定义在`drivers/base/platform.c`中，内容如下：
 ```c
+// drivers/base/platform.c
 int __init platform_bus_init(void)
 {
     int error;
@@ -121,7 +130,189 @@ int __init platform_bus_init(void)
     return error;
 }
 ```
-首先来看`earlt_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表，然后向内核注册`platform_bus`这个设备和`platform_bus_type`总线
+首先来看`early_platform_cleanup()`这个函数，位于`arch/sh/drivers/platform_early.c`中，这个函数主要的功能就是清空`sh_early_platform_device_list)`这个链表
+```c
+// include/linux/init.h
+#define __initdata __section(".init.data")
+
+static _initdata LIST_HEAD(sh_early_platform_device_list);
+
+/**
+ * early_platform_cleanup - clean up early platform code
+ */
+void __init early_platform_cleanup(void)
+{
+    struct platform_device *pd, *pd2;
+
+    /* clean up the devres list used to chain devices */
+    list_for_each_entry_safe(pd, pd2, &sh_early_platform_device_list,
+                        dev.devres_head) {
+        list_del(&pd->dev.devres_head);
+        memset(&pd->dev.devres_head, 0, sizeof(pd->dev.devres_head));
+    }
+}
+```
+
+接着来看`device_register(&platform_bus)`，将`platform_bus`设备注册到驱动模型中
+```c
+// drivers/base/core.c
+/**
+ * device_register - register a device with the system.
+ * @dev: pointer to the device structure
+ *
+ * This happens in two clean steps - initialize the device
+ * and add it to the system. The two steps can be called
+ * separately, but this is the easiest and most common.
+ * I.e. you should only call the two helpers separately if
+ * have a clearly defined need to use and refcount the device
+ * before it is added to the hierarchy.
+ *
+ * For more information, see the kerneldoc for device_initialize()
+ * and device_add().
+ *
+ * NOTE: _Never_ directly free @dev after calling this function, even
+ * if it returned an error! Always use put_device() to give up the
+ * reference initialized in this function instead.
+ */
+int device_register(struct device *dev)
+{
+    device_initialize(dev);
+    return device_add(dev);
+}
+```
+
+然后是`bus_register(&platform_bus_type);`，将`platform`总线注册到Linux的总线系统中
+```c
+// drivers/base/base.h
+// 子系统私有数据的数据结构定义
+/**
+ * struct subsys_private - structure to hold the private to the driver core portions of the bus_type/class structure.
+ *
+ * @subsys - the struct kset that defines this subsystem
+ * @devices_kset - the subsystem's 'devices' directory
+ * @interfaces - list of subsystem interfaces associated
+ * @mutex - protect the devices, and interfaces lists.
+ *
+ * @drivers_kset - the list of drivers associated
+ * @klist_devices - the klist to iterate over the @devices_kset
+ * @klist_drivers - the klist to iterate over the @drivers_kset
+ * @bus_notifier - the bus notifier list for anything that cares about things
+ *                 on this bus.
+ * @bus - pointer back to the struct bus_type that this structure is associated
+ *        with.
+ *
+ * @glue_dirs - "glue" directory to put in-between the parent device to
+ *              avoid namespace conflicts
+ * @class - pointer back to the struct class that this structure is associated
+ *          with.
+ *
+ * This structure is the one that is the actual kobject allowing struct
+ * bus_type/class to be statically allocated safely.  Nothing outside of the
+ * driver core should ever touch these fields.
+ */
+struct subsys_private {
+	struct kset subsys;
+	struct kset *devices_kset;
+	struct list_head interfaces;
+	struct mutex mutex;
+
+	struct kset *drivers_kset;
+	struct klist klist_devices;
+	struct klist klist_drivers;
+	struct blocking_notifier_head bus_notifier;
+	unsigned int drivers_autoprobe:1;
+	struct bus_type *bus;
+
+	struct kset glue_dirs;
+	struct class *class;
+};
+
+/**
+ * bus_register - register a driver-core subsystem
+ * @bus: bus to register
+ *
+ * Once we have that, we register the bus with the kobject
+ * infrastructure, then register the children subsystems it has:
+ * the devices and drivers that belong to the subsystem.
+ */
+int bus_register(struct bus_type *bus)
+{
+	int retval;
+	struct subsys_private *priv;
+	struct lock_class_key *key = &bus->lock_key;
+
+	priv = kzalloc(sizeof(struct subsys_private), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->bus = bus;
+	bus->p = priv;
+
+	BLOCKING_INIT_NOTIFIER_HEAD(&priv->bus_notifier);
+
+	retval = kobject_set_name(&priv->subsys.kobj, "%s", bus->name);
+	if (retval)
+		goto out;
+
+	priv->subsys.kobj.kset = bus_kset;
+	priv->subsys.kobj.ktype = &bus_ktype;
+	priv->drivers_autoprobe = 1;
+
+	retval = kset_register(&priv->subsys);
+	if (retval)
+		goto out;
+
+	retval = bus_create_file(bus, &bus_attr_uevent);
+	if (retval)
+		goto bus_uevent_fail;
+
+	priv->devices_kset = kset_create_and_add("devices", NULL,
+						 &priv->subsys.kobj);
+	if (!priv->devices_kset) {
+		retval = -ENOMEM;
+		goto bus_devices_fail;
+	}
+
+	priv->drivers_kset = kset_create_and_add("drivers", NULL,
+						 &priv->subsys.kobj);
+	if (!priv->drivers_kset) {
+		retval = -ENOMEM;
+		goto bus_drivers_fail;
+	}
+
+	INIT_LIST_HEAD(&priv->interfaces);
+	__mutex_init(&priv->mutex, "subsys mutex", key);
+	klist_init(&priv->klist_devices, klist_devices_get, klist_devices_put);
+	klist_init(&priv->klist_drivers, NULL, NULL);
+
+	retval = add_probe_files(bus);
+	if (retval)
+		goto bus_probe_files_fail;
+
+	retval = bus_add_groups(bus, bus->bus_groups);
+	if (retval)
+		goto bus_groups_fail;
+
+	pr_debug("bus: '%s': registered\n", bus->name);
+	return 0;
+
+bus_groups_fail:
+	remove_probe_files(bus);
+bus_probe_files_fail:
+	kset_unregister(bus->p->drivers_kset);
+bus_drivers_fail:
+	kset_unregister(bus->p->devices_kset);
+bus_devices_fail:
+	bus_remove_file(bus, &bus_attr_uevent);
+bus_uevent_fail:
+	kset_unregister(&bus->p->subsys);
+out:
+	kfree(bus->p);
+	bus->p = NULL;
+	return retval;
+}
+EXPORT_SYMBOL_GPL(bus_register);
+```
 
 #### Platform驱动
 + `platform_driver`结构体表示`platform`驱动，定义在`include/linux/platform.h`里面
