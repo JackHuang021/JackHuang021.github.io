@@ -1,0 +1,59 @@
+---
+title: Linux内核整体架构
+date: 2023-02-28 10:20:45
+tags:
+---
+
+#### 内核开发环境
+1. 内核版本为Linux 5.10.0
+2. 以arm64架构处理器为分析对象
+
+#### Linux内核的核心功能
+Linux内核是Linux操作系统的一部分，对下管理系统的所有硬件设备；对上通过系统调用向C库或者其他应用程序提供接口，**核心功能就是：管理硬件设备，供应用程序使用**
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230228103646.png)
+
+#### Linux内核的整体架构
+现代计算机由CPU、内存、输入输出设备、网络设备和其他外围设备组成，为了管理这些设备，Linux内核提出了如下架构：
+
+根据内核功能，Linux内核提出了5个子系统：
+1. Process Scheduler：进程管理、进程调度，负责管理CPU资源，让各个进程以尽量公平的方式访问CPU
+2. Memory Manager：内存管理，让各个进程可以安全地共享机器的内存资源。另外，内存管理会提供虚拟内存的机制，该机制可以让进程使用多于系统可用的物理内存，不用的内存会通过文件系统保存在外部非易失存储器中，需要使用的时候，再取回到内存中
+3. VFS（Virtual File System）：虚拟文件系统，Linux内核将不同功能的外部设备，例如Disk、输入输出设备、显示设备等，抽象为可以通过统一的文件操作接口（open, close, read, write）来访问
+4. Network：网络子系统，负责管理系统的网络设备，并实现多种多样的网络标准
+5. IPC（Inter-Process Communication）：进程间通信，IPC不管理硬件，主要负责Linux系统中进程之间的通信
+
+
+#### Linux内核源代码的目录结构
+Linux内核源代码主要包括三个部分：
+1. 内核核心代码：各个子系统、以及其他的支撑子系统
+2. 其他非核心代码：外围设备驱动程序，内核中使用的实现库等
+3. 编译脚本、配置文件、帮助文档、版权说明等文件
+
+内核源代码顶层的目录结构如下：
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230228110047.png)
+
++ include：内核头文件，需要提供给外部模块使用
++ kernel：Linux内核的核心代码，包含了进程调度子系统
++ mm：内存管理子系统
++ fs：VFS子系统
++ net：不包含网络设备驱动的网络子系统
++ ipc：进程间通信子系统
++ arch：体系结构相关的代码
++ init：Linux系统启动初始化相关的代码
++ block：块设备驱动模型
++ sound：音频相关的驱动及子系统
++ drivers：设备驱动
++ lib：实现需要在内核中使用的库函数
++ crypto：加密、解密相关的库函数
++ security：提供安全特性SELinux
++ virt：提供虚拟机技术的支持
++ usr：用于生成initramfs的代码
++ firmware：保存用于第三方设备驱动的固件
++ samples：一些示例代码
++ tools：一些常用工具、性能剖析、自测试等
++ KConfig, Kbuild, Makefile, scripts：用于内核编译的配置文件、脚本
++ COPYING：版权声明
++ MAINTAINERS：维护者名单
++ CREDITS：Linux主要的贡献者名单
++ Documentation, README：帮助、说明文档

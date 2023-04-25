@@ -23,6 +23,11 @@ cpufreq framework中的几个重要概念：
 2. governor（调节器）：决定如何计算合适的频率或电压
 3. cpufreq driver：来实现真正的调频执行工作（与平台相关）
 
+除此之外，cpufreq还包含cpufreq stats, cpufreq qos, cpufreq notifier等辅助模块，其主要功能如下：
+1. cpufreq stats：用于搜集cpufreq的一些统计数据，如CPU在每个频点下的运行时间，总的频率切换次数等
+2. cpufreq qos：用于cpufreq频率限制值发生改变时，向cpufreq模块发送一个通知，将频率限制值调整到新的值
+3. cpufreq notifer：对CPU频率切换或policy对应governor发生改变感兴趣的模块，可以向cpufreq注册一个通知，当以上事件发生时，cpufreq将会向其发送相关通知
+
 常用的governor类型
 1. Performance：总是将CPU置于最高性能的状态，即硬件所支持的最高频率、电压
 2. Powersaving：总是将CPU置于最节能的状态，即硬件所支持的最低频率、电压
@@ -57,8 +62,7 @@ cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑�
 + 对下提供CPU频率和电压控制的驱动框架，方便底层driver的开发，同时提供governor框架，用于实现不同的频率调整机制
 + 内部封装各种逻辑，主要围绕`struct cpufreq_policy` `struct cpufreq_driver` `struct cpufreq_governor`三个数据结构进行
 
-kernel使用`struct cpufreq_policy`用来抽象cpufreq，它从一定程度上代表了一个CPU簇的cpufreq的属性
-![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103093856.png)
+kernel使用`struct cpufreq_policy`用来抽象cpufreq，它代表了一个CPU簇的cpufreq的属性
 
 `cpufreq_policy`结构体
 ```c
@@ -160,7 +164,46 @@ OPP表的定义：域中每个设备支持的电压和频率的离散元组的�
 {800000000, 1200000}  
 {1000000000, 1300000}
 
-这里初始化的就是各个性能域（即不同CPU簇）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的协议实现源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
+Linux内核使用opp layer库来管理opp table，具体的结构如下：
+
+
+Linux内核使用`struct dev_pm_opp`结构表示设备的一OPP
+```c
+// drivers/opp/opp.h
+struct dev_pm_opp {
+	struct list_head node;
+	struct kref kref;
+
+	bool available;
+	bool dynamic;
+	bool turbo;
+	bool suspend;
+	unsigned int pstate;
+	unsigned long rate;
+	unsigned int level;
+
+	struct dev_pm_opp_supply *supplies;
+	struct dev_pm_opp_icc_bw *bandwidth;
+
+	unsigned long clock_latency_ns;
+
+	struct dev_pm_opp **required_opps;
+	struct opp_table *opp_table;
+
+	struct device_node *np;
+
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dentry;
+#endif
+};
+```
+
+Linux内核opp layer库的结构如下
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230307162438.png)
+
+
+
+这里初始化的就是各个性能域（即不同cluster）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的协议实现源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
 ```c
 // include/linux/scmi_protocol.h
 // 抽象描述scmi协议的结构体，相应的ops操作集对应scmi的一个协议
@@ -174,6 +217,7 @@ struct scmi_handle {
 	const struct scmi_reset_ops *reset_ops;
 	const struct scmi_notify_ops *notify_ops;
 	/* for protocol internal use */
+	// perf_priv存放括performance domain数据，包含opp表等
 	void *perf_priv;
 	void *clk_priv;
 	void *power_priv;
@@ -182,9 +226,6 @@ struct scmi_handle {
 	void *notify_priv;
 	void *system_priv;
 };
-
-// scmi_handle这个结构体实现的就是scmi整个协议的处理
-static const struct scmi_handle *handle;	
 
 // include/linux/scmi_protocol.h
 /**
@@ -237,6 +278,7 @@ struct scmi_opp {
 	u32 trans_latency_us;	// 切换延时
 };
 
+// drivers/firmware/arm_scmi/perf.c
 // scmi performance domain management protocol(性能域管理相关协议 0x13)对应操作函数集
 // scmi cpufreq_driver 主要利用这个函数集进行调频相关操作
 // 对应Performace domain management protocol各个message_id
@@ -257,6 +299,7 @@ static const struct scmi_perf_ops perf_ops = {
 // 在这个宏进行SCMI performance domain management protocol协议的初始化
 DEFINE_SCMI_PROTOCOL_REGISTER_UNREGISTER(SCMI_PROTOCOL_PERF, perf)
 
+// drivers/firmware/arm_scmi/common.h
 #define DEFINE_SCMI_PROTOCOL_REGISTER_UNREGISTER(id, name) \
 int __init scmi_##name##_register(void) \
 { \
@@ -289,12 +332,15 @@ static int scmi_perf_protocol_init(struct scmi_handle *handle)
 	pinfo = devm_kzalloc(handle->dev, sizeof(*pinfo), GFP_KERNEL);
 	if (!pinfo)
 		return -ENOMEM;
-
+	// 通过PROTOCOL_ATTRIBUTES(0x01)这个命令获取domain id个数
+	// 还有share memory的地址和长度
 	scmi_perf_attributes_get(handle, pinfo);
 
+	// 分配perf_dom_info结构体内存，这里面的opp成员会存放OPP表
+	// 对于E2000Q这里会分配3个大小的dom_info
 	pinfo->dom_info = devm_kcalloc(handle->dev, pinfo->num_domains,
 				       sizeof(*pinfo->dom_info), GFP_KERNEL);
-	if (!pinfo->dom_info)
+	if (!pinfo->dom_info) 
 		return -ENOMEM;
 
 	// 遍历每个performance_domain，获取performance domain的属性和performance level参数
@@ -304,6 +350,7 @@ static int scmi_perf_protocol_init(struct scmi_handle *handle)
 		// 获取performance domain属性
 		scmi_perf_domain_attributes_get(handle, domain, dom);
 		// 获取performance level参数即opp表
+		// 填充perf_dom_info内的opp结构体
 		scmi_perf_describe_levels_get(handle, domain, dom);
 
 		if (dom->perf_fastchannels)
@@ -318,15 +365,201 @@ static int scmi_perf_protocol_init(struct scmi_handle *handle)
 
 	pinfo->version = version;
 	handle->perf_ops = &perf_ops;
+	// perf_priv保存performance domain信息，后续会用到perf_priv
 	handle->perf_priv = pinfo;
 
 	return 0;
 }
 ```
+在初始化阶段，`scmi_perf_protocol_init`只会将固件里面的perf domains信息保存到handle->perf_priv里面，此时还并没有将opp表注册到cpu设备上
+
+接下来在scmi调频驱动初始化的过程中，会调用scmi的device_opps_add()接口初始化，即调用`scmi_dvfs_device_opps_add()`，在这个里面才会生成cpu的opp_table
+```c
+static int scmi_dvfs_device_opps_add(const struct scmi_handle *handle,
+				     struct device *dev)
+{
+	int idx, ret, domain;
+	unsigned long freq;
+	struct scmi_opp *opp;
+	struct perf_dom_info *dom;
+	// 获取pref_priv地址，在这里面取opp数据
+	struct scmi_perf_info *pi = handle->perf_priv;
+	// 这个domain是从设备树里面取到的，设备树cpu节点的clock属性会带一个domain编号
+	domain = scmi_dev_domain_id(dev);
+	if (domain < 0)
+		return domain;
+	// 取当前CPU的perf domain信息
+	dom = pi->dom_info + domain;
+	// struct perf_dom_info结构体里面一共16个opp表
+	// 这里没对opp进行限制，可能有数组越界的问题
+	for (opp = dom->opp, idx = 0; idx < dom->opp_count; idx++, opp++) {
+		freq = opp->perf * dom->mult_factor;
+		// 这里面第一次会为opp_table分配内存，这里只将频率加进opp table里了
+		ret = dev_pm_opp_add(dev, freq, 0);
+		if (ret) {
+			dev_warn(dev, "failed to add opp %luHz\n", freq);
+
+			while (idx-- > 0) {
+				freq = (--opp)->perf * dom->mult_factor;
+				dev_pm_opp_remove(dev, freq);
+			}
+			return ret;
+		}
+	}
+	return 0;
+}
+```
+
+详细看一下`dev_pm_opp_add()`的过程
+```c
+// drviers/opp/opp.h
+// opp_table结构体的定义
+struct opp_table {
+	struct list_head node;
+
+	struct blocking_notifier_head head;
+	struct list_head dev_list;			// 共享该opp表的设备链表
+	struct list_head opp_list;
+	struct kref kref;
+	struct mutex lock;
+
+	struct device_node *np;
+	unsigned long clock_latency_ns_max;
+
+	/* For backward compatibility with v1 bindings */
+	unsigned int voltage_tolerance_v1;
+
+	unsigned int parsed_static_opps;
+	enum opp_table_access shared_opp;
+	struct dev_pm_opp *suspend_opp;
+
+	struct mutex genpd_virt_dev_lock;
+	struct device **genpd_virt_devs;
+	struct opp_table **required_opp_tables;
+	unsigned int required_opp_count;
+
+	unsigned int *supported_hw;
+	unsigned int supported_hw_count;
+	const char *prop_name;
+	struct clk *clk;
+	struct regulator **regulators;
+	int regulator_count;
+	struct icc_path **paths;
+	unsigned int path_count;
+	bool enabled;
+	bool genpd_performance_state;
+	bool is_genpd;
+
+	int (*set_opp)(struct dev_pm_set_opp_data *data);
+	struct dev_pm_set_opp_data *set_opp_data;
+
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dentry;
+	char dentry_name[NAME_MAX];
+#endif
+};
+
+// drivers/opp/core.c
+/*
+ * The root of the list of all opp-tables. All opp_table structures branch off
+ * from here, with each opp_table containing the list of opps it supports in
+ * various states of availability.
+ */
+// opp_tables是opp_table链表的头节点
+LIST_HEAD(opp_tables);
+
+static struct opp_device *_find_opp_dev(const struct device *dev,
+							struct opp_table *opp_table)
+{
+	struct opp_device *opp_dev;
+	// 从opp_table的dev_list中的dev与当前dev进行对比
+	list_for_each_entry(opp_dev, &opp_table->dev_list, node)
+		if (opp_dev->dev == dev)
+			return opp_dev;
+
+	return NULL;
+}
+
+static struct opp_table *_find_opp_table_unlocked(struct device *dev)
+{
+	struct opp_table *opp_table;
+	bool found;
+	// 在opp_tables中进行遍历查找当前设备对应的opp_table
+	list_for_each_entry(opp_table, &opp_tables, node) {
+		mutex_lock(&opp_table->lock);
+		found = !!_find_opp_dev(dev, opp_table);
+		mutex_unlock(&opp_table->lock);
+
+		if (found) {
+			// opp_table的引用计数加一
+			_get_opp_table_kref(opp_table);
+
+			return opp_table;
+		}
+	}
+
+	return ERR_PTR(-ENODEV);
+}
+
+static struct opp_table *_opp_get_opp_table(struct device *dev, int index)
+{
+	struct opp_table *opp_table;
+
+	/* Hold our table modification lock here */
+	mutex_lock(&opp_table_lock);
+
+	// 第一次运行到这里的时候，应该是找不到opp_table的，需要进行创建
+	opp_table = _find_opp_table_unlocked(dev);
+	if (!IS_ERR(opp_table))
+		goto unlock;
+
+	opp_table = _managed_opp(dev, index);
+	if (opp_table) {
+		if (!_add_opp_dev_unlocked(dev, opp_table)) {
+			dev_pm_opp_put_opp_table(opp_table);
+			opp_table = ERR_PTR(-ENOMEM);
+		}
+		goto unlock;
+	}
+	// 对该设备创建opp表
+	opp_table = _allocate_opp_table(dev, index);
+
+unlock:
+	mutex_unlock(&opp_table_lock);
+
+	return opp_table;
+}
+
+
+struct opp_table *dev_pm_opp_get_opp_table(struct device *dev)
+{
+	return _opp_get_opp_table(dev, 0);
+}
+
+int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
+{
+	struct opp_table *opp_table;
+	int ret;
+
+	opp_table = dev_pm_opp_get_opp_table(dev);
+	if (IS_ERR(opp_table)) 
+		return PTR_ERR(opp_table);
+	
+	opp_table->regulator_count = 1;
+	
+	ret = _opp_add_v1(opp_table, dev, freq, u_volt, true);
+	if (ret)
+		dev_pm_opp_put_opp_table(opp_table);
+	
+	return ret;
+}
+```
+
 最终获取得到的OPP表如下
-![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103140116.png)
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230222105334.png)
 
 ##### cpufreq初始化过程
+cpufreq被注册cpu_subsys总线上
 
 cpufreq的初始化从cpufreq_drvier注册开始，`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
 
@@ -340,12 +573,14 @@ struct cpufreq_driver {
 	/* needed by all drivers */
 	int		(*init)(struct cpufreq_policy *policy);
 	int		(*verify)(struct cpufreq_policy_data *policy);
+	// 调频接口
 	int		(*target_index)(struct cpufreq_policy *policy,
 					unsigned int index);
 	unsigned int	(*fast_switch)(struct cpufreq_policy *policy,
 				       unsigned int target_freq);
 
 	/* should be defined, if possible */
+	// 获取频率接口
 	unsigned int	(*get)(unsigned int cpu);
 
 	/* Called to update policy limits on firmware notifications. */
@@ -359,6 +594,7 @@ struct cpufreq_driver {
 };
 
 // driver/base/cpu.c
+// cpu subsys总线，cpufreq就是以subsys_interface挂在该总线下
 struct bus_type cpu_subsys = {
 	.name = "cpu",
 	.dev_name = "cpu",
@@ -398,12 +634,19 @@ static struct cpufreq_driver scmi_cpufreq_driver = {
 // 其中又分别进行cpufreq_driver的初始化和governor的初始化
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 
+// 指向当前注册的cpufreq driver
+static struct cpufreq_driver *cpufreq_driver;
+
 // cpufreq驱动框架初始化过程，整个过程都围绕着policy这个结构体进行，逐步进行初始化
 cpufreq_register_driver(&scmi_cpufreq_driver);
 	subsys_interface_register(&cpufreq_interface);
 		cpufreq_add_dev(dev, sif);
 			cpufreq_online(cpu);
 				// 初步初始化policy
+				// cpumask初始化
+				// policy->kobj kobject初始化
+				// policy->constraints 频率限制初始化
+				// 注册频率限制通知接口，频率最大最小值变化时会调用接口
 				policy = cpufreq_policy_alloc(cpu);
 				// 调用cpufreq_drvier init接口，完善policy结构体
 				// 将opp表添加到对应的device，通过dev_pm_opp_add接口
@@ -415,6 +658,7 @@ cpufreq_register_driver(&scmi_cpufreq_driver);
 				freq_qos_and_request();
 				blocking_notifier_call_chain();
 				// CPU进行频率调整，使当前运行频率在频率表中
+				// 初始化的时候会进行一次调整
 				__cpufreq_driver_target();
 				// 创建sys节点，/sys/device/system/cpu/cpufreq/policyx目录下的一些可选属性
 				cpufreq_add_dev_interface(policy);
@@ -424,8 +668,411 @@ cpufreq_register_driver(&scmi_cpufreq_driver);
 				cpufreq_init_policy();
 ```
 
-##### governor初始化过程
+来看一下`subsys_interface_register()`
+```c
+// drivers/base/bus.c
+int subsys_interface_register(struct subsystem_interface *sif)
+{
+	struct bus_type *subsys;
+	struct subsys_dev_iter iter;
+	struct device *dev;
 
+	if (!sif || !sif->subsys)
+		return -ENODEV;
+
+	subsys = bus_get(sif->subsys);
+	if (!subsys)
+		return -EINVAL;
+
+	mutex_lock(&subsys->p->mutex);
+	// 将cpufreq_interface添加到cpu_subsys总线的interfaces上
+	// interfaces是一个list_head链表
+	list_add_tail(&sif->node, &subsys->p->interfaces);
+
+	// 遍历cpu_subsys总线
+	// subsys_dev_iter是对klist 迭代器的一个封装
+	// 这里遍历的对象是struct device私有数据的knode_bus
+	// knode_bus节点是挂载到klist_device这个链表上
+	if (sif->add_dev) {
+		subsys_dev_iter_init(&iter, subsys, NULL, NULL);
+		// 从knode_bus取得device指针
+		while ((dev = subsys_dev_iter_next(&iter)))
+			sif->add_dev(dev, sif);
+		subsys_dev_iter_exit(&iter);
+	}
+	mutex_unlock(&subsys->p->mutex);
+
+	return 0;
+}
+```
+
+再来看看cpufreq_online()
+```c
+static int cpufreq_online(unsigned int cpu)
+{
+	struct cpufreq_policy *policy;
+	bool new_policy;
+	unsigned long flags;
+	unsigned int j;
+	int ret;
+
+	pr_debug("%s: bringing CPU%u online\n", __func__, cpu);
+
+	/* Check if this CPU already has a policy to manage it */
+	// cpufreq_cpu_data是类型为policy指针的precpu变量
+	// 这是是取得policy指针
+	policy = per_cpu(cpufreq_cpu_data, cpu);
+	if (policy) {
+		// 假如该cpu不在该policy的related_cpus里面则是有问题的
+		WARN_ON(!cpumask_test_cpu(cpu, policy->related_cpus));
+		// 判断当前policy还有没有online CPU
+		if (!policy_is_inactive(policy))
+			// 将当前cpu加入到policy->cpu online CPU里面
+			return cpufreq_add_policy_cpu(policy, cpu);
+
+		/* This is the only online CPU for the policy.  Start over. */
+		new_policy = false;
+		down_write(&policy->rwsem);
+		policy->cpu = cpu;
+		policy->governor = NULL;
+		up_write(&policy->rwsem);
+	} else {
+		// 第一次开机的时候需要分配policy内存
+		new_policy = true;
+		policy = cpufreq_policy_alloc(cpu);
+		if (!policy)
+			return -ENOMEM;
+	}
+
+	// scmi调频驱动没有实现online接口
+	if (!new_policy && cpufreq_driver->online) {
+		ret = cpufreq_driver->online(policy);
+		if (ret) {
+			pr_debug("%s: %d: initialization failed\n", __func__,
+				 __LINE__);
+			goto out_exit_policy;
+		}
+
+		/* Recover policy->cpus using related_cpus */
+		cpumask_copy(policy->cpus, policy->related_cpus);
+	} else {
+		cpumask_copy(policy->cpus, cpumask_of(cpu));
+
+		/*
+		 * Call driver. From then on the cpufreq must be able
+		 * to accept all calls to ->verify and ->setpolicy for this CPU.
+		 */
+		// cpufreq_driver是在cpufreq_register_driver()中进行赋值的
+		// 调频驱动初始化
+		ret = cpufreq_driver->init(policy);
+		if (ret) {
+			pr_debug("%s: %d: initialization failed\n", __func__,
+				 __LINE__);
+			goto out_free_policy;
+		}
+
+		ret = cpufreq_table_validate_and_sort(policy);
+		if (ret)
+			goto out_exit_policy;
+
+		/* related_cpus should at least include policy->cpus. */
+		cpumask_copy(policy->related_cpus, policy->cpus);
+	}
+
+	down_write(&policy->rwsem);
+	/*
+	 * affected cpus must always be the one, which are online. We aren't
+	 * managing offline cpus here.
+	 */
+	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
+
+	if (new_policy) {
+		for_each_cpu(j, policy->related_cpus) {
+			per_cpu(cpufreq_cpu_data, j) = policy;
+			add_cpu_dev_symlink(policy, j);
+		}
+
+		policy->min_freq_req = kzalloc(2 * sizeof(*policy->min_freq_req),
+					       GFP_KERNEL);
+		if (!policy->min_freq_req)
+			goto out_destroy_policy;
+
+		ret = freq_qos_add_request(&policy->constraints,
+					   policy->min_freq_req, FREQ_QOS_MIN,
+					   policy->min);
+		if (ret < 0) {
+			/*
+			 * So we don't call freq_qos_remove_request() for an
+			 * uninitialized request.
+			 */
+			kfree(policy->min_freq_req);
+			policy->min_freq_req = NULL;
+			goto out_destroy_policy;
+		}
+
+		/*
+		 * This must be initialized right here to avoid calling
+		 * freq_qos_remove_request() on uninitialized request in case
+		 * of errors.
+		 */
+		policy->max_freq_req = policy->min_freq_req + 1;
+
+		ret = freq_qos_add_request(&policy->constraints,
+					   policy->max_freq_req, FREQ_QOS_MAX,
+					   policy->max);
+		if (ret < 0) {
+			policy->max_freq_req = NULL;
+			goto out_destroy_policy;
+		}
+
+		blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+				CPUFREQ_CREATE_POLICY, policy);
+	}
+
+	if (cpufreq_driver->get && has_target()) {
+		policy->cur = cpufreq_driver->get(policy->cpu);
+		if (!policy->cur) {
+			pr_err("%s: ->get() failed\n", __func__);
+			goto out_destroy_policy;
+		}
+	}
+
+	/*
+	 * Sometimes boot loaders set CPU frequency to a value outside of
+	 * frequency table present with cpufreq core. In such cases CPU might be
+	 * unstable if it has to run on that frequency for long duration of time
+	 * and so its better to set it to a frequency which is specified in
+	 * freq-table. This also makes cpufreq stats inconsistent as
+	 * cpufreq-stats would fail to register because current frequency of CPU
+	 * isn't found in freq-table.
+	 *
+	 * Because we don't want this change to effect boot process badly, we go
+	 * for the next freq which is >= policy->cur ('cur' must be set by now,
+	 * otherwise we will end up setting freq to lowest of the table as 'cur'
+	 * is initialized to zero).
+	 *
+	 * We are passing target-freq as "policy->cur - 1" otherwise
+	 * __cpufreq_driver_target() would simply fail, as policy->cur will be
+	 * equal to target-freq.
+	 */
+	if ((cpufreq_driver->flags & CPUFREQ_NEED_INITIAL_FREQ_CHECK)
+	    && has_target()) {
+		unsigned int old_freq = policy->cur;
+
+		/* Are we running at unknown frequency ? */
+		ret = cpufreq_frequency_table_get_index(policy, old_freq);
+		if (ret == -EINVAL) {
+			ret = __cpufreq_driver_target(policy, old_freq - 1,
+						      CPUFREQ_RELATION_L);
+
+			/*
+			 * Reaching here after boot in a few seconds may not
+			 * mean that system will remain stable at "unknown"
+			 * frequency for longer duration. Hence, a BUG_ON().
+			 */
+			BUG_ON(ret);
+			pr_info("%s: CPU%d: Running at unlisted initial frequency: %u KHz, changing to: %u KHz\n",
+				__func__, policy->cpu, old_freq, policy->cur);
+		}
+	}
+
+	if (new_policy) {
+		ret = cpufreq_add_dev_interface(policy);
+		if (ret)
+			goto out_destroy_policy;
+
+		cpufreq_stats_create_table(policy);
+
+		write_lock_irqsave(&cpufreq_driver_lock, flags);
+		list_add(&policy->policy_list, &cpufreq_policy_list);
+		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
+	}
+
+	ret = cpufreq_init_policy(policy);
+	if (ret) {
+		pr_err("%s: Failed to initialize policy for cpu: %d (%d)\n",
+		       __func__, cpu, ret);
+		goto out_destroy_policy;
+	}
+
+	up_write(&policy->rwsem);
+
+	kobject_uevent(&policy->kobj, KOBJ_ADD);
+
+	/* Callback for handling stuff after policy is ready */
+	if (cpufreq_driver->ready)
+		cpufreq_driver->ready(policy);
+
+	if (cpufreq_thermal_control_enabled(cpufreq_driver))
+		policy->cdev = of_cpufreq_cooling_register(policy);
+
+	pr_debug("initialization complete\n");
+
+	return 0;
+
+out_destroy_policy:
+	for_each_cpu(j, policy->real_cpus)
+		remove_cpu_dev_symlink(policy, get_cpu_device(j));
+
+	up_write(&policy->rwsem);
+
+out_exit_policy:
+	if (cpufreq_driver->exit)
+		cpufreq_driver->exit(policy);
+
+out_free_policy:
+	cpufreq_policy_free(policy);
+	return ret;
+}
+```
+
+##### cpufreq drviver初始化
+在cpufreq_online()中调用全局变量cpufreq_driver->init(policy)进行调频驱动的初始化，下面是scmi调频驱动的初始化过程
+```c
+static int scmi_cpufreq_init(struct cpufreq_policy *policy)
+{
+	int ret, nr_opp;
+	unsigned int latency;
+	struct device *cpu_dev;
+	struct scmi_data *priv;
+	struct cpufreq_frequency_table *freq_table;
+	struct em_data_callback em_cb = EM_DATA_CB(scmi_get_cpu_power);
+
+	// 获取CPU device结构体即对应percpu变量cpu_sys_devices
+	cpu_dev = get_cpu_device(policy->cpu);
+	if (!cpu_dev) {
+		pr_err("failed to get cpu%d device\n", policy->cpu);
+		return -ENODEV;
+	}
+
+	// 调用scmi_dvfs_device_opps_add()生成opp表
+	ret = handle->perf_ops->device_opps_add(handle, cpu_dev);
+	if (ret) {
+		dev_warn(cpu_dev, "failed to add opps to the device\n");
+		return ret;
+	}
+	// 遍历可用的cpu，对比cpu_dev的domain_id，若是相同的话加入到policy->cpus里面
+	ret = scmi_get_sharing_cpus(cpu_dev, policy->cpus);
+	if (ret) {
+		dev_warn(cpu_dev, "failed to get sharing cpumask\n");
+		return ret;
+	}
+	// 将opp表添加到sharing cpus里面
+	ret = dev_pm_opp_set_sharing_cpus(cpu_dev, policy->cpus);
+	if (ret) {
+		dev_err(cpu_dev, "%s: failed to mark OPPs as shared: %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	nr_opp = dev_pm_opp_get_opp_count(cpu_dev);
+	if (nr_opp <= 0) {
+		dev_dbg(cpu_dev, "OPP table is not ready, deferring probe\n");
+		ret = -EPROBE_DEFER;
+		goto out_free_opp;
+	}
+
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		ret = -ENOMEM;
+		goto out_free_opp;
+	}
+	// cpufreq
+	ret = dev_pm_opp_init_cpufreq_table(cpu_dev, &freq_table);
+	if (ret) {
+		dev_err(cpu_dev, "failed to init cpufreq table: %d\n", ret);
+		goto out_free_priv;
+	}
+
+	priv->cpu_dev = cpu_dev;
+	priv->domain_id = handle->perf_ops->device_domain_id(cpu_dev);
+	// driver_data保存了调频驱动的一些数据，这里只有cpu编号和domain id号
+	policy->driver_data = priv;
+	policy->freq_table = freq_table;
+
+	/* SCMI allows DVFS request for any domain from any CPU */
+	policy->dvfs_possible_from_any_cpu = true;
+
+	latency = handle->perf_ops->transition_latency_get(handle, cpu_dev);
+	if (!latency)
+		latency = CPUFREQ_ETERNAL;
+
+	policy->cpuinfo.transition_latency = latency;
+
+	policy->fast_switch_possible =
+		handle->perf_ops->fast_switch_possible(handle, cpu_dev);
+
+	em_dev_register_perf_domain(cpu_dev, nr_opp, &em_cb, policy->cpus);
+
+	return 0;
+
+out_free_priv:
+	kfree(priv);
+out_free_opp:
+	dev_pm_opp_remove_all_dynamic(cpu_dev);
+
+	return ret;
+}
+```
+
+
+频率表初始化过程
+```c
+struct cpufreq_frequency_table {
+	unsigned int flags;
+	unsigned int driver_data;
+	unsigned int frequency;		/* KHz */
+};
+
+// drivers/opp/cpu.c
+int dev_pm_opp_init_cpufreq_table(struct device *dev,
+				  struct cpufreq_frequency_table **table)
+{
+	struct dev_pm_opp *opp;
+	struct cpufreq_frequency_table *freq_table = NULL;
+	int i, max_opps, ret = 0;
+	unsigned long rate;
+
+	max_opps = dev_pm_opp_get_opp_count(dev);
+	if (max_opps <= 0)
+		return max_opps ? max_opps : -ENODATA;
+
+	freq_table = kcalloc((max_opps + 1), sizeof(*freq_table), GFP_KERNEL);
+	if (!freq_table)
+		return -ENOMEM;
+
+	for (i = 0, rate = 0; i < max_opps; i++, rate++) {
+		/* find next rate */
+		opp = dev_pm_opp_find_freq_ceil(dev, &rate);
+		if (IS_ERR(opp)) {
+			ret = PTR_ERR(opp);
+			goto out;
+		}
+		freq_table[i].driver_data = i;
+		freq_table[i].frequency = rate / 1000;
+
+		/* Is Boost/turbo opp ? */
+		if (dev_pm_opp_is_turbo(opp))
+			freq_table[i].flags = CPUFREQ_BOOST_FREQ;
+
+		dev_pm_opp_put(opp);
+	}
+
+	freq_table[i].driver_data = i;
+	freq_table[i].frequency = CPUFREQ_TABLE_END;
+
+	*table = &freq_table[0];
+
+out:
+	if (ret)
+		kfree(freq_table);
+
+	return ret;
+}
+```
+
+
+##### governor初始化过程
 cpufreq governor的初始化过程，在cpufreq_init_policy(policy)中进行，这里以ondemand为例进行分析
 ```c
 // include/linux/cpufreq.h
@@ -447,7 +1094,7 @@ struct cpufreq_governor {
 };
 
 /* Common Governor data across policies */
-// 抽象出的governor调度器结构体
+// 抽象出的ondemand governor结构体
 // drivers/cpufreq/cpufreq_governor.h
 struct dbs_governor {
 	struct cpufreq_governor gov;
@@ -467,7 +1114,7 @@ struct dbs_governor {
 };
 
 /* Governor demand based switching data (per-policy or global). */
-// governor计算频率使用的相关参数，包括阈值 采样率等
+// ondemand计算频率使用的相关参数，包括阈值 采样率等，默认阈值是负载的80%
 // dbs(demand based switching)按需切换
 struct dbs_data {
 	struct gov_attr_set attr_set;
@@ -481,7 +1128,6 @@ struct dbs_data {
 
 /* Common to all CPUs of a policy */
 // driver/cpufreq/cpufreq_governor.h
-// policy和governor传递的私有数据
 struct policy_dbs_info {
 	struct cpufreq_policy *policy;
 	/*
@@ -569,6 +1215,7 @@ ondemand调节器也会根据当前的CPU负载来进行CPU频率计算，ondema
 
 ```c
 // include/linux/sched/cpufreq.h
+// CPU利用率变化时会调用func重新计算频率
 struct update_util_data {
     void (*func)(struct update_util_data *data, u64 time, unsigned int flags);
 };
@@ -792,7 +1439,7 @@ static void od_update(struct cpufreq_policy *policy)
 			freq_next = od_ops.powersave_bias_target(policy,
 								 freq_next,
 								 CPUFREQ_RELATION_L);
-
+		// 频率调整
 		__cpufreq_driver_target(policy, freq_next, CPUFREQ_RELATION_C);
 	}
 }
@@ -837,6 +1484,7 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 		time_elapsed = update_time - j_cdbs->prev_update_time;
 		j_cdbs->prev_update_time = update_time;
 
+		// 计算本次时间间隔内的idle_time
         // idle_time = 本次idle时间 - 上次idle时间
 		idle_time = cur_idle_time - j_cdbs->prev_cpu_idle;
 		j_cdbs->prev_cpu_idle = cur_idle_time;
@@ -848,6 +1496,7 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 			j_cdbs->prev_cpu_nice = cur_nice;
 		}
 
+		// 这里主要是对各种比较罕见的情况进行临时处理
 		if (unlikely(!time_elapsed)) {
 			/*
 			 * That can only happen when this function is called
@@ -881,6 +1530,7 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 			 */
 			load = j_cdbs->prev_load;
 			j_cdbs->prev_load = 0;
+		// 程序正常会运行到这里进行负载计算
 		} else {
 			if (time_elapsed >= idle_time) {
 				load = 100 * (time_elapsed - idle_time) / time_elapsed;
@@ -921,9 +1571,6 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 	return max_load;
 }
 ```
-
-
-
 
 
 #### schedutil调节器
@@ -974,7 +1621,7 @@ struct sugov_policy {
 };
 ```
 
-`sugov_cpu`结构体，sugov为每个cpu构建了该数据结构，记录per-cpu的调频数据信息
+`sugov_cpu`结构体，sugov为每个cpu构建了该数据结构，记录每个CPU的调频数据信息
 ```c
 struct sugov_cpu {
 	// 保存了cpu util变化后的回调函数
@@ -1000,7 +1647,7 @@ struct sugov_cpu {
 };
 ```
 
-sugov初始化过程和ondemand初始化过程相似，当内核设定默认governor为sugov时，在`cpufreq_init_governor(policy);`中会调用`sugov_init()`初始化sugov，然后调用`sugov_start()`设置调频回调函数，每当CPU利用率发生变化的时候，调度器都会调用`cpufreq_update_util()`通知sugov，在`cpufreq_update_util()`被调用时，即任务调度后CPU当前的util发生变化，会调用sugov的回调函数进行调频，`sugov_update_shared()`当一个簇中有多个CPU调用该回调，遍历簇上的CPU找到当前最大util的CPU，然后根据该util映射到频率；`sugov_update_single()`即一个簇上单个CPU的情况直接根据该CPUte_shared()` util计算频率
+sugov初始化过程和ondemand初始化过程相似，当内核设定默认governor为sugov时，在`cpufreq_init_governor(policy);`中会调用`sugov_init()`初始化sugov，然后调用`sugov_start()`设置调频回调函数，每当CPU利用率发生变化的时候，调度器都会调用`cpufreq_update_util()`通知sugov，在`cpufreq_update_util()`被调用时，即任务调度后CPU当前的util发生变化，会调用sugov的回调函数进行调频，`sugov_update_shared()`当一个簇中有多个CPU调用该回调，遍历簇上的CPU找到当前最大util的CPU，然后根据该util映射到频率；`sugov_update_single()`即一个簇上单个CPU的情况直接根据该CPU util计算频率
 
 调度事件的发生还是非常密集的，特别是在重载的情况下，很多任务可能执行若干个us就切换出去了。如果每次都计算CPU util看看是否需要调整频率，那么本身sugov就给系统带来较重的负荷，因此并非每次调频时机都会真正执行调频检查，sugov设置了一个最小调频间隔，小于这个间隔的调频请求会被过滤掉。
 
@@ -1135,8 +1782,6 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 EAS在CPU调度领域，在为任务选核是起作用，目的是保证性能的情况下尽可能节省功耗，EAS涉及内核的几个子系统（任务调度、能源管理、CPU动态调频），EAS代码主要位于`kernel/sched/fair.c`，能源感知的任务调度需要调度器评估各个任务在CPU上运行带来的能耗影响
 
-EAS负载跟踪有两种模式，一种是“每实体负载跟踪（Per_Entity Load Track）”，通常用于负载跟踪，然后该信息用于确定频率以及如何在CPU上委派任务，另一种是“窗口辅助的负载跟踪（Window-Assisted Load Tracking）”，WALT更具有突发性，而PELT试图让频率保持连贯性，负载跟踪器实际上并不影响CPU频率，它只是告诉系统CPU使用率是多少
-
 EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
 
 #### CPU算力归一化过程
@@ -1183,6 +1828,44 @@ struct perf_domain {
 	struct rcu_head rcu;
 };
 
+// cpumask_var_t解析
+// include/uapi/linux/kernel.h
+#define __KERNEL_DIV_ROUND_UP(n, d) ((((n) + (d)) - 1) / (d))
+
+// include/linux/kernel.h
+#define DIV_ROUND_UP	__KERNEL_DIV_ROUND_UP
+
+// include/linux/bits.h
+#define BITS_PER_BYTE 	8
+
+// include/linux/bitops.h
+#define BITS_PER_TYPE(type) (sizeof(type) * BITS_PER_BYTE)
+#define BITS_TO_LONGS(nr)	DIV_ROUND_UP(nr, BITS_PER_TYPE(long))
+
+// include/linux/types.h
+#define DECLARE_BITMAP(name, bits) \
+	unsigned long name[BITS_TO_LONGS(bits)]
+
+// include/linux/threads.h
+#define CONFIG_NR_CPUS 256
+#define NR_CPUS		CONFIG_NR_CPUS
+
+// include/linux/cpumask.h
+typedef struct cpumask { DECLARE_BITMAP(bits, NR_CPUS); } cpumask_t;
+typedef struct cpumask cpumask_var_t[1];
+
+// 展开cpumask
+// 该结构体用来表示当前系统中CPU的状态，每个CPU对应其中一位
+// 这里内核配置最大支持256个CPU，所以定义了一个长度为4的long数组
+typedef struct cpumask {
+	/*
+	unsigned long bits[BITS_TO_LONGS(256)];
+	unsigned long bits[DIV_ROUND_UP(256, 64)];
+	*/
+	unsigned long bits[4];
+} cpumask_t;
+
+// root_domain代表CPU性能域的一个总体数据结构，管理这些性能域
 struct root_domain {
 	atomic_t		refcount;
 	atomic_t		rto_count;
@@ -1250,6 +1933,197 @@ struct em_perf_domain {
 };
 ```
 
+#### perf_domain初始化
+
+
+start_kernel() -> sched_init() -> init_defrootdomain()
+```c
+// kernel/sched/core.c
+void __init sched_init(void)
+{
+	...
+#ifdef CONFIG_SMP
+	// 这里只是一些简单的初始化
+	init_defrootdmain();
+#endif
+	...
+}
+
+// include/linux/bitmap.h
+#define small_const_nbits(nbits) \
+	(__builtin_constant_p(nbits) && (nbits) <= BITS_PER_LONG && (nbits) > 0)
+
+static __always_inline int bitmap_weight(const unsigned long *src,
+								unsigned int nbits)
+{
+	// 这个条件不满足，直接执行下面的__bitmap_weight()
+	if (small_const_nbits(nbits))
+		return hweight_long(*src & BITMAP_LAST_WORD_MASK(nbits));
+	// 这里传入的src实际就是所有CPU状态位
+	return __bitmap_weight(src, nbits);
+}
+
+// lib/bitmap.c
+int __bitmap_weight(const unsigned long *bitmap, unsigned int bits)
+{
+	unsigned int k, lim = bits/BITS_PER_LONG;
+	int w = 0;
+
+	for (k = 0; k < lim; k++)
+		w += hweight_long(bitmap[k]);
+
+	if (bits % BITS_PER_LONG)
+		w += hweight_long(bitmap[k] & BITMAP_LAST_WORD_MASK(bits));
+
+	return w;
+}
+
+// include/linux/bitops.h
+static __always_inline unsigned long hweight_long(unsigned long w)
+{
+	return sizeof(w) == 4 ? hweight32(w) : hweight64((__64)w);
+}
+
+// include/asm-generic/bitops/const_hweight.h
+// __builtin_constant_p(w) gcc的内建函数
+// 如果w的值在编译时能确定，那么该函数返回值为1
+// 这里传入的bitmap[k]不是常量，计算走__arch_hweight64()
+#define hweight64(w) (__builtin_constant_p(w) ? \
+			__const_hweight64(w) : __arch_hweight64(w))
+
+// include/asm-generic/bitops/arch_hweight.h
+static inline unsigned long __arch_hweight64(u64 w)
+{
+	return __sw_hweight64(w);
+}
+
+// lib/weight.c
+// 统计给定数字w中值为1的bit位个数
+unsigned long __sw_hweight64(__u64 w)
+{
+#if BITS_PER_LONG == 32
+	return __sw_hweight32((unsigned int)(w >> 32)) +
+	       __sw_hweight32((unsigned int)w);
+#elif BITS_PER_LONG == 64
+#ifdef CONFIG_ARCH_HAS_FAST_MULTIPLIER
+	w -= (w >> 1) & 0x5555555555555555ul;
+	w =  (w & 0x3333333333333333ul) + ((w >> 2) & 0x3333333333333333ul);
+	w =  (w + (w >> 4)) & 0x0f0f0f0f0f0f0f0ful;
+	return (w * 0x0101010101010101ul) >> 56;
+#else
+	__u64 res = w - ((w >> 1) & 0x5555555555555555ul);
+	res = (res & 0x3333333333333333ul) + ((res >> 2) & 0x3333333333333333ul);
+	res = (res + (res >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
+	res = res + (res >> 8);
+	res = res + (res >> 16);
+	return (res + (res >> 32)) & 0x00000000000000FFul;
+#endif
+#endif
+}
+EXPORT_SYMBOL(__sw_hweight64);
+
+// include/linux/cpumask.h
+// cpumask_weight()
+#define nr_cpumask_bits		((unsigned int)NR_CPUS)
+#define cpumask_bits(maskp)	((maskp)->bits)							
+
+static inline unsigned int cpumask_weight(const struct cpumask *srcp)
+{
+	return bitmap_weight(cpumask_bits(srcp), nr_cpumask_bits);
+}
+
+// kernel/sched/topology.c
+static bool build_perf_domains(const struct cpumask *cpu_map)
+{
+	// 这里nr_cpus即统计cpu_map里面当前CPU的个数
+	int i, nr_pd = 0, nr_ps = 0, nr_cpus = cpumask_weight(cpu_map);
+	struct perf_domain *pd = NULL, *tmp;
+	int cpu = cpumask_first(cpu_map);
+	struct root_domain *rd = cpu_rq(cpu)->rd;
+	struct cpufreq_policy *policy;
+	struct cpufreq_governor *gov;
+
+	if (!sysctl_sched_energy_aware)
+		goto free;
+
+	/* EAS is enabled for asymmetric CPU capacity topologies. */
+	if (!per_cpu(sd_asym_cpucapacity, cpu)) {
+		if (sched_debug()) {
+			pr_info("rd %*pbl: CPUs do not have asymmetric capacities\n",
+					cpumask_pr_args(cpu_map));
+		}
+		goto free;
+	}
+
+	/* EAS definitely does *not* handle SMT */
+	if (sched_smt_active()) {
+		pr_warn("rd %*pbl: Disabling EAS, SMT is not supported\n",
+			cpumask_pr_args(cpu_map));
+		goto free;
+	}
+
+	for_each_cpu(i, cpu_map) {
+		/* Skip already covered CPUs. */
+		if (find_pd(pd, i))
+			continue;
+
+		/* Do not attempt EAS if schedutil is not being used. */
+		policy = cpufreq_cpu_get(i);
+		if (!policy)
+			goto free;
+		gov = policy->governor;
+		cpufreq_cpu_put(policy);
+		if (gov != &schedutil_gov) {
+			if (rd->pd)
+				pr_warn("rd %*pbl: Disabling EAS, schedutil is mandatory\n",
+						cpumask_pr_args(cpu_map));
+			goto free;
+		}
+
+		/* Create the new pd and add it to the local list. */
+		tmp = pd_init(i);
+		if (!tmp)
+			goto free;
+		tmp->next = pd;
+		pd = tmp;
+
+		/*
+		 * Count performance domains and performance states for the
+		 * complexity check.
+		 */
+		nr_pd++;
+		nr_ps += em_pd_nr_perf_states(pd->em_pd);
+	}
+
+	/* Bail out if the Energy Model complexity is too high. */
+	if (nr_pd * (nr_ps + nr_cpus) > EM_MAX_COMPLEXITY) {
+		WARN(1, "rd %*pbl: Failed to start EAS, EM complexity is too high\n",
+						cpumask_pr_args(cpu_map));
+		goto free;
+	}
+
+	perf_domain_debug(cpu_map, pd);
+
+	/* Attach the new list of performance domains to the root domain. */
+	tmp = rd->pd;
+	rcu_assign_pointer(rd->pd, pd);
+	if (tmp)
+		call_rcu(&tmp->rcu, destroy_perf_domain_rcu);
+
+	return !!pd;
+
+free:
+	free_pd(pd);
+	tmp = rd->pd;
+	rcu_assign_pointer(rd->pd, NULL);
+	if (tmp)
+		call_rcu(&tmp->rcu, destroy_perf_domain_rcu);
+
+	return false;
+
+}
+```
+
 E2000Q 5.10内核，perf_domain_debug 打印信息
 ```bash
 [    2.574534] root_domain 0-3: pd3:{ cpus=3 nr_pstate=4 }
@@ -1296,6 +2170,48 @@ pd_nrg = ps->cost * sum(cpu_util) / scale_cpu
 在任务被重新唤醒或者fork新建时，会通过`select_task_rq_fair()`将任务进行balance，达到充分利用CPU的目的。在`select_task_rq_fair()`，若任务是被重新唤醒就会调用`find_energy_efficient_cpu()`进行选核执行
 ```c
 /*
+ * Predicts what cpu_util(@cpu) would return if @p was migrated (and enqueued)
+ * to @dst_cpu.
+ */
+static unsigned long cpu_util_next(int cpu, struct task_struct *p, int dst_cpu)
+{
+	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
+	// 计算cfs的util
+	unsigned long util_est, util = READ_ONCE(cfs_rq->avg.util_avg);
+
+	/*
+	 * If @p migrates from @cpu to another, remove its contribution. Or,
+	 * if @p migrates from another CPU to @cpu, add its contribution. In
+	 * the other cases, @cpu is not impacted by the migration, so the
+	 * util_avg should already be correct.
+	 */
+	// 在dst_cpu为-1的情况下
+	// 若任务p运行在传入的CPU util = cfs_util - task_util(p)
+	if (task_cpu(p) == cpu && dst_cpu != cpu)
+		sub_positive(&util, task_util(p));
+	else if (task_cpu(p) != cpu && dst_cpu == cpu)
+		util += task_util(p);
+
+	if (sched_feat(UTIL_EST)) {
+		util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+
+		/*
+		 * During wake-up, the task isn't enqueued yet and doesn't
+		 * appear in the cfs_rq->avg.util_est.enqueued of any rq,
+		 * so just add it (if needed) to "simulate" what will be
+		 * cpu_util() after the task has been enqueued.
+		 */
+		if (dst_cpu == cpu)
+			util_est += _task_util_est(p);
+
+		util = max(util, util_est);
+	}
+
+	return min(util, capacity_orig_of(cpu));
+}
+
+
+/*
  * compute_energy(): Estimates the energy that @pd would consume if @p was
  * migrated to @dst_cpu. compute_energy() predicts what will be the utilization
  * landscape of @pd's CPUs after the task migration, and uses the Energy Model
@@ -1307,20 +2223,25 @@ static long
 compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 {
 	struct cpumask *pd_mask = perf_domain_span(pd);
-	// 获取该CPU的算力
+	// 获取该CPU的算力，这里取得的是归一化到1024的算力
 	unsigned long cpu_cap = arch_scale_cpu_capacity(cpumask_first(pd_mask));
 	unsigned long max_util = 0, sum_util = 0;
 	int cpu;
 
 	// 对此pd中每个online cpu都执行计算
 	for_each_cpu_and(cpu, pd_mask, cpu_online_mask) {
+		// 这里计算util_cfs，当dst_cpu传入为-1时，这里是没将p的util计算进去的
+		// 这个地方比较关键，p的util有没有算到cpu的util里面去是在这一步决定的
 		unsigned long cpu_util, util_cfs = cpu_util_next(cpu, p, dst_cpu);
 		struct task_struct *tsk = cpu == dst_cpu ? p : NULL;
 
 		// 返回该CPU下cfs+irq+rt+dl使用掉的CPU算力总和
+		// 这一步计算没将任务p的util加进去
 		sum_util += schedutil_cpu_util(cpu, util_cfs, cpu_cap,
 					       ENERGY_UTIL, NULL);
-
+		// 这一步计算将任务p的util加进去了
+		// 这里计算cpu_util的原因就是需要预测下一次该perf_domain的频率
+		// 计算的cpu_util是略微放大了的，需要进一步分析这个放大的操作
 		cpu_util = schedutil_cpu_util(cpu, util_cfs, cpu_cap,
 					      FREQUENCY_UTIL, tsk);
 		max_util = max(max_util, cpu_util);
@@ -1346,12 +2267,19 @@ static inline unsigned long em_cpu_energy(struct em_perf_domain *pd,
 	cpu = cpumask_first(to_cpumask(pd->cpus));
 	scale_cpu = arch_scale_cpu_capacity(cpu);
 	ps = &pd->table[pd->nr_perf_states - 1];
+	// 这里将perf_domai计算出来的最大的CPU利用率来推测CPU接下来需要调频的频率
+	// 这里可以将freq称为推测频率
+	// 计算公式 freq = 1.25 * max_f * max_util / scale_cpu
+	// 这里是在最大频率1.25倍进行计算的
 	freq = map_util_freq(max_util, ps->frequency, scale_cpu);
 
 	/*
 	 * Find the lowest performance state of the Energy Model above the
 	 * requested frequency.
 	 */
+	// 将该频率映射到频率表上
+	// 因为freq是在1.5倍最大频率计算的，算出来的推测频率可能大于最大频率
+	// 假如大于最大频率的话，for循环执行后ps指向的就是最大频率了
 	for (i = 0; i < pd->nr_perf_states; i++) {
 		ps = &pd->table[i];
 		if (ps->frequency >= freq)
@@ -1400,6 +2328,10 @@ static inline unsigned long em_cpu_energy(struct em_perf_domain *pd,
 	 *   pd_nrg = ------------------------                       (4)
 	 *                  scale_cpu
 	 */
+	// 根据推测频率在频点表上对应的cost来算energy
+	// 不同频率的cost是常数，在初始化时就已经计算出来
+	// 计算cost的时候需要将该perf_domain上的所有util拿出来进行计算
+	// 一个perf_domain下的频率是一样的，所以这里计算能耗直接用了sum_util
 	return ps->cost * sum_util / scale_cpu;
 }
 
@@ -1430,6 +2362,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 		goto fail;
 
 	sync_entity_load_avg(&p->se);
+	// p的util为0，直接返回prev_cpu
 	if (!task_util_est(p))
 		goto unlock;
 
@@ -1441,6 +2374,8 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 
 		/* Compute the 'base' energy of the pd, without @p */
 		// 计算不包括p的情况下此pd当前的energy
+		// 这里传入dst_cpu为-1，计算的就是该perf_domain不包括任务P的util
+		// 来进行频率推测，然后用来计算能耗
 		base_energy_pd = compute_energy(p, -1, pd);
 		// 不包括p的情况下系统的总energy
 		base_energy += base_energy_pd;
@@ -1451,6 +2386,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 				continue;
 			// 计算p放到此CPU后该CPU总共消耗的算力
 			util = cpu_util_next(cpu, p, cpu);
+			// 这里取的是归一化后的CPU算力
 			cpu_cap = capacity_of(cpu);
 			spare_cap = cpu_cap;
 			// 计算p放到此CPU后剩余的算力
@@ -1472,6 +2408,8 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 			// 若对比的这个CPU就是任务之前运行的CPU
 			if (cpu == prev_cpu) {
 				// 计算p放在该cpu后整个pd的能量消耗
+				// 这里传入的dst_cpu为之前p运行的CPU
+				// 推测频率是在之前运行CPU进行推测，同时把P的util也计算到了
 				prev_delta = compute_energy(p, prev_cpu, pd);
 				// 计算p放在该CPU后整个pd增加的能量消耗
 				prev_delta -= base_energy_pd;
@@ -1494,6 +2432,8 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu)
 		// 同一个簇上的CPU取最大余量算力的那个CPU与其他簇的CPU做能量消耗对比
 		if (max_spare_cap_cpu >= 0 && max_spare_cap_cpu != prev_cpu) {
 			// 计算p放在算力剩余最大的CPU后整个pd的能量消耗
+			// 这里传进去的dst_cpu肯定不会和当前任务p运行的CPU相同
+			// 所以在cpu_util_next()中会把p的util加到cpu util上
 			cur_delta = compute_energy(p, max_spare_cap_cpu, pd);
 			// 计算能量消耗增量
 			cur_delta -= base_energy_pd;

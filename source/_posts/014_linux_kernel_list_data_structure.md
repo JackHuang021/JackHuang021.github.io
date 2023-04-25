@@ -14,6 +14,8 @@ Linux内核中，对于数据管理，提供了2种类型的双向链表，一�
 
 <!-- more -->
 ### list_head链表
+
+#### list_head定义
 `list_head`结构体定义在`include/linux/types.h`中，定义如下：
 ```c
 struct list_head {
@@ -57,9 +59,9 @@ struct my_list {
 `offsetof`获取结构体成员在结构体中地址的偏移量  
 `container_of`的作用是通过结构体的成员地址获取结构体变量的地址，container_of一共需要传入三个参数，`ptr`指针地址，`type`结构体类型，`member`结构体成员名称，具体的做法就是通过成员的指针地址，减去成员在结构体中偏移的地址
 
-### `list_head`链表操作
+#### `list_head`链表操作
 
-#### `list_head`初始化
+##### `list_head`初始化
 **静态初始化**
 ```c
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
@@ -87,7 +89,7 @@ struct list_head mylist2;
 INIT_LIST_HEAD(&mylist2);
 ```
 
-#### 从`list_head`中获取对象结构体
+##### 从`list_head`中获取对象结构体
 ```c
 /**
  * @ptr:	the list head to take the element from.
@@ -126,7 +128,7 @@ INIT_LIST_HEAD(&mylist2);
     list_entry((pos)->member.prev, typeof(*(pos)), member)
 ```
 
-#### `list_head`增加节点
+##### `list_head`增加节点
 ```c
 static inline void __list_add(struct list_head *new,
                 struct list_head *prev,
@@ -154,7 +156,7 @@ static inline void list_add_tail(struct list_head *new,
 ```
 
 
-#### `list_head`删除节点
+##### `list_head`删除节点
 ```c
 /**
  * Delete a list entry by making the prev/next entries
@@ -199,8 +201,8 @@ static inline void list_del(struct list_head *entry)
 }
 ```
 
-#### 遍历`list_head`
-+ 通过`list_head`的头节点向后遍历整个链表
+##### 遍历`list_head`
+通过`list_head`的头节点向后遍历整个链表
 ```c
 /**
  * @pos:    the &struct list_head to use as a loop cursor
@@ -210,13 +212,13 @@ static inline void list_del(struct list_head *entry)
     for (pos = (head)->next; pos != (head); pos = pos->next)
 ```
 
-+ 通过`list_head`的头节点向前遍历整个链表
+通过`list_head`的头节点向前遍历整个链表
 ```c
 #define list_for_each_prev(pos, head) \
     for (pos = (head)->prev; pos != (head); pos = pos->prev)
 ```
 
-+ 通过`list_head`的头节点向后遍历链表，这里使用`n`来存储`pos`指向的下一个节点的原因主要就是若：当前循环对`pos`进行了删除操作，因为`n`存储了下一个节点，那么可以保证遍历安全的进行下去
+通过`list_head`的头节点向后遍历链表，这里使用`n`来存储`pos`指向的下一个节点的原因主要就是若：当前循环对`pos`进行了删除操作，因为`n`存储了下一个节点，那么可以保证遍历安全的进行下去
 ```c
 /**
  * @pos:    the &struct list_head to use as a loop cursor
@@ -228,14 +230,14 @@ static inline void list_del(struct list_head *entry)
         pos = n, n = pos->next)
 ```
 
-+ 通过`list_head`的头节点向前遍历链表
+通过`list_head`的头节点向前遍历链表
 ```c
 #define list_for_each_prev_safe(pos, n, head) \
     for (pos = (head)->prev, n = pos->prev; pos != head; \
         pos = n, n = pos->prev)
 ```
 
-+ 通过`list_head`指针来向后遍历链表上的所有结构体对象
+通过`list_head`指针来向后遍历链表上的所有结构体对象
 ```c
 #define list_for_each_entry(pos, head, member) \
     for (pos = list_first_entry((head), typeof(*pos), member); \
@@ -243,7 +245,7 @@ static inline void list_del(struct list_head *entry)
         pos = list_next_entry(pos, member))
 ```
 
-+ 通过`list_head`指针来向前遍历链表上的所有的结构体对象
+通过`list_head`指针来向前遍历链表上的所有的结构体对象
 ```c
 #define list_for_each_entry_reverse(pos, head, member) \
     for (pos = list_last_entry((head), typeof(*pos), member); \
@@ -251,7 +253,7 @@ static inline void list_del(struct list_head *entry)
         pos = list_prev_entry(pos, member))
 ```
 
-+ 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从下一个节点开始继续向后遍历链表
+通过给定的结构体指针`pos`和链表头，`pos`不能为空，从下一个节点开始继续向后遍历链表
 ```c
 #define list_for_each_entry_continue(pos, head, member) \
     for (pos = list_next_entry(pos, member); \
@@ -259,7 +261,7 @@ static inline void list_del(struct list_head *entry)
         pos = list_next_entry(pos, member))
 ```
 
-+ 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从上一个节点开始继续向前遍历链表
+通过给定的结构体指针`pos`和链表头，`pos`不能为空，从上一个节点开始继续向前遍历链表
 ```c
 #define list_for_each_entry_continue_reverse(pos, head, member) \
     for (pos = list_prev_entry(pos, member); \
@@ -267,14 +269,14 @@ static inline void list_del(struct list_head *entry)
         pos = list_prev_entry(pos, member))
 ```
 
-+ 通过给定的结构体指针`pos`和链表头，`pos`不能为空，从当前节点开始继续向后遍历链表
+通过给定的结构体指针`pos`和链表头，`pos`不能为空，从当前节点开始继续向后遍历链表
 ```c
 #define list_for_each_entry_from(pos, head, member) \
     for (; &pos->member != (head); \
         pos = list_next_entry(pos, member))
 ```
 
-+ 通过给定的结构体指针`pos`和链表头，来安全的遍历链表，可以在循环中对当前遍历的结构体进行删除操作
+通过给定的结构体指针`pos`和链表头，来安全的遍历链表，可以在循环中对当前遍历的结构体进行删除操作
 ```c
 /**
 * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
@@ -311,6 +313,320 @@ void __init early_platform_cleanup(void)
 ```
 采用这种遍历的方式可以安全的删除当前遍历的节点
 
+### klist链表
+Linux内核提供了两个封装list_head的结构体，链表头klist和链表节点klist_node，klist是list的线程安全版本，在结构体中提供了自旋锁，对链表的操作进行锁保护，klist的链表节点数据结构klist_node使用了引用计数器，只有当节点的引用计数为0时，才允许该节点从klist链表中移除
+
+#### klist链表定义
+首先来看klist的定义
+```c
+// include/linux/klist.h
+struct klist {
+    spinlock_t k_lock;
+    struct list_head k_list;
+    void (*get)(struct klist_node *);
+    void (*put)(struct klist_node *);
+} __attribute__ ((aligned (sizeof(void *))));
+```
++ k_lock：链接节点操作的自旋锁
++ k_list：双向链表
++ get：用于对链表内的节点增加引用计数
++ put：用于对链表内的节点减少引用计数
+
+klist_node结构体定义如下
+```c
+struct klist_node {
+    void *n_klist;
+    struct list_head n_node;
+    struct kref n_ref;
+};
+```
++ n_klist：用来指向链表头
++ n_node：用来链接前后节点
++ n_ref：引用计数，实际就是一个int类型变量
+
+#### klist初始化
+```c
+//include/linux/klist.h
+#define KLIST_INIT(_name, _get, _put) \
+    { .k_lock = __SPIN_LOCK_UNLOCKED(_name.k_lock), \
+      .k_list = LIST_HEAD_INIT(_name.k_list), \
+      .get = _get, \
+      .put = _put, }
+
+#define DEFINE_KLIST(_name, _get, _put) \
+    struct klist _name = KLIST_INIT(_name, _get, _put)
+
+void klist_init(struct klist *k, void (*get)(struct klist_node *),
+            void (*put)(struct klist_node *))
+{
+    INIT_LIST_HEAD(&k->k_list);
+    spin_lock_init(&k->k_lock);
+    k->get = get;
+    k->put = put;
+}
+```
+
+klist_node初始化
+```c
+// lib/klist.c
+static void klist_node_init(struct klist *k, struct klist_node *n)
+{
+    INIT_LIST_HEAD(&n->n_node);
+    // klist_node引用计数加1
+    kref_init(&n->n_ref);
+    // 将n_klist指向klist，即指向头节点
+    knode_set_klist(n, k);
+    if (k->get)
+        k->get(n);
+}
+```
+
+#### klist操作接口
+
+##### klist增加节点
+```c
+// 将新节点n初始化并添加节点到链表尾部
+void klist_add_tail(struct klist_node *n, struct klist *k);
+// 将新节点n初始化并添加节点到链表头部
+void klist_add_head(struct klist_node *n, struct klist *k);
+// 将新节点n初始化并将节点插到pos节点后
+void klist_add_behind(struct klist_node *n, struct klist_node *pos);
+// 将新节点n初始化并将节点插到pos节点前
+void klist_add_before(struct klist_node *n, struct klist_node *pos);
+```
+##### klist删除节点
+在链表节点klist_node中，引入了一个引用计数器，使用kref实现了节点的动态删除，当引用计数器为0时，就会调用`klist_release()`函数将节点进行脱离，之前有线程申请删除某节点，但节点的引用计数仍在，所以只能把请求删除的线程阻塞，在klist_release()调用时还要将阻塞的线程唤醒
+
+klist_remove()会调用klist_del()减少引用计数，还会一直阻塞到节点被删除，若某个线程需要删除某个节点，需要调用这个klist_remove()接口
+
+klist_del接口
+```c
+struct klist_waiter {
+    struct list_head list;          // 将等待删除的节点链起来
+    struct klist_node *node;        // 当前等待删除的节点
+    struct task_struct *process;    // 进程或者线程指针
+    int woken;                      // 进程唤醒标记
+};
+
+static DEFINE_SPINLOCK(klist_remove_lock);
+static LIST_HEAD(klist_remove_waiters);
+
+// 使用klist_node最低位标记该节点是否被删除
+#define KNODE_DEAD          1LU
+#define KNODE_KLIST_MASK    ~KNODE_DEAD
+
+
+// 取得klist node对应的klist头节点
+static struct klist *knode_klist(struct klist_node *knode)
+{
+    // n_klist是指向链表头的，可以通过它查找klist
+    // 这里最低位默认是置零的
+    return (struct klist *)
+        ((unsigned long)knode->n_klist & KNODE_KLIST_MASK);
+}
+
+// 计数为0时调用klist_release
+static void klist_release(struct kref *kref)
+{
+    struct klist_waiter *waiter, *tmp;
+    // 通过kref获取klist_node指针
+	struct klist_node *n = container_of(kref, struct klist_node, n_ref);
+
+	WARN_ON(!knode_dead(n));
+    // 删除该节点
+	list_del(&n->n_node);
+	spin_lock(&n_lock);
+    // 通过klist_remove_waiters链表头遍历整个remove链表
+	list_for_each_entry_safe(waiter, tmp, &klist_remove_waiters, list) {
+		if (waiter->node != n)
+			continue;
+        // 删除该klist节点对应的remove waiter节点
+		list_del(&waiter->list);
+		waiter->woken = 1;
+		mb();
+		wake_up_process(waiter->process);
+	}
+	spin_unlock(&klist_remove_lock);
+	knode_set_klist(n, NULL);
+}
+
+static int klist_dec_and_del(struct klist_node *n)
+{
+    // klist节点引用计数减1，当引用计数到0时调用klist_release
+    return kref_put(&n->nref, klist_release);
+}
+
+static void klist_put(struct klist_node *n, bool kill)
+{
+    // 取得链表头
+    struct klist *k = knode_klist(n);
+    void (*put)(struct klist_node *) = k->put;
+
+    spin_lock(&k->k_lock);
+    // 将klist_node的n_klist标记为dead
+    if (kill)
+        knode_kill(n);
+    if (!klist_dev_and_del(n))
+        put = NULL;
+    spin_unlock(&k->k_lock);
+    if (put)
+        put(n);
+}
+
+void klist_del(struct klist_node *n)
+{
+    klist_put(n, true);
+}
+```
+
+> klist中引入dead标识的原因：当一个线程要让某个klist_node无效时，不能简单地从klist中删除，因为有可能还有其它线程还在使用这个节点，因此只能减少klist_node的引用计数，节点还在klist中，遍历的时候将对这个节点dead标识进行判断，避开这些申请删除的节点，当其它线程不引用该节点后，引用计数为0，该节点会自动从klist链表中移除
+
+
+klist_remove()接口
+```c
+void klist_remove(struct klist_node *n)
+{
+    struct klist_waiter waiter;
     
+    waiter.node = n;
+    waiter.process = current;
+    waiter.woken = 0;
+    spin_lock(&klist_remove_lock);
+    list_add(&waiter.list, &klist_remove_waiters);
+    spin_unlock(&klist_remove_lock);
+
+    // 减少引用计数，如果当前节点的引用计数为1会直接删除该节点
+    klist_del(n);
+
+    // 引用计数减少后还没到0，会阻塞当前进程
+    for(;;) {
+        set_current_state(TASK_UNINTERRUPTIBLE);
+        if (waiter.woken)
+            break;
+        schedule();
+    }
+    __set_current_state(TASK_RUNNING);
+}
+```
+
+##### 遍历klist
+
+```c
+struct klist_iter {
+    struct klist *i_klist;      // 当前遍历的klist链表
+    struct klist_node *i_cur;   // 当前遍历的节点
+};
+```
+
+迭代器初始化
+```c
+// 从链表头开始遍历
+void klist_iter_init(struct klist *k, struct klist_iter *i)
+{
+    klist_iter_init_node(k, i, NULL);
+}
+
+// 若n不为空，则从节点n进行遍历，从节点n初始化迭代器
+void klist_iter_init_node(struct klist *k, struct klist_iter *i,
+                    struct klist_node *n)
+{
+    i->i_klist = k;
+    i->i_cur = NULL;
+    // 若节点不为空需要对该节点增加引用计数
+    if (n && kref_get_unless_zero(&n->n_ref))
+        i->i_cur = n;
+}
+
+void klist_iter_exit(struct klist_iter *i)
+{
+    if (i->i_cur) {
+        klist_put(i->i_cur, false);
+        i->i_cur = NULL;
+    }
+}
+```
+
+klist向前遍历
+```c
+static struct klist_node *to_klist_node(struct list_head *n)
+{
+    return container_of(n, struct klist_node, n_node);
+}
+
+struct klist_node *klist_prev(struct klist_iter *i)
+{
+    void (*put)(struct klist_node *) = i->i_klist->put;
+    struct klist_node *last = i->i_cur;
+    struct klist_node *prev;
+    unsigned long flags;
+
+    spin_lock_irqsave(&i->i_klist->k_lock, flags);
+
+    // 假如是从链表头进行遍历
+    if (last) {
+        prev = to_klist_node(last->node.prev);
+        // 对之前节点的引用计数进行减一操作
+        if (!klist_dec_and_del(last))
+            put = NULL;
+    } else
+        prev = to_klist_node(i->i_klist->k_list.prev);
+
+    i->i_cur = NULL;
+    // 往前找一个非dead节点
+    while (prev != to_klist_node(&i->i_klist->k_list)) {
+        if (likely(!knode_dead(prev))) {
+            // 找到了节点，增加它的引用计数
+            kref_get(&prev->n_ref);
+            i->i_cur = prev;
+            break;
+        }
+        prev = to_klist_node(prev->n_node.prev);
+    }
+
+    spin_unlock_irqrestore(&i->i_klist->k_lock, flags);
+
+    if (put && last)
+        put(last);
+    return i->i_cur;
+}
+
+```
+
+klist向后遍历
+```c
+struct klist_node *klist_next(struct klist_iter *i)
+{
+    void (*put)(struct klist_node *) = i->i_klist->put;
+    struct klist_node *last = i->i_cur;
+    struct klist_node *next;
+    unsigned long flags;
+
+    spin_lock_irqsave(&i->i_klist->k_lock, flags);
+
+    if (last) {
+        next = to_klist_node(last->node.next);
+        if (!klist_dec_and_del(last))
+            put = NULL;
+    } else
+        next = to_klist_node(i->i_klist->k_list.next);
+
+    i->i_cur = NULL;
+    while (next != to_klist_node(&i->i_klist->klist)) {
+        if (likely(!knode_dead(next))) {
+            kref_get(&next->n_ref);
+            i->i_cur = next;
+            break;
+        }
+    }
+    
+    spin_unlock_irqrestore(&i->klist->k_lock, flags);
+
+    if (put && last)
+        put(last);
+    return i->i_cur;
+}
+```
+
+
 
 
