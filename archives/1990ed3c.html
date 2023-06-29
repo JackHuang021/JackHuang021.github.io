@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha256-AbA177XfpSnFEvgpYu1jMygiLabzPCJCRIBtR5jGc0k=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/themes/blue/pace-theme-minimal.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="相关概念DMA是Direct Memory Access的缩写，就是绕开CPU进行内存的访问，DMA控制器就是用来协助CPU在memory和memory或者memory和设备之间搬运数据">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux DMA驱动框架">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/1990ed3c.html">
+<meta property="og:site_name" content="Jack&#39;s Home">
+<meta property="og:description" content="相关概念DMA是Direct Memory Access的缩写，就是绕开CPU进行内存的访问，DMA控制器就是用来协助CPU在memory和memory或者memory和设备之间搬运数据">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20230526141809.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20230512103247.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20230615143556.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/%E4%B8%B2%E5%8F%A3DMA%204Mbps%E4%BC%A0%E8%BE%93.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/002.BMP">
+<meta property="article:published_time" content="2023-05-09T08:14:27.000Z">
+<meta property="article:modified_time" content="2023-06-29T09:58:08.401Z">
+<meta property="article:author" content="Jack">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="DMA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20230526141809.png">
+
+
+<link rel="canonical" href="https://jackhuang021.github.io/archives/1990ed3c.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/1990ed3c.html","path":"archives/1990ed3c.html","title":"Linux DMA驱动框架"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux DMA驱动框架 | Jack's Home</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?cf1cdec429059a964c53024129e34116"></script>
+
+
+
+
+
+  <script async defer data-website-id="" src=""></script>
+
+  <script defer data-domain="" src=""></script>
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Jack's Home</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5"><span class="nav-number">1.</span> <span class="nav-text">相关概念</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#DMA-channels"><span class="nav-number">1.1.</span> <span class="nav-text">DMA channels</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#DMA-request-line"><span class="nav-number">1.2.</span> <span class="nav-text">DMA request line</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BC%A0%E8%BE%93%E5%8F%82%E6%95%B0"><span class="nav-number">1.3.</span> <span class="nav-text">传输参数</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Linux-dmaengine"><span class="nav-number">2.</span> <span class="nav-text">Linux dmaengine</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E9%87%8D%E8%A6%81%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.</span> <span class="nav-text">重要数据结构</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DMA-API%E4%BD%BF%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">DMA API使用</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BB%8ECPU%E8%A7%92%E5%BA%A6%E7%9C%8B%E5%88%B0%E7%9A%84%E5%9C%B0%E5%9D%80%E5%92%8C%E4%BB%8EDMA%E6%8E%A7%E5%88%B6%E5%99%A8%E7%9C%8B%E5%88%B0%E7%9A%84%E5%9C%B0%E5%9D%80"><span class="nav-number">3.1.</span> <span class="nav-text">从CPU角度看到的地址和从DMA控制器看到的地址</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#DMA%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84"><span class="nav-number">3.2.</span> <span class="nav-text">DMA内存映射</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E4%BD%BF%E7%94%A8dmaengine"><span class="nav-number">3.3.</span> <span class="nav-text">设备驱动使用dmaengine</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BC%A0%E8%BE%93%E6%8F%8F%E8%BF%B0%E7%AC%A6"><span class="nav-number">3.4.</span> <span class="nav-text">传输描述符</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Phytium-DDMA%E9%A9%B1%E5%8A%A8"><span class="nav-number">4.</span> <span class="nav-text">Phytium DDMA驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91%E6%8F%8F%E8%BF%B0"><span class="nav-number">4.1.</span> <span class="nav-text">设备树描述</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#ddma%E9%A9%B1%E5%8A%A8%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84%E4%BD%93"><span class="nav-number">4.2.</span> <span class="nav-text">ddma驱动相关结构体</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#pl011-DMA-device%E9%A9%B1%E5%8A%A8"><span class="nav-number">5.</span> <span class="nav-text">pl011 DMA device驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pl011-uart-rx%E9%80%BB%E8%BE%91"><span class="nav-number">5.1.</span> <span class="nav-text">pl011 uart rx逻辑</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#pl011-uart-tx%E9%80%BB%E8%BE%91"><span class="nav-number">5.2.</span> <span class="nav-text">pl011 uart tx逻辑</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SPI%E5%8A%9F%E8%83%BD%E6%B5%8B%E8%AF%95"><span class="nav-number">6.</span> <span class="nav-text">SPI功能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#spidev-test%E6%B5%8B%E8%AF%95"><span class="nav-number">6.1.</span> <span class="nav-text">spidev_test测试</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A4%96%E6%8E%A5flash-mtd-speedtest%E9%80%9F%E5%BA%A6%E6%B5%8B%E8%AF%95"><span class="nav-number">6.2.</span> <span class="nav-text">外接flash mtd_speedtest速度测试</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A4%96%E6%8E%A5flash-dd%E8%AF%BB%E5%86%99%E6%B5%8B%E8%AF%95"><span class="nav-number">6.3.</span> <span class="nav-text">外接flash dd读写测试</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%B2%E5%8F%A3%E5%8A%9F%E8%83%BD%E6%B5%8B%E8%AF%95"><span class="nav-number">7.</span> <span class="nav-text">串口功能测试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%95%E7%94%A8"><span class="nav-number">8.</span> <span class="nav-text">引用</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Jack"
+      src="/images/favicon-32x32.png">
+  <p class="site-author-name" itemprop="name">Jack</p>
+  <div class="site-description" itemprop="description">build a better world</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">33</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">38</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/JackHuang021" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;JackHuang021" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jackhuang021@gmail.com" title="E-Mail → mailto:jackhuang021@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/1990ed3c.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/favicon-32x32.png">
+      <meta itemprop="name" content="Jack">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Jack's Home">
+      <meta itemprop="description" content="build a better world">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux DMA驱动框架 | Jack's Home">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux DMA驱动框架
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-05-09 16:14:27" itemprop="dateCreated datePublished" datetime="2023-05-09T16:14:27+08:00">2023-05-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2023-06-29 17:58:08" itemprop="dateModified" datetime="2023-06-29T17:58:08+08:00">2023-06-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>16k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h4 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h4><p>DMA是Direct Memory Access的缩写，就是绕开CPU进行内存的访问，DMA控制器就是用来协助CPU在memory和memory或者memory和设备之间搬运数据</p>
+<p><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20230526141809.png"></p>
+<span id="more"></span>
+<h5 id="DMA-channels"><a href="#DMA-channels" class="headerlink" title="DMA channels"></a>DMA channels</h5><p>一个DMA可以“同时”进行DMA传输的个数是有限的，这称作DMA channels，这里的channel只是一个逻辑上的概念</p>
+<blockquote>
+<p>鉴于总线访问的冲突，以及内存一致性的考量，从物理的角度看，不大可能会同时进行两个（及以上）的DMA传输。因而DMA channel不太可能是物理上独立的通道；</p>
+<p>很多时候，DMA channels是DMA controller为了方便，抽象出来的概念，让consumer以为独占了一个channel，实际上所有channel的DMA传输请求都会在DMA controller中进行仲裁，进而串行传输；</p>
+<p>因此，软件也可以基于controller提供的channel（我们称为“物理”channel），自行抽象更多的“逻辑”channel，软件会管理这些逻辑channel上的传输请求。实际上很多平台都这样做了，在DMA Engine framework中，不会区分这两种channel（本质上没区别）。</p>
+</blockquote>
+<h5 id="DMA-request-line"><a href="#DMA-request-line" class="headerlink" title="DMA request line"></a>DMA request line</h5><p>DMA传输是由CPU发起的，CPU会告诉DMA控制器，把xxx地方的数据搬运到xxx地方，而DMA控制器，除了负责怎么搬之外还要决定一件非常重要的事情：何时开始搬运？</p>
+<p>因为，CPU发起DMA传输的时候，并不知道当前是否具备传输条件，例如source设备是否有数据、dest设备的FIFO是否空闲等等。那谁知道是否可以传输呢？设备！因此，需要DMA传输的设备和DMA控制器之间，会有几条物理的连接线（称作DMA request，DRQ），用于通知DMA控制器可以开始传输了。</p>
+<p>通常来说，每一个数据收发的节点（称作endpoint），和DMA controller之间，就有一条DMA request line。</p>
+<h5 id="传输参数"><a href="#传输参数" class="headerlink" title="传输参数"></a>传输参数</h5><p><strong>transfer size:</strong> 在每一个时钟周期，DMA controller将1 byte的数据从一个buffer搬到另一个buffer，直到搬完transfer size个byte即可停止</p>
+<p><strong>transfer width:</strong> 传输的数据宽度，在一个时钟周期中，传输指定的bit的数据，DDMA固定为4字节</p>
+<p><strong>buffer size:</strong> DMA控制器内部可缓存的数据量大小</p>
+<p><strong>scatter-gather:</strong> DMA传输一般情况下只能处理物理上连续的buffer，在某些场景下将一些非连续的buffer拷贝到一个连续的buffer中，这样的操作称为scatter-gather，对于这种非连续的传输，大多时候都是通过软件，将传输分成多个连续的小块（chunk）,例如在dmaengine中的scatterlist</p>
+<p><strong>burst size:</strong> DMA控制器内部可缓存的数据量大小，按照DDMA的手册描述应该是固定为64字节，一次搬64字节</p>
+<h4 id="Linux-dmaengine"><a href="#Linux-dmaengine" class="headerlink" title="Linux dmaengine"></a>Linux dmaengine</h4><p>从方向上来说：DMA传输可以分为4类，memory到memory，memory到device，device到memory以及device到device，从linux kernel的角度，外设都是slave，因此这些有device参与的传输（MEM2DEV, DEV2MEM, DEV2DEV）为Slave-DMA传输，另一种memory到memory的传输，被称为Async TX</p>
+<p>因为Linux为了方便基于DMA的memcpy、memset等操作，在dma engine之上，封装了一层更为简洁的API，这种API就是Async TX API（以async_开头，例如async_memcpy、async_memset、async_xor等）。因为memory到memory的DMA传输有了比较简洁的API，没必要直接使用dma engine提供的API，最后就导致dma engine所提供的API就特指为Slave-DMA API</p>
+<p>Slave-DMA中的slave指的是参与DMA传输的设备，对应的master就是指DMA controller自身</p>
+<h5 id="重要数据结构"><a href="#重要数据结构" class="headerlink" title="重要数据结构"></a>重要数据结构</h5><p><code>struct dma_device</code>，用于抽象dma controller</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* include/linux/dmaengine.h */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_device</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kref</span> <span class="title">ref</span>;</span></span><br><span class="line">	<span class="comment">/* 当前支持的dma通道数，读取设备树的dma-channels值 */</span></span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">int</span> chancnt;</span><br><span class="line">	<span class="comment">/* 已经申请的dma通道数 */</span></span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">int</span> privatecnt;</span><br><span class="line">  	<span class="comment">/* 用于保存该controller支持的所有dma channel */</span></span><br><span class="line">  	<span class="comment">/* 初始化的时候需要将所有的channel加入到链表头中 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">channels</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">global_node</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_filter</span> <span class="title">filter</span>;</span></span><br><span class="line">  	<span class="comment">/* 用于指示dma controller所具备的功能，DDMA仅具有DMA_SLAVE的功能 */</span></span><br><span class="line">	<span class="keyword">dma_cap_mask_t</span>  cap_mask;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* dma controller支持的源数据宽度类型，DDMA只支持4字节 */</span></span><br><span class="line">	u32 src_addr_widths;</span><br><span class="line">	<span class="comment">/* dma controller支持的目的数据宽度类型，DDMA只支持4字节 */</span></span><br><span class="line">	u32 dst_addr_widths;</span><br><span class="line">	<span class="comment">/* dma controller支持的传输方向，DDMA只支持MEM_TO_DEV DEV_TO_MEM */</span></span><br><span class="line">	u32 directions;</span><br><span class="line">	u32 min_burst;</span><br><span class="line">	u32 max_burst;</span><br><span class="line">	<span class="comment">/* 单次传输的一个散列表中支持的最大长度，DDMA驱动里面设置是4KB */</span></span><br><span class="line">	u32 max_sg_burst;</span><br><span class="line">	<span class="comment">/* 报告传输剩余数据长度的功能 */</span></span><br><span class="line">	<span class="keyword">bool</span> descriptor_reuse;</span><br><span class="line">	<span class="comment">/* 剩余数据长度报告的类型，一共有三种：无法上报、传输完成后即可上报、每个brust传输后报告 */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_residue_granularity</span> <span class="title">residue_granularity</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 分配通道的接口 */</span></span><br><span class="line">	<span class="keyword">int</span> (*device_alloc_chan_resources)(struct dma_chan *chan);</span><br><span class="line">	<span class="comment">/* 释放通道的接口 */</span></span><br><span class="line">	<span class="keyword">void</span> (*device_free_chan_resources)(struct dma_chan *chan);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* dma通道准备传输的接口 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> *(*<span class="title">device_prep_slave_sg</span>)(</span></span><br><span class="line"><span class="class">		<span class="keyword">struct</span> <span class="title">dma_chan</span> *<span class="title">chan</span>, <span class="keyword">struct</span> <span class="title">scatterlist</span> *<span class="title">sgl</span>,</span></span><br><span class="line"><span class="class">		<span class="title">unsigned</span> <span class="title">int</span> <span class="title">sg_len</span>, <span class="title">enum</span> <span class="title">dma_transfer_direction</span> <span class="title">direction</span>,</span></span><br><span class="line"><span class="class">		<span class="title">unsigned</span> <span class="title">long</span> <span class="title">flags</span>, <span class="title">void</span> *<span class="title">context</span>);</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">void</span> (*device_caps)(struct dma_chan *chan,</span><br><span class="line">			    struct dma_slave_caps *caps);</span><br><span class="line">	<span class="comment">/* 对dma通道进行配置的接口 */</span></span><br><span class="line">	<span class="keyword">int</span> (*device_config)(struct dma_chan *chan,</span><br><span class="line">			     struct dma_slave_config *config);</span><br><span class="line">	<span class="comment">/* 暂停传输的接口 */</span></span><br><span class="line">	<span class="keyword">int</span> (*device_pause)(struct dma_chan *chan);</span><br><span class="line">	<span class="comment">/* 恢复传输的接口 */</span></span><br><span class="line">	<span class="keyword">int</span> (*device_resume)(struct dma_chan *chan);</span><br><span class="line">	<span class="comment">/* 终止dma通道传输的接口 */</span></span><br><span class="line">	<span class="keyword">int</span> (*device_terminate_all)(struct dma_chan *chan);</span><br><span class="line">	<span class="comment">/* 获取本次传输状态和已经传输完的长度 */</span></span><br><span class="line">	<span class="function"><span class="keyword">enum</span> <span class="title">dma_status</span> <span class="params">(*device_tx_status)</span><span class="params">(struct dma_chan *chan,</span></span></span><br><span class="line"><span class="params"><span class="function">					    <span class="keyword">dma_cookie_t</span> cookie,</span></span></span><br><span class="line"><span class="params"><span class="function">					    struct dma_tx_state *txstate)</span></span>;</span><br><span class="line">	<span class="comment">/* 启动dma传输的接口 */</span></span><br><span class="line">	<span class="keyword">void</span> (*device_issue_pending)(struct dma_chan *chan);</span><br><span class="line">	<span class="keyword">void</span> (*device_release)(struct dma_device *dev);</span><br><span class="line">	<span class="comment">/* debugfs support */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_DEBUG_FS</span></span><br><span class="line">	<span class="keyword">void</span> (*dbg_summary_show)(struct seq_file *s, struct dma_device *dev);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> *<span class="title">dbg_dev_root</span>;</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct dma_chan</code>用于抽象物理dma channel</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* include/linux/dmaengine.h */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_chan</span> &#123;</span></span><br><span class="line">	<span class="comment">/* 指向所在的dma device */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_device</span> *<span class="title">device</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device</span> *<span class="title">slave</span>;</span></span><br><span class="line">	<span class="keyword">dma_cookie_t</span> cookie;</span><br><span class="line">	<span class="comment">/* 在这个channel上最后一次完成的传输的cookie */</span></span><br><span class="line">	<span class="comment">/* dma controller driver可以调用dma_cookie_complete设置它的value */</span></span><br><span class="line">	<span class="keyword">dma_cookie_t</span> completed_cookie;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* sysfs */</span></span><br><span class="line">	<span class="keyword">int</span> chan_id;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_chan_dev</span> *<span class="title">dev</span>;</span></span><br><span class="line">	<span class="keyword">const</span> <span class="keyword">char</span> *name;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_DEBUG_FS</span></span><br><span class="line">	<span class="keyword">char</span> *dbg_client_name;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 用于将该channel添加到dma_device的channels列表中 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">device_node</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_chan_percpu</span> __<span class="title">percpu</span> *<span class="title">local</span>;</span></span><br><span class="line">	<span class="keyword">int</span> client_count;</span><br><span class="line">	<span class="keyword">int</span> table_count;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* DMA router */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_router</span> *<span class="title">router</span>;</span></span><br><span class="line">	<span class="keyword">void</span> *route_data;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">void</span> *<span class="keyword">private</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct virt_dma_chan</code>用于抽象一个虚拟的dma_channel，多个虚拟channel可以共用一个物理channel，并由软件调度多个传输请求，将多个虚拟channel的传输串行地在物理channel上完成</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* drivers/dma/virt_dma.h */</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* struct virt_dma_desc 对请求描述符做了一个简单的封装 */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">virt_dma_desc</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> <span class="title">tx</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dmaengine_result</span> <span class="title">tx_result</span>;</span></span><br><span class="line">	<span class="comment">/* protected by vc.lock */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">node</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">virt_dma_chan</span> &#123;</span></span><br><span class="line">	<span class="comment">/* 指向一个物理通道 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_chan</span>	<span class="title">chan</span>;</span></span><br><span class="line">	<span class="comment">/* 用于等待该虚拟channel上传输的完成，完成后会调度该task */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> <span class="title">task</span>;</span></span><br><span class="line">	<span class="comment">/* 用于传输完成或终止传输后释放描述符内存 */</span></span><br><span class="line">	<span class="keyword">void</span> (*desc_free)(struct virt_dma_desc *);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">spinlock_t</span> lock;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* protected by vc.lock */</span></span><br><span class="line">	<span class="comment">/* 链表用于保存不同状态下的虚拟channel描述符 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">desc_allocated</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">desc_submitted</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">desc_issued</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">desc_completed</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">desc_terminated</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">virt_dma_desc</span> *<span class="title">cyclic</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct dma_slave_config</code>，DMA client对DMA channel的配置结构体</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_slave_config</span> &#123;</span></span><br><span class="line">	<span class="comment">/* 传输方向 DMA_MEM_TO_DEV DMA_DEV_TO_MEM */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_transfer_direction</span> <span class="title">direction</span>;</span></span><br><span class="line">	<span class="comment">/* 设备物理地址，dev_to_mem的时候才起作用，通常是固定的外设fifo地址 */</span></span><br><span class="line">	<span class="keyword">phys_addr_t</span> src_addr;</span><br><span class="line">	<span class="comment">/* 设备物理地址，mem_to_dev的时候才起作用，通常是固定的外设fifo地址 */</span></span><br><span class="line">	<span class="keyword">phys_addr_t</span> dst_addr;</span><br><span class="line">	<span class="comment">/* 读取DMA数据源寄存器的的地址宽度 */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_slave_buswidth</span> <span class="title">src_addr_width</span>;</span></span><br><span class="line">	<span class="comment">/* 读取DMA目标地址寄存器的的地址宽度 */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_slave_buswidth</span> <span class="title">dst_addr_width</span>;</span></span><br><span class="line">	u32 src_maxburst;</span><br><span class="line">	u32 dst_maxburst;</span><br><span class="line">	u32 src_port_window_size;</span><br><span class="line">	u32 dst_port_window_size;</span><br><span class="line">	<span class="keyword">bool</span> device_fc;</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">int</span> slave_id;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct dma_async_tx_descriptor</code>，用于描述一次DMA传输，类似一个文件句柄，controller driver返回给client driver一个描述符</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> &#123;</span></span><br><span class="line">	<span class="comment">/* 用于追踪本次传输 */</span></span><br><span class="line">	<span class="keyword">dma_cookie_t</span> cookie;</span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_ctrl_flags</span> <span class="title">flags</span>;</span> <span class="comment">/* not a &#x27;long&#x27; to pack with cookie */</span></span><br><span class="line">	<span class="keyword">dma_addr_t</span> phys;</span><br><span class="line">	<span class="comment">/* 对应的dma channel */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_chan</span> *<span class="title">chan</span>;</span></span><br><span class="line">	<span class="comment">/* controller driver提供的回调函数，用于把该描述符提交到传输列表，由dmaengine调用 */</span></span><br><span class="line">	<span class="keyword">dma_cookie_t</span> (*tx_submit)(struct dma_async_tx_descriptor *tx);</span><br><span class="line">	<span class="comment">/* 用于释放该描述符的回调函数，dmaengine调用 */</span></span><br><span class="line">	<span class="keyword">int</span> (*desc_free)(struct dma_async_tx_descriptor *tx);</span><br><span class="line">	<span class="comment">/* 传输完成的callback函数，client driver提供 */</span></span><br><span class="line">	dma_async_tx_callback callback;</span><br><span class="line">	dma_async_tx_callback_result callback_result;</span><br><span class="line">	<span class="keyword">void</span> *callback_param;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dmaengine_unmap_data</span> *<span class="title">unmap</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">dma_desc_metadata_mode</span> <span class="title">desc_metadata_mode</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_descriptor_metadata_ops</span> *<span class="title">metadata_ops</span>;</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_ASYNC_TX_ENABLE_CHANNEL_SWITCH</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> *<span class="title">next</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> *<span class="title">parent</span>;</span></span><br><span class="line">	<span class="keyword">spinlock_t</span> lock;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h4 id="DMA-API使用"><a href="#DMA-API使用" class="headerlink" title="DMA API使用"></a>DMA API使用</h4><h5 id="从CPU角度看到的地址和从DMA控制器看到的地址"><a href="#从CPU角度看到的地址和从DMA控制器看到的地址" class="headerlink" title="从CPU角度看到的地址和从DMA控制器看到的地址"></a>从CPU角度看到的地址和从DMA控制器看到的地址</h5><p>在DMA API中涉及到好几个地址的概念（物理地址、虚拟地址、总线地址）</p>
+<p>内核通常使用的地址是虚拟地址，我们调用<code>kmalloc()</code>、<code>vmalloc()</code>或者类似的接口返回的地址都是虚拟地址</p>
+<p>虚拟内存系统（TLB 页表等）将虚拟地址翻译成物理地址，物理地址保存在<code>phys_addr_t</code>或<code>resource_size_t</code>的变量中，对于一个硬件设备上的寄存器等设备资源，内核是按照物理地址来管理的，通过<code>/proc/iomem</code>可以看到这些和设备IO相关的物理地址，驱动不能直接使用这些物理地址，必须首先通过<code>ioremap()</code>接口将这些物理地址映射到内核虚拟地址空间上去</p>
+<p>I&#x2F;O设备使用第三种地址：总线地址。如果设备在MMIO地址空间中有若干的寄存器，或者该设备可以通过DMA执行读写系统内存的操作，这种情况下，设备使用的地址就是总线地址</p>
+<p>各种地址概念关系图<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20230512103247.png"></p>
+<p>DMA使用的内存地址：在驱动中可以通过<code>kmalloc</code>或者其他类似接口分配一个DMA buffer，并且返回了虚拟地址X，MMU将X地址映射成了物理地址Y，从而定位了DMA buffer在系统内存中的位置，因此驱动可以通过地址X来操作DMA buffer，但是设备并不能通过X地址来访问DMA buffer，因为MMU对设备不可见</p>
+<p>驱动在调用<code>dma_map_single()</code>这样的接口函数的时候会传递一个虚拟地址X，在这个函数中会设定IOMMU的页表，将地址X映射到Z，并且将返回Z这个总线地址，驱动可以把Z这个总线地址设定到设备上的DMA相关的寄存器中，这样当设备发起对地址Z开始的DMA操作的时候，IOMMU可以进行地址映射，并将DMA操作定位到Y地址开始的DMA buffer</p>
+<h5 id="DMA内存映射"><a href="#DMA内存映射" class="headerlink" title="DMA内存映射"></a>DMA内存映射</h5><p>一致性映射（coherent DMA mappings）是使用专门的接口分配一块DMA缓冲区，这块DMA缓冲区是关闭了cache机制的。也就是数据直接写入内存，这样就不存在一致性问题。</p>
+<p>一致性dma映射接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> *<span class="title">dma_alloc_coherent</span><span class="params">(struct device *dev, <span class="keyword">size_t</span> size,<span class="keyword">dma_addr_t</span> *dma_handle, <span class="keyword">gfp_t</span> flag)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">dma_addr_t</span> dma_handle</span>;</span><br><span class="line">cpu_addr = dma_alloc_coherent(dev, size, &amp;dma_handle, gfp);</span><br></pre></td></tr></table></figure>
+<p>dma_alloc_coherent函数返回两个值，一个是从CPU角度访问DMA buffer的虚拟地址，另外一个是从设备（DMA controller）角度看到的bus address：dma_handle，驱动可以将这个bus address传递给DMA控制器。</p>
+<h5 id="设备驱动使用dmaengine"><a href="#设备驱动使用dmaengine" class="headerlink" title="设备驱动使用dmaengine"></a>设备驱动使用dmaengine</h5><p>对于设备驱动，要基于dmaengine提供的Slave-DMA API进行DMA传输的话，需要如下的操作步骤</p>
+<ol>
+<li>申请一个DMA channel</li>
+<li>根据设备的特性，配置dma channel的参数</li>
+<li>要进行DMA传输的时候，获取一个用于识别本次传输的描述符（descriptor）</li>
+<li>将本次传输提交给dma engine并启动传输</li>
+<li>等待传输结束</li>
+</ol>
+<h5 id="传输描述符"><a href="#传输描述符" class="headerlink" title="传输描述符"></a>传输描述符</h5><p>DMA属于异步传输，在启动传输之前，slave driver需要将此次传输的一些信息（src dst的地址，传输的方向）提交给dmaengine，dma controller驱动确认后会返回一个描述符（由<code>struct dma_async_tx_escriptor</code>抽象），slave driver就以该描述符为单位，控制并跟踪此次传输</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @chan: 本次传输所用到的channel</span></span><br><span class="line"><span class="comment"> * @sgl: scatter gather buffers 数组地址</span></span><br><span class="line"><span class="comment"> * @sg_len: scatter gather buffers 数组的长度</span></span><br><span class="line"><span class="comment"> * @direction: 数据传输的方向</span></span><br><span class="line"><span class="comment"> * @flags: 一些额外的标志位</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_async_tx_descriptor</span> *(*<span class="title">device_prep_slave_sg</span>)(<span class="keyword">struct</span> <span class="title">dma_chan</span> *<span class="title">chan</span>,</span></span><br><span class="line"><span class="class">			<span class="keyword">struct</span> <span class="title">scatterlist</span> *<span class="title">sgl</span>, <span class="title">unsigned</span> <span class="title">int</span> <span class="title">sg_len</span>,</span></span><br><span class="line"><span class="class">			<span class="title">enum</span> <span class="title">dma_transfer_direction</span> <span class="title">direction</span>,</span></span><br><span class="line"><span class="class">			<span class="title">unsigned</span> <span class="title">long</span> <span class="title">flags</span>, <span class="title">void</span> *<span class="title">context</span>);</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="Phytium-DDMA驱动"><a href="#Phytium-DDMA驱动" class="headerlink" title="Phytium DDMA驱动"></a>Phytium DDMA驱动</h4><h5 id="设备树描述"><a href="#设备树描述" class="headerlink" title="设备树描述"></a>设备树描述</h5><ul>
+<li><p>dma controller设备树描述</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">ddma0: ddma@<span class="number">28003000</span> &#123;</span><br><span class="line">	compatible = <span class="string">&quot;phytium,ddma&quot;</span>;</span><br><span class="line">	reg = &lt;<span class="number">0x0</span> <span class="number">0x28003000</span> <span class="number">0x0</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">	interrupts = &lt;GIC_SPI <span class="number">75</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">	<span class="meta">#dma-cells = <span class="meta-string">&lt;2&gt;</span>;			<span class="comment">// 用来表示dma client设备树dmas中属性的个数</span></span></span><br><span class="line">	dma-channels = &lt;<span class="number">8</span>&gt;;			<span class="comment">// dma 通道个数</span></span><br><span class="line">	clocks = &lt;&amp;sysclk_50mhz&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;core_clk&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">ddma1: ddma@<span class="number">28004000</span> &#123;</span><br><span class="line">	compatible = <span class="string">&quot;phytium,ddma&quot;</span>;</span><br><span class="line">	reg = &lt;<span class="number">0x0</span> <span class="number">0x28004000</span> <span class="number">0x0</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">	interrupts = &lt;GIC_SPI <span class="number">76</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">	<span class="meta">#dma-cells = <span class="meta-string">&lt;2&gt;</span>;</span></span><br><span class="line">	dma-channels = &lt;<span class="number">8</span>&gt;;</span><br><span class="line">	clocks = &lt;&amp;sysclk_50mhz&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;core_clk&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>dma client设备树描述</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">spi2: spi@2803c000 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;phytium,spi&quot;</span>;</span><br><span class="line">	reg = &lt;0x0 0x2803c000 0x0 0x1000&gt;;</span><br><span class="line">	interrupts = &lt;GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">	clocks = &lt;&amp;sysclk_48mhz&gt;;</span><br><span class="line">	num-cs = &lt;4&gt;;</span><br><span class="line">	<span class="comment">#address-cells = &lt;1&gt;;</span></span><br><span class="line">	<span class="comment">#size-cells = &lt;0&gt;;</span></span><br><span class="line">	dmas = &lt;&amp;ddma0 0 8&gt;,</span><br><span class="line">			&lt;&amp;ddma0 1 21&gt;;</span><br><span class="line">	dma-names = <span class="string">&quot;tx&quot;</span>, <span class="string">&quot;rx&quot;</span>;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h5 id="ddma驱动相关结构体"><a href="#ddma驱动相关结构体" class="headerlink" title="ddma驱动相关结构体"></a>ddma驱动相关结构体</h5><p><code>struct phytium_ddma_device</code>用于描述ddma控制器</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * struct phytium_ddma_device - the struct holding info describing DDMA device</span></span><br><span class="line"><span class="comment"> * @dma_dev: an instance for struct dma_device</span></span><br><span class="line"><span class="comment"> * @irq: the irq that DDMA using</span></span><br><span class="line"><span class="comment"> * @base: the mapped register I/O base of this DDMA</span></span><br><span class="line"><span class="comment"> * @core_clk: DDMA clock</span></span><br><span class="line"><span class="comment"> * @dma_channels: the number of DDMA physical channels</span></span><br><span class="line"><span class="comment"> * @chan: the phyical channels of DDMA</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_device</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_device</span> <span class="title">dma_dev</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device</span> *<span class="title">dev</span>;</span></span><br><span class="line">	<span class="keyword">int</span>	irq;</span><br><span class="line">	<span class="keyword">void</span> __iomem *base;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">clk</span> *<span class="title">core_clk</span>;</span></span><br><span class="line">	u32 dma_channels;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_chan</span> *<span class="title">chan</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>phytium_ddma_chan</code>用于描述一个ddma 物理通道</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * struct phytium_ddma_chan - the struct holding info describing dma channel</span></span><br><span class="line"><span class="comment"> * @vchan: virtual dma channel</span></span><br><span class="line"><span class="comment"> * @base: the mapped register I/O of dma physical channel</span></span><br><span class="line"><span class="comment"> * @id: the id of ddma physical channel</span></span><br><span class="line"><span class="comment"> * @desc: the transform request descriptor</span></span><br><span class="line"><span class="comment"> * @dma_config: config parameters for dma channel</span></span><br><span class="line"><span class="comment"> * @busy: the channel busy flag, this flag set when channel is tansferring</span></span><br><span class="line"><span class="comment"> * @is_used: the channel bind flag, this flag set when channel binded</span></span><br><span class="line"><span class="comment"> * @next_sg: the index of next scatter-gatter</span></span><br><span class="line"><span class="comment"> * @paddr: used to align data between dma provider and consumer</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_chan</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">virt_dma_chan</span> <span class="title">vchan</span>;</span></span><br><span class="line">	<span class="keyword">void</span> __iomem *base;</span><br><span class="line">	u32 id;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_desc</span> *<span class="title">desc</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dma_slave_config</span> <span class="title">dma_config</span>;</span></span><br><span class="line">	<span class="keyword">bool</span> busy;</span><br><span class="line">	<span class="keyword">bool</span> is_used;</span><br><span class="line">	u32 next_sg;</span><br><span class="line">	<span class="keyword">dma_addr_t</span> paddr;</span><br><span class="line">	<span class="keyword">char</span> *buf;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct phytium_ddma_desc</code>dma传输时使用的描述符，里面记录了本次传输的数据</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * struct phytium_ddma_desc - the struct holding info describing ddma request</span></span><br><span class="line"><span class="comment"> * descriptor</span></span><br><span class="line"><span class="comment"> * @vdesc: ddma request descriptor</span></span><br><span class="line"><span class="comment"> * @num_sgs: the size of scatter-gather list</span></span><br><span class="line"><span class="comment"> * @sg_req: use to save scatter-gather list info</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_desc</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">virt_dma_desc</span> <span class="title">vdesc</span>;</span></span><br><span class="line">	u32 num_sgs;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_sg_req</span> <span class="title">sg_req</span>[];</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>struct phytium_ddma_sg_req</code>用于记录当前传输的scatter-gather信息，源数据地址、设备数据寄存器地址、传输长度等</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * struct phytium_ddma_sg_req - scatter-gatter list data info</span></span><br><span class="line"><span class="comment"> * @len: number of bytes to transform</span></span><br><span class="line"><span class="comment"> * @mem_addr_l: bus address low 32bit</span></span><br><span class="line"><span class="comment"> * @mem_addr_h: bus address high 32bit</span></span><br><span class="line"><span class="comment"> * @dev_addr: dma cousumer data reg addr</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">phytium_ddma_sg_req</span> &#123;</span></span><br><span class="line">	u32 len;</span><br><span class="line">	u32 mem_addr_l;</span><br><span class="line">	u32 mem_addr_h;</span><br><span class="line">	u32 dev_addr;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h4 id="pl011-DMA-device驱动"><a href="#pl011-DMA-device驱动" class="headerlink" title="pl011 DMA device驱动"></a>pl011 DMA device驱动</h4><h5 id="pl011-uart-rx逻辑"><a href="#pl011-uart-rx逻辑" class="headerlink" title="pl011 uart rx逻辑"></a>pl011 uart rx逻辑</h5><p>pl011 串口RX逻辑主要借助pl011的串口接收超时中断来进行数据接收，如pl011的手册描述，当rx fifo中不为空且连续32个bit的时间内没收到任何数据则产生接收超时中断，在超时中断中先对dma rx通道进行暂停，并检查dma实际传输了多少长度的数据，将实际传输的数据存入tty缓冲区，再把fifo中剩下的数据读出来，也存入tty缓冲区，这样完成了一次接收，具体代码位于<code>pl011_dma_rx_irq()</code><br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20230615143556.png"></p>
+<h5 id="pl011-uart-tx逻辑"><a href="#pl011-uart-tx逻辑" class="headerlink" title="pl011 uart tx逻辑"></a>pl011 uart tx逻辑</h5><p>当串口发送中断触发时（发送fifo中的数据低于设定的触发值）就会进入发送逻辑，dma模式下uart有数据需要发送时会调用<code>pl011_dma_tx_irq()</code>走dma的一套数据发送流程进行发送，位于<code>pl011_dma_tx_refill()</code>中</p>
+<h4 id="SPI功能测试"><a href="#SPI功能测试" class="headerlink" title="SPI功能测试"></a>SPI功能测试</h4><p>使用spidev-test进行spi硬件回环测试</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~<span class="comment"># spidev_test -D /dev/spidev0.0 -v</span></span><br><span class="line">spi mode: 0x0</span><br><span class="line">bits per word: 8</span><br><span class="line">max speed: 500000 Hz (500 kHz)</span><br><span class="line">TX | FF FF FF FF FF FF 40 00 00 00 00 95 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF F0 0D  |......@.........................|</span><br><span class="line">RX | FF FF FF FF FF FF 40 00 00 00 00 95 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF F0 0D  |......@.........................|</span><br></pre></td></tr></table></figure>
+
+<h5 id="spidev-test测试"><a href="#spidev-test测试" class="headerlink" title="spidev_test测试"></a>spidev_test测试</h5><p>测试命令：<code>spidev_test -s &lt;speed&gt; -D /dev/spidev0.0 -S &lt;length&gt; -I &lt;iterations&gt;</code></p>
+<ul>
+<li><p>E2000D demo板测试数据</p>
+<table>
+<thead>
+<tr>
+<th align="center">单次传输字节长度</th>
+<th align="center">DMA传输速度</th>
+<th align="center">中断传输速度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">64KB</td>
+<td align="center">15.8Mbps</td>
+<td align="center">10.6Mbps</td>
+</tr>
+<tr>
+<td align="center">1KB</td>
+<td align="center">15.2Mbps</td>
+<td align="center">12Mbps</td>
+</tr>
+<tr>
+<td align="center">512B</td>
+<td align="center">14.4Mbps</td>
+<td align="center">11.8Mbps</td>
+</tr>
+<tr>
+<td align="center">128B</td>
+<td align="center">11.1Mbps</td>
+<td align="center">10.8Mbps</td>
+</tr>
+<tr>
+<td align="center">8B</td>
+<td align="center">3.1Mbps</td>
+<td align="center">3.5Mbps</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>树莓派4测试数据</p>
+<table>
+<thead>
+<tr>
+<th align="center">测试用例</th>
+<th align="center">DMA传输速度</th>
+<th align="center">中断传输速度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">25MHz 单次64KB</td>
+<td align="center">24.6Mbps</td>
+<td align="center">22.6Mbps</td>
+</tr>
+<tr>
+<td align="center">250MHz 单次64KB</td>
+<td align="center">90.2Mbps</td>
+<td align="center">29.1Mbps</td>
+</tr>
+</tbody></table>
+</li>
+</ul>
+<h5 id="外接flash-mtd-speedtest速度测试"><a href="#外接flash-mtd-speedtest速度测试" class="headerlink" title="外接flash mtd_speedtest速度测试"></a>外接flash mtd_speedtest速度测试</h5><ul>
+<li>spi中断传输模式<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~<span class="comment"># echo 7 &gt; /proc/sys/kernel/printk</span></span><br><span class="line">root@Ubuntu:~<span class="comment"># modprobe mtd_speedtest dev=0 count=100</span></span><br><span class="line">[ 1393.267903] </span><br><span class="line">[ 1393.269405] =================================================</span><br><span class="line">[ 1393.275203] mtd_speedtest: MTD device: 0    count: 100</span><br><span class="line">[ 1393.280379] mtd_speedtest: not NAND flash, assume page size is 512 bytes.</span><br><span class="line">[ 1393.287182] mtd_speedtest: MTD device size 16777216, eraseblock size 4096, page size 512, count of er0</span><br><span class="line">[ 1406.236226] mtd_speedtest: testing eraseblock write speed</span><br><span class="line">[ 1407.918432] mtd_speedtest: eraseblock write speed is 238 KiB/s</span><br><span class="line">[ 1407.924276] mtd_speedtest: testing eraseblock <span class="built_in">read</span> speed</span><br><span class="line">[ 1408.224498] mtd_speedtest: eraseblock <span class="built_in">read</span> speed is 1360 KiB/s</span><br><span class="line">[ 1420.949754] mtd_speedtest: testing page write speed</span><br><span class="line">[ 1422.628841] mtd_speedtest: page write speed is 238 KiB/s</span><br><span class="line">[ 1422.634163] mtd_speedtest: testing page <span class="built_in">read</span> speed</span><br><span class="line">[ 1422.955827] mtd_speedtest: page <span class="built_in">read</span> speed is 1265 KiB/s</span><br><span class="line">[ 1435.536738] mtd_speedtest: testing 2 page write speed</span><br><span class="line">[ 1437.265931] mtd_speedtest: 2 page write speed is 232 KiB/s</span><br><span class="line">[ 1437.271429] mtd_speedtest: testing 2 page <span class="built_in">read</span> speed</span><br><span class="line">[ 1437.585886] mtd_speedtest: 2 page <span class="built_in">read</span> speed is 1294 KiB/s</span><br><span class="line">[ 1437.591385] mtd_speedtest: Testing erase speed</span><br><span class="line">[ 1450.136398] mtd_speedtest: erase speed is 31 KiB/s</span><br><span class="line">[ 1450.141203] mtd_speedtest: Testing 2x multi-block erase speed</span><br><span class="line">[ 1462.805642] mtd_speedtest: 2x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1462.811747] mtd_speedtest: Testing 4x multi-block erase speed</span><br><span class="line">[ 1475.535328] mtd_speedtest: 4x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1475.541432] mtd_speedtest: Testing 8x multi-block erase speed</span><br><span class="line">[ 1488.202989] mtd_speedtest: 8x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1488.209098] mtd_speedtest: Testing 16x multi-block erase speed</span><br><span class="line">[ 1500.921395] mtd_speedtest: 16x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1500.927592] mtd_speedtest: Testing 32x multi-block erase speed</span><br><span class="line">[ 1513.647523] mtd_speedtest: 32x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1513.653714] mtd_speedtest: Testing 64x multi-block erase speed</span><br><span class="line">[ 1526.322498] mtd_speedtest: 64x multi-block erase speed is 31 KiB/s</span><br><span class="line">[ 1526.328691] mtd_speedtest: finished</span><br><span class="line">[ 1526.332216] =================================================</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h5 id="外接flash-dd读写测试"><a href="#外接flash-dd读写测试" class="headerlink" title="外接flash dd读写测试"></a>外接flash dd读写测试</h5><ul>
+<li>spi中断传输模式<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写入测试</span></span><br><span class="line"><span class="attribute">root</span>@Ubuntu:~# time dd if=/dev/zero of=/dev/mtd<span class="number">0</span> bs=<span class="number">1024</span>k count=<span class="number">10</span></span><br><span class="line"><span class="attribute">10</span>+<span class="number">0</span> records in</span><br><span class="line"><span class="attribute">10</span>+<span class="number">0</span> records out</span><br><span class="line"><span class="attribute">10485760</span> bytes (<span class="number">10</span> MB, <span class="number">10</span> MiB) copied, <span class="number">43</span>.<span class="number">2331</span> s, <span class="number">243</span> kB/s</span><br><span class="line"></span><br><span class="line"><span class="attribute">real</span>    <span class="number">0</span>m<span class="number">43</span>.<span class="number">247</span>s</span><br><span class="line"><span class="attribute">user</span>    <span class="number">0</span>m<span class="number">0</span>.<span class="number">001</span>s</span><br><span class="line"><span class="attribute">sys</span>     <span class="number">0</span>m<span class="number">22</span>.<span class="number">231</span>s</span><br><span class="line"></span><br><span class="line"><span class="comment"># 读测试</span></span><br><span class="line"><span class="attribute">root</span>@Ubuntu:~# time dd if=/dev/mtd<span class="number">0</span> of=/dev/null bs=<span class="number">1024</span>k count=<span class="number">10</span></span><br><span class="line"><span class="attribute">10</span>+<span class="number">0</span> records in</span><br><span class="line"><span class="attribute">10</span>+<span class="number">0</span> records out</span><br><span class="line"><span class="attribute">10485760</span> bytes (<span class="number">10</span> MB, <span class="number">10</span> MiB) copied, <span class="number">8</span>.<span class="number">76685</span> s, <span class="number">1</span>.<span class="number">2</span> MB/s</span><br><span class="line"></span><br><span class="line"><span class="attribute">real</span>    <span class="number">0</span>m<span class="number">8</span>.<span class="number">773</span>s</span><br><span class="line"><span class="attribute">user</span>    <span class="number">0</span>m<span class="number">0</span>.<span class="number">004</span>s</span><br><span class="line"><span class="attribute">sys</span>     <span class="number">0</span>m<span class="number">0</span>.<span class="number">011</span>s</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="串口功能测试"><a href="#串口功能测试" class="headerlink" title="串口功能测试"></a>串口功能测试</h4><p>测试工具： </p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/carloscn/tinyserial.git">tinyserial v1.4</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cbrake/linux-serial-test.git">linux-serial-test</a></li>
+</ul>
+<p>4Mbps波特率回环测试，tx和rx数据能对齐<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/%E4%B8%B2%E5%8F%A3DMA%204Mbps%E4%BC%A0%E8%BE%93.png"></p>
+<p>4Mbps发送单个字节（0x55）波形<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/002.BMP"></p>
+<h4 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h4><blockquote>
+<p><a target="_blank" rel="noopener" href="http://www.wowotech.net/tag/dma">http://www.wowotech.net/tag/dma</a><br><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/e1b622234d13">https://www.jianshu.com/p/e1b622234d13</a></p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Jack 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Jack 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Jack
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://jackhuang021.github.io/archives/1990ed3c.html" title="Linux DMA驱动框架">https://jackhuang021.github.io/archives/1990ed3c.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/DMA/" rel="tag"># DMA</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/archives/cedbb48.html" rel="prev" title="Linux CPU状态管理">
+                  <i class="fa fa-chevron-left"></i> Linux CPU状态管理
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2021 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Jack</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:25</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/JackHuang021" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+  <script src="/js/third-party/pace.js"></script>
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+
+</body>
+</html>
