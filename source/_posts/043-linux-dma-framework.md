@@ -1,16 +1,18 @@
 ---
 title: Linux DMA驱动框架
-date: 2023-05-09 16:14:27
 tags:
   - Linux
   - DMA
 categories: Linux
+abbrlink: 1990ed3c
+date: 2023-05-09 16:14:27
 ---
 
 #### 相关概念
 DMA是Direct Memory Access的缩写，就是绕开CPU进行内存的访问，DMA控制器就是用来协助CPU在memory和memory或者memory和设备之间搬运数据
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230526141809.png)
+<!-- more -->
 ##### DMA channels
 一个DMA可以“同时”进行DMA传输的个数是有限的，这称作DMA channels，这里的channel只是一个逻辑上的概念
 > 鉴于总线访问的冲突，以及内存一致性的考量，从物理的角度看，不大可能会同时进行两个（及以上）的DMA传输。因而DMA channel不太可能是物理上独立的通道；

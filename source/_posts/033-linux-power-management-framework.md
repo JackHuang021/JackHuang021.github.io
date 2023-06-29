@@ -1,10 +1,11 @@
 ---
 title: 033_linux_power_management_framework
-date: 2023-01-13 08:12:46
 tags:
   - Linux
   - Power Management Framework
 categories: Linux
+abbrlink: '43564739'
+date: 2023-01-13 08:12:46
 ---
 
 ### 概述
@@ -20,6 +21,8 @@ Linux内核电源管理的组成：
 7. PM QOS，系统运行状态的质量
 8. Regulator Framework，电压和电流
 9. Power Supply，电源供电状态
+
+<!-- more -->
 
 ### Linux内核电源状态
 在Linux内核中，将电源划分为如下几个状态

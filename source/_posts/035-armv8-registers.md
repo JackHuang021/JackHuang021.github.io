@@ -10,6 +10,7 @@ date: 2023-01-18 14:22:33
 
 ### ARMv8-A架构及其对应处理器特性
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230128094507.png)
+<!-- more -->
 
 ### ARMv8异常等级
 **软件运行异常级别**：

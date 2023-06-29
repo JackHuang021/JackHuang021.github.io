@@ -1,16 +1,19 @@
 ---
 title: Linux GPIO驱动框架
-date: 2022-11-17 16:14:27
 tags:
   - Linux
   - GPIO
 categories: Linux
+abbrlink: 2b4bdb51
+date: 2022-11-17 16:14:27
 ---
 
 ### 概述
 Linux内核中对GPIO资源进行了抽象，抽象为gpiolib，管理GPIO资源
 
 gpiolib汇总了GPIO的通用操作，根据GPIO的特性，gpiolib对上（其他用到GPIO的driver）提供一套统一的操作GPIO的软件接口，屏蔽了不同芯片的具体实现；对下（specific chip driver）提供了针对不同芯片操作的一套框架，针对不同芯片，只需要实现这套框架，然后使用gpiolib提供的注册函数，将其挂接到gpiolib上，就完成了gpio驱动的编写
+
+<!-- more -->
 
 ### gpiolib相关数据结构
 `struct gpio_chip`，这个结构是为了抽象GPIO的所有操作，这个结构是要开出去给其他芯片进行特定的操作赋值的，gpio_chip的抽象是针对GPIO一组bank的抽象，通常在硬件上，一个芯片的IO口，分为了很多个bank，每个bank分为了N组GPIO，可以理解为每一个bank有一组gpio操作的寄存器，可以通过这些寄存器对该bank的GPIO进行配置

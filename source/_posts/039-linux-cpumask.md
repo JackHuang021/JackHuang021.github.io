@@ -4,10 +4,13 @@ tags:
   - Linux
   - coumask
 categories: Linux
+abbrlink: cedbb48
 ---
 
 #### cpumask定义
 内核使用cpumask来记录CPU的状态，cpumask提供了系统中CPU集合的位图，一个bit代表了一个CPU的状态
+
+<!-- more -->
 
 cpumask结构体
 ```c
