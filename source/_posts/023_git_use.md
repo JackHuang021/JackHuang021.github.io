@@ -94,4 +94,14 @@ git代码回滚常用的两种方式：`git revert`和`git reset`
 
 git reset，将提交的commit从历史记录中删除，用途如下：
 + 新提交的commit有问题，想要撤销该笔提交，并保留修改的内容`git reset --soft HEAD^`
-+ 
++ 撤销新提交的commit，不保留修改的内容`git reset --hard HEAD^`
+
+#### git暂存文件转为unstage
+```bash
+# 当前所有暂存文件全部转为unstage状态
+git restore --staged .
+
+# 将某个暂存文件转为unstage状态
+git restore --staged <filename>
+```
+
