@@ -3,10 +3,94 @@ title: Linux MMC子系统
 date: 2023-01-29 14:37:36
 tags:
     - Linux
-    - SDIO
+    - MMC
 categories:
     - Linux
 ---
+
+### Linux MMC驱动子系统
+块设备是Linux中的基础外设之一，而MMC/SD存储设备是一种典型的块设备，Linux内核设计了MMC子系统，用于管理MMC/SD设备
+
+MMC驱动子系统包含三个部分：
++ MMC总线(mmc_bus)
++ 封装在platform_device下的host设备
++ 依附在MMC总线的MMC驱动(mmc_driver)
+
+MMC子系统的框架结构如下图所示
+
+core layer根据MMC/SD协议标准实现了协议，card layer与Linux的块设备子系统对接，实现块设备驱动以及完成请求，具体协议经过core layer的接口，最终通过host layer完成传输，对MMC设备进行实际的操作
+
+host和card可以理解为MMC device的MMC主设备和MMC从设备，其中host为集成于芯片内部的MMC controller，card为MMC设备内部实际的存储设备
+
+Linux内核中，使用两个结构体`struct mmc_host`和`struct mmc_card`分别描述host和card，其中host设备被封装成platform_device注册到Linux驱动模型中
+
+#### MMC总线的注册
+```c
+// drivers/mmc/core/bus.c
+static struct bus_type mmc_bus_type = {
+	.name = "mmc",
+	.dev_groups = mmc_dev_groups,
+	.match 		= mmc_bus_match,
+	.uevent		= mmc_bus_uevent,
+	.probe 		= mmc_bus_probe,
+	.remove 	= mmc_bus_remove,
+	.shutdown 	= mmc_bus_shutdown,
+	.pm			= &mmc_bus_pm_ops,
+};
+
+// mmc总线注册
+int mmc_register_bus(void)
+{
+	return bus_register(&mmc_bus_type);
+}
+
+// drivers/mmc/core/core.c
+// MMC初始化
+static int __init mmc_init(void)
+{
+	int ret;
+
+	// mmc总线注册，对应sysfs下的/sys/bus/mmc/目录
+	ret = mmc_register_bus();
+	if (ret)
+		return ret;
+
+	// mmc_host class注册，对应sysfs下的/sys/class/mmc_host目录
+	ret = mmc_register_host_class();
+	if (ret)
+		goto unregister_bus;
+
+	ret = sdio_register_bus();
+	if (ret)
+		goto unregister_host_class;
+
+	return 0;
+
+unregister_host_class:
+	mmc_unregister_host_class();
+unregister_bus:
+	mmc_unregister_bus();
+	return ret;
+}
+```
+
+#### MMC驱动注册
+在`drivers/mmc/block.c`中，将`mmc_driver`注册到`mmc_bus`对应的总线系统里
+```c
+static struct mmc_driver = {
+	.drv = {
+		.name = "mmcblk",
+		.pm = &mmc_blk_pm_ops,
+	},
+	.probe 		= mmc_blk_probe,
+	.remove 	= mmc_blk_remove,
+	.shutdown	= mmc_blk_shutdown,
+};
+
+
+```
+
+
 
 ### SDIO总线简介
 SDIO(Secure Digital Input and Output)，即安全数字输入输出接口，他是在SD卡接口的基础上发展而来的，可以兼容之前的SD卡，并可以链接SDIO接口设备，比如蓝牙、WiFi、GPS等
