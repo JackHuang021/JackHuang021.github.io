@@ -117,6 +117,9 @@ msr{cond} 程序状态寄存器, 操作数
 ##### stp指令
 把一对寄存器写入到右边的内存，`stp w0,w1,[x2]`把w0和w1的值写入到右边内存
 
+### 64位机器上进程虚拟内存空间分布
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20230711110451.png)
+
 ### 启动代码分析
 内核启动入口，`arch/arm64/kernel/head.S`是内核的启动代码文件
 ```armasm
@@ -224,19 +227,26 @@ ENTRY(el2_setup)
 	msr	SPsel, #1			// We want to use SP_EL{1,2}
 	// 当前的exception level保存在PSTATE中
 	// CurrentEL是获取PSTATE中current exception level域的特殊寄存器
+	// 将当前异常等级写入到x0中
 	mrs	x0, CurrentEL
 	// 判断是否处于EL2
 	cmp	x0, #CurrentEL_EL2
-	// 是EL2的话跳转到1f
+	// 是EL2的话跳转到1
 	b.eq	1f
 	// 执行到这里说明CPU处于EL1
 	mov_q	x0, (SCTLR_EL1_RES1 | ENDIAN_SET_EL1)
+	// 将x0写入到sctlr_el1
 	msr	sctlr_el1, x0
+	// EL1时，w0保存了当前CPU启动时候
 	mov	w0, #BOOT_CPU_MODE_EL1		// This cpu booted in EL1
+	// 用于同步？？？
 	isb
 	ret
-	// 执行到这里说明CPU处于EL2
+	// 执行到这里说明CPU处于EL2，这里会设置CPU大小端
 1:	mov_q	x0, (SCTLR_EL2_RES1 | ENDIAN_SET_EL2)
+	// sctlr_el2(system contorl reg)也是一个可以通过mrs/msr指令访问的寄存器
+	// 当CPU处于EL2状态的时候，该寄存器可以控制整个系统的行为
+	// 将x0写入到sctlr_el2
 	msr	sctlr_el2, x0
 
 #ifdef CONFIG_ARM64_VHE
@@ -248,17 +258,23 @@ ENTRY(el2_setup)
 	mrs	x2, id_aa64mmfr1_el1
 	ubfx	x2, x2, #8, #4
 #else
+	// xzr是64位零寄存器，wzr是32位零寄存器
 	mov	x2, xzr
 #endif
 
 	/* Hyp configuration. */
+	// 设置hcr_el2寄存器（hypervisor configuration register）
+	// 该寄存器bit31是register width control，这里设置为1，确保EL1也是aarch64运行态
 	mov_q	x0, HCR_HOST_NVHE_FLAGS
+	// cbz表示测试一个寄存器是否为0，如果为0则将控制流程更改为另一个地址执行
+	// 这里跳转到set_hcr执行
 	cbz	x2, set_hcr
 	mov_q	x0, HCR_HOST_VHE_FLAGS
 set_hcr:
 	msr	hcr_el2, x0
 	isb
 
+	// 对generic timers进行配置
 	/*
 	 * Allow Non-secure EL1 and EL0 to access physical timer and counter.
 	 * This is not necessary for VHE, since the host kernel runs in EL2,
@@ -269,6 +285,12 @@ set_hcr:
 	 * to transparently mess with the EL0 bits via CNTKCTL_EL1 access in
 	 * EL2.
 	 */
+	// cnthctl_el2（counter-timer hypervisor control register）用来控制系统中的
+	// physical counter和virtual counter如何产生event stream以及在EL1和EL0状态访
+	// 问physical counter和timer的硬件行为
+	// cbnz表示测试一个寄存器不为0，则将控制流程更改为另一个地址执行
+	// 在EL1（EL0）状态的时候访问physical counter和timer有两种配置，一种是允许其访问
+	// 另外一种就是trap to EL2。这里的设定是：不陷入EL2（对应的bit设置为1）。
 	cbnz	x2, 1f
 	mrs	x0, cnthctl_el2
 	orr	x0, x0, #3			// Enable EL1 physical timers
@@ -276,15 +298,26 @@ set_hcr:
 1:
 	msr	cntvoff_el2, xzr		// Clear virtual offset
 
+// 配置gic_v3
 #ifdef CONFIG_ARM_GIC_V3
 	/* GICv3 system register access */
+	// id_aa64pfr0_el1（aarch64 processor feature register 0），该寄存器描述了PE实现的feature
+	// GIC bits [27:24]描述了该PE是否实现了system register来访问GIC
 	mrs	x0, id_aa64pfr0_el1
+	// 取出bit24开始的4个bit的值并将该值赋给x0
 	ubfx	x0, x0, #24, #4
+	// x0若为0跳转到3
 	cbz	x0, 3f
 
+	// ICC_SRE_EL2，Interrupt Controller System Register Enable register (EL2)
+	// 该寄存器用来（在EL2状态时候）控制如何访问GIC CPU interface模块
+	// 可以通过memory mapped方式，也可以通过system register的方式
+	// 将SRE bit设定为1确保通过system register方式进行GIC interface cpu寄存器的访问
+	// 将enable bit设定为1确保在EL1状态的时候可以通过ICC_SRE_EL1寄存器对GIC进行配置而不是陷入EL2
 	mrs_s	x0, SYS_ICC_SRE_EL2
 	orr	x0, x0, #ICC_SRE_EL2_SRE	// Set ICC_SRE_EL2.SRE==1
 	orr	x0, x0, #ICC_SRE_EL2_ENABLE	// Set ICC_SRE_EL2.Enable==1
+	// 写回到SYS_ICC_SRE_EL2寄存器
 	msr_s	SYS_ICC_SRE_EL2, x0
 	isb					// Make sure SRE is now set
 	mrs_s	x0, SYS_ICC_SRE_EL2		// Read SRE back,
@@ -295,21 +328,32 @@ set_hcr:
 #endif
 
 	/* Populate ID registers. */
+	// midr_el1（main id register）主要给出了该PE的architecture信息
+	// mpidr_el1（multiprocessor affinity register）该寄存器保存了processor id
 	mrs	x0, midr_el1
 	mrs	x1, mpidr_el1
+	// vpidr_el2和vmpidr_el2和上面的两个寄存器是对应的，不过是for virtual processor的
 	msr	vpidr_el2, x0
 	msr	vmpidr_el2, x1
 
+	// 是否支持64bit kernel上运行32bit的应用
 #ifdef CONFIG_COMPAT
 	msr	hstr_el2, xzr			// Disable CP15 traps to EL2
 #endif
 
 	/* EL2 debug */
+	// ???
 	mrs	x1, id_aa64dfr0_el1		// Check ID_AA64DFR0_EL1 PMUVer
+	// sbfx指令选取一个操作数的一段位，并将其存储在目标寄存器中
 	sbfx	x0, x1, #8, #4
 	cmp	x0, #1
 	b.lt	4f				// Skip if no PMU present
+	// pmcr_el0（performance monitors control register）该寄存器的[15:11]标识了支持
+	// 的performance monitors counter的数目，并将其设置到MDCR_EL2中
+	// 结果就是允许EL0和EL1进行debug的操作（而不是trap to EL2）
+	// 允许EL1访问Performance Monitors counter（而不是trap to EL2）
 	mrs	x0, pmcr_el0			// Disable debug access traps
+	// ubfx指令选取一个操作数中的一段位，并将其无符号地扩展为32位，并将结果存储在目标寄存器中
 	ubfx	x0, x0, #11, #5			// to EL2 and allow access to
 4:
 	csel	x3, xzr, x0, lt			// all PMU counters from EL1
@@ -344,7 +388,7 @@ set_hcr:
 	msr	vttbr_el2, xzr
 
 	cbz	x2, install_el2_stub
-
+	// w0寄存器保存启动异常等级
 	mov	w0, #BOOT_CPU_MODE_EL2		// This CPU booted in EL2
 	isb
 	ret
@@ -388,4 +432,28 @@ install_el2_stub:
 	eret
 ENDPROC(el2_setup)
 ```
+
+在进入`set_cpu_boot_mode_flag`之前，w0寄存器保存了cpu启动时候的异常等级
+```armasm
+/*
+ * Sets the __boot_cpu_mode flag depending on the CPU boot mode passed
+ * in w0. See arch/arm64/include/asm/virt.h for more info.
+ */
+set_cpu_boot_mode_flag:
+	adr_l	x1, __boot_cpu_mode
+	cmp	w0, #BOOT_CPU_MODE_EL2
+	b.ne	1f
+	add	x1, x1, #4
+1:	str	w0, [x1]			// This CPU has booted in EL1
+	dmb	sy
+	dc	ivac, x1			// Invalidate potentially stale cache line
+	ret
+ENDPROC(set_cpu_boot_mode_flag)
+```
+
+接下来是创建启动阶段的页表
+
+下面是和地址映射相关的宏定义
+
+
 
