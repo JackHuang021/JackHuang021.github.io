@@ -11,6 +11,8 @@ date: 2023-01-13 08:12:46
 ### 概述
 Linux内核中电源管理主要涉及到供电、充电、时钟、频率、电压、睡眠唤醒等内容
 
+<!-- more -->
+
 Linux内核电源管理的组成：
 1. Gerneric PM：传统意义上的电源管理，主要是Power off, sleep, hibernate, restart等，涉及到各个层级的suspend, resume, prepare_suspend, suspend_early, suspend_noirq, resume_late, complete
 2. Runtime PM和wakelock，kernel层级的调度

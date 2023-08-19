@@ -1,3 +1,6 @@
+---
+abbrlink: '0'
+---
 
 
 基于4.19.246内核分析
@@ -9,6 +12,7 @@
 
 ### ARMv8体系架构
 ARMv8架构继承了ARMv7与之前处理器的技术的基础，除了对现有的16/32bit的Thumb2指令支持外，也向前兼容了现有的A32（ARM 32bit）指令集，基于64bit的aarch64架构，除了新增A64（ARM 64bit）指令集外，也扩充了现有的A32和T32（Thumb2 32bit）指令集，另外还增加了CRYPTO加密模块支持
+<!-- more -->
 
 ARMv8提供了aarch32和aarch64两种执行状态（Execution State）
 

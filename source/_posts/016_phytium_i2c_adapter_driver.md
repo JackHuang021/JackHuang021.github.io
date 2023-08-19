@@ -12,7 +12,7 @@ abbrlink: 1dd4e6b7
 
 
 #### I2C总线驱动
-+ I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include/linux/i2c.h中，结构体的内容如下：
+I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include/linux/i2c.h中，结构体的内容如下：
 <!-- more -->
     ```
     struct i2c_adapter {

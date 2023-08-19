@@ -1,11 +1,13 @@
 ---
 title: 047_linu_reboot
+abbrlink: 3fca1565
 date: 2023-08-11 17:55:25
 tags:
 ---
 
 
 kernel根据不同的表现方式，将reboot分为如下的几种方式：
+<!-- more -->
 ```c
 // include/uapi/linux/reboot.h
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */

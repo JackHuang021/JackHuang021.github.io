@@ -2,18 +2,19 @@
 title: 045_linux_top_cmd
 tags:
   - Linux
-  - DMA
+  - top
 categories: Linux
+abbrlink: f4a20648
 date: 2023-07-19 10:02:04
-tags:
 ---
 
 top能够实时显示系统中各个进程的资源占用情况，类似于windows的任务管理器
+![](https://raw.githubusercontent.com/JackHuang021/images/master/
 <!-- more -->
 
 ### 1. top参数含义
-![](https://raw.githubusercontent.com/JackHuang021/images/master/20230719103527.png)
-统计信息的前5行是系统整体的统计信息：
+20230719103527.png)
+前5行是系统整体的统计信息：
 + 第1行是任务队列信息，同uptime的执行结果，其内容如下
     ```bash
     # 当前时间          系统运行时间    当前登录用户数      系统负载

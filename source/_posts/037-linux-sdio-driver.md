@@ -1,15 +1,18 @@
 ---
 title: Linux MMC子系统
-date: 2023-01-29 14:37:36
 tags:
-    - Linux
-    - MMC
+  - Linux
+  - MMC
 categories:
-    - Linux
+  - Linux
+abbrlink: a0a95d0f
+date: 2023-01-29 14:37:36
 ---
 
 ### Linux MMC驱动子系统
 块设备是Linux中的基础外设之一，而MMC/SD存储设备是一种典型的块设备，Linux内核设计了MMC子系统，用于管理MMC/SD设备
+
+<!-- more -->
 
 MMC驱动子系统包含三个部分：
 + MMC总线(mmc_bus)
