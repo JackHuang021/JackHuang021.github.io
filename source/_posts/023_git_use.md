@@ -92,7 +92,6 @@ git fetch upstream
 git merge upstream/branch
 ```
 
-
 #### git代码回滚
 git代码回滚常用的两种方式：`git revert`和`git reset`
 
