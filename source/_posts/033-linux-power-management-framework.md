@@ -1,5 +1,5 @@
 ---
-title: 033_linux_power_management_framework
+title: Linux电源管理框架
 tags:
   - Linux
   - Power Management Framework
