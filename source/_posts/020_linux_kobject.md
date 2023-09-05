@@ -438,8 +438,9 @@ struct bus_type {
 + probe, remove：这两个回调函数，和device_driver中的非常类似，如果probe指定的device的话，需要保证该device所在的bus是被初始化过、确保能正确工作的，这就需要在执行device_driver的probe前，先执行它的bus的probe
 + shutdown, suspend, resume：和probe, remove的原理类似，这些是电源管理相关的实现
 
-subsys_private定义
+subsys_private定义，subsys_private可以看做是bus的私有数据
 ```c
+// drivers/base/base.h 
 struct subsys_private {
     struct kset subsys;
     struct kset *devices_kset;
@@ -461,6 +462,159 @@ struct subsys_private {
 + klist_devices和klist_drivers：这两个链表分别保存了本bus下所有的device和device_driver指针，以方便查找
 + drivers_autoprobe：用于控制该bus下的drivers或者devices是否自动probe
 + bus, class：分别保存上层的bus和class指针
+
+bus模块的功能包括：
++ bus的注册和注销
++ 本bus下device或者device_driver注册或注销到内核的处理
++ device_driver的probe处理
++ 管理bus下的所有device和device_driver
+
+bus的注册是由`bus_register()`接口实现的，在接口的原型在`include/linux/device.h`中声明，在`drivers/base/bus.c`中实现
+```c
+// drivers/base/bus.c
+/**
+ * bus_register - register a driver-core subsystem
+ * @bus: bus to register
+ *
+ * Once we have that, we register the bus with the kobject
+ * infrastructure, then register the children subsystems it has:
+ * the devices and drivers that belong to the subsystem.
+ */
+int bus_register(struct bus_type *bus)
+{
+	int retval;
+	struct subsys_private *priv;
+	struct lock_class_key *key = &bus->lock_key;
+
+    // 为subsys_private指针分配空间
+	priv = kzalloc(sizeof(struct subsys_private), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+    // 更新priv->bus和bus->p的值
+	priv->bus = bus;
+	bus->p = priv;
+
+	BLOCKING_INIT_NOTIFIER_HEAD(&priv->bus_notifier);
+
+	retval = kobject_set_name(&priv->subsys.kobj, "%s", bus->name);
+	if (retval)
+		goto out;
+
+	priv->subsys.kobj.kset = bus_kset;
+	priv->subsys.kobj.ktype = &bus_ktype;
+	priv->drivers_autoprobe = 1;
+
+	retval = kset_register(&priv->subsys);
+	if (retval)
+		goto out;
+
+    // 向bus目录下添加一个uevent attribute
+	retval = bus_create_file(bus, &bus_attr_uevent);
+	if (retval)
+		goto bus_uevent_fail;
+
+    // 向内核添加devices kset和drivers kset，并在sysfs中添加目录
+	priv->devices_kset = kset_create_and_add("devices", NULL,
+						 &priv->subsys.kobj);
+	if (!priv->devices_kset) {
+		retval = -ENOMEM;
+		goto bus_devices_fail;
+	}
+
+	priv->drivers_kset = kset_create_and_add("drivers", NULL,
+						 &priv->subsys.kobj);
+	if (!priv->drivers_kset) {
+		retval = -ENOMEM;
+		goto bus_drivers_fail;
+	}
+
+    // 初始化链表 锁
+	INIT_LIST_HEAD(&priv->interfaces);
+	__mutex_init(&priv->mutex, "subsys mutex", key);
+	klist_init(&priv->klist_devices, klist_devices_get, klist_devices_put);
+	klist_init(&priv->klist_drivers, NULL, NULL);
+
+    // 在bus下添加drivers_probe和drivers_autoprobe两个attribute
+    // 其中drivers_probe允许用户空间主动发出指定bus下的device_driver的probe动作
+    // drivers_autoprobe控制是否在device或device_driver添加到内核时自动执行probe
+	retval = add_probe_files(bus);
+	if (retval)
+		goto bus_probe_files_fail;
+
+	retval = bus_add_groups(bus, bus->bus_groups);
+	if (retval)
+		goto bus_groups_fail;
+
+	pr_debug("bus: '%s': registered\n", bus->name);
+	return 0;
+
+bus_groups_fail:
+	remove_probe_files(bus);
+bus_probe_files_fail:
+	kset_unregister(bus->p->drivers_kset);
+bus_drivers_fail:
+	kset_unregister(bus->p->devices_kset);
+bus_devices_fail:
+	bus_remove_file(bus, &bus_attr_uevent);
+bus_uevent_fail:
+	kset_unregister(&bus->p->subsys);
+out:
+	kfree(bus->p);
+	bus->p = NULL;
+	return retval;
+}
+EXPORT_SYMBOL_GPL(bus_register);
+```
+
+device和driver添加到bus中，内核提供了`device_register()`和`driver_register()`两个接口，供各个driver模块使用，这两个接口的核心逻辑是通过bus模块的`bus_add_device()`和`bus_add_driver()`来实现的
+
+`bus_add_device()`的实现
+```c
+// drivers/base/bus.c
+/**
+ * bus_add_device - add device to bus
+ * @dev: device being added
+ *
+ * - Add device's bus attributes.
+ * - Create links to device's bus.
+ * - Add the device to its bus's list of devices.
+ */
+int bus_add_device(struct device *dev)
+{
+	struct bus_type *bus = bus_get(dev->bus);
+	int error = 0;
+
+	if (bus) {
+		pr_debug("bus: '%s': add device %s\n", bus->name, dev_name(dev));
+		error = device_add_groups(dev, bus->dev_groups);
+		if (error)
+			goto out_put;
+        // 将该device在sysfs中真正的位置，连接到bus的device目录下
+		error = sysfs_create_link(&bus->p->devices_kset->kobj,
+						&dev->kobj, dev_name(dev));
+		if (error)
+			goto out_groups;
+        // 为该device的目录下创建一个名为subsystem的链接，链接到该device所在的bus目录
+		error = sysfs_create_link(&dev->kobj,
+				&dev->bus->p->subsys.kobj, "subsystem");
+		if (error)
+			goto out_subsys;
+        // 将该device添加到链表
+		klist_add_tail(&dev->p->knode_bus, &bus->p->klist_devices);
+	}
+	return 0;
+
+out_subsys:
+	sysfs_remove_link(&bus->p->devices_kset->kobj, dev_name(dev));
+out_groups:
+	device_remove_groups(dev, bus->dev_groups);
+out_put:
+	bus_put(dev->bus);
+	return error;
+}
+
+```
 
 #### Class
 class是虚拟出来的，为了抽象设备的共性，class为一些相似的device提供通用的接口，定义如下：
@@ -492,4 +646,9 @@ struct class {
 };
 ```
 + name：class的名称，会在`/sys/class/`下体现
-+ dev_kobj：表示该class下的设备在`/sys/dev/`下的目录
++ class_groups：
++ dev_groups：
++ dev_kobj：表示该class下的设备在`/sys/dev/`下的目录，现在一般有char和block两个，如果dev_kobj为空，则默认选择char
++ class_release：用于release自身的回调函数
++ dev_release：用于release class内设备的回调函数
++ p：class私有数据

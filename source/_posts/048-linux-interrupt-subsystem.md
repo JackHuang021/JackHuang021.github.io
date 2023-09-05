@@ -5,7 +5,6 @@ tags:
   - Interrupt
 categories: Linux
 date: 2023-08-17 17:46:52
-tags:
 ---
 
 ### 中断子系统的一些概念
