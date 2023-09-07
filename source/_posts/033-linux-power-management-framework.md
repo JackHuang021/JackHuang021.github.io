@@ -24,8 +24,6 @@ Linux内核电源管理的组成：
 8. Regulator Framework，电压和电流
 9. Power Supply，电源供电状态
 
-<!-- more -->
-
 ### Linux内核电源状态
 在Linux内核中，将电源划分为如下几个状态
 | ACPI | State | Linux State Drscription |
@@ -36,6 +34,212 @@ Linux内核电源管理的组成：
 | S3 | Suspend to RAM | CPU is off, RAM is powered and the running content is saved to RAM |
 | S4 | Suspend to Disk | All content is saved to Disk and power down |
 | S5 | Shutdown | Shutdown the system |
+
+### Generic PM
+Generic PM指的是Linux系统中常规的电源管理，包括关机、待机、重启等
+
+Generic PM的软件层次：
++ API Layer：用于向用户空间提供接口，其中关机、重启的接口形式是系统调用，Hibernate、Suspend的接口形式是sysfs
++ PM Core：位于`kernel/power`目录下，主要处理和硬件无关的核心逻辑
++ PM Driver：分为两个部分，一个是和体系结构无关的Driver，提供pm框架；另一部分是具体的体系结构相关的driver，也是开发者关注的部分
+
+#### Generic PM reboot的过程
+
+kernel支持的reboot的方式定义在`include/uapi/linux/reboot.h`中，代码如下：
+```c
+// include/uapi/linux/reboot.h
+/*
+ * Magic values required to use _reboot() system call.
+ */
+
+#define	LINUX_REBOOT_MAGIC1	0xfee1dead
+#define	LINUX_REBOOT_MAGIC2	672274793
+#define	LINUX_REBOOT_MAGIC2A	85072278
+#define	LINUX_REBOOT_MAGIC2B	369367448
+#define	LINUX_REBOOT_MAGIC2C	537993216
+
+
+/*
+ * Commands accepted by the _reboot() system call.
+ *
+ * RESTART     Restart system using default command and mode.
+ * HALT        Stop OS and give system control to ROM monitor, if any.
+ * CAD_ON      Ctrl-Alt-Del sequence causes RESTART command.
+ * CAD_OFF     Ctrl-Alt-Del sequence sends SIGINT to init task.
+ * POWER_OFF   Stop OS and remove all power from system, if possible.
+ * RESTART2    Restart system using given command string.
+ * SW_SUSPEND  Suspend system using software suspend if compiled in.
+ * KEXEC       Restart system using a previously loaded Linux kernel
+ */
+
+#define	LINUX_REBOOT_CMD_RESTART	0x01234567
+#define	LINUX_REBOOT_CMD_HALT		0xCDEF0123
+#define	LINUX_REBOOT_CMD_CAD_ON		0x89ABCDEF
+#define	LINUX_REBOOT_CMD_CAD_OFF	0x00000000
+#define	LINUX_REBOOT_CMD_POWER_OFF	0x4321FEDC
+#define	LINUX_REBOOT_CMD_RESTART2	0xA1B2C3D4
+#define	LINUX_REBOOT_CMD_SW_SUSPEND	0xD000FCE2
+#define	LINUX_REBOOT_CMD_KEXEC		0x45584543
+```
+
+#### reboot过程的代码分析
+reboot的系统调用定义在`kernel/reboot.c`中，其代码如下
+```c
+/*
+ * Reboot system call: for obvious reasons only root may call it,
+ * and even root needs to set up some magic numbers in the registers
+ * so that some mistake won't make this reboot the whole machine.
+ * You can also set the meaning of the ctrl-alt-del-key here.
+ *
+ * reboot doesn't sync: do that yourself before calling this.
+ */
+SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
+		void __user *, arg)
+{
+	struct pid_namespace *pid_ns = task_active_pid_ns(current);
+	char buffer[256];
+	int ret = 0;
+
+	/* We only trust the superuser with rebooting the system. */
+	// 判断调用者的用户权限，只有root用户才能执行
+	// 从current中取到pid_namespace，再通过pid_namespace中的userspace判断权限
+	if (!ns_capable(pid_ns->user_ns, CAP_SYS_BOOT))
+		return -EPERM;
+
+	/* For safety, we require "magic" arguments. */
+	// 判断magic number是否匹配
+	if (magic1 != LINUX_REBOOT_MAGIC1 ||
+			(magic2 != LINUX_REBOOT_MAGIC2 &&
+			magic2 != LINUX_REBOOT_MAGIC2A &&
+			magic2 != LINUX_REBOOT_MAGIC2B &&
+			magic2 != LINUX_REBOOT_MAGIC2C))
+		return -EINVAL;
+
+	/*
+	 * If pid namespaces are enabled and the current task is in a child
+	 * pid_namespace, the command is handled by reboot_pid_ns() which will
+	 * call do_exit().
+	 */
+	ret = reboot_pid_ns(pid_ns, cmd);
+	if (ret)
+		return ret;
+
+	/* Instead of trying to make the power_off code look like
+	 * halt when pm_power_off is not set do it the easy way.
+	 */
+	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !kernel_can_power_off())
+		cmd = LINUX_REBOOT_CMD_HALT;
+
+	mutex_lock(&system_transition_mutex);
+	switch (cmd) {
+	case LINUX_REBOOT_CMD_RESTART:
+		kernel_restart(NULL);
+		break;
+
+	case LINUX_REBOOT_CMD_CAD_ON:
+		C_A_D = 1;
+		break;
+
+	case LINUX_REBOOT_CMD_CAD_OFF:
+		C_A_D = 0;
+		break;
+
+	case LINUX_REBOOT_CMD_HALT:
+		kernel_halt();
+		do_exit(0);
+
+	case LINUX_REBOOT_CMD_POWER_OFF:
+		kernel_power_off();
+		do_exit(0);
+		break;
+
+	case LINUX_REBOOT_CMD_RESTART2:
+		ret = strncpy_from_user(&buffer[0], arg, sizeof(buffer) - 1);
+		if (ret < 0) {
+			ret = -EFAULT;
+			break;
+		}
+		buffer[sizeof(buffer) - 1] = '\0';
+
+		kernel_restart(buffer);
+		break;
+
+#ifdef CONFIG_KEXEC_CORE
+	case LINUX_REBOOT_CMD_KEXEC:
+		ret = kernel_kexec();
+		break;
+#endif
+
+#ifdef CONFIG_HIBERNATION
+	case LINUX_REBOOT_CMD_SW_SUSPEND:
+		ret = hibernate();
+		break;
+#endif
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	mutex_unlock(&system_transition_mutex);
+	return ret;
+```
+
+`kernel_restart()`位于`kernel/reboot.c`中，代码如下：
+```c
+// kernel/reboot.c
+/**
+ *	kernel_restart - reboot the system
+ *	@cmd: pointer to buffer containing command to execute for restart
+ *		or %NULL
+ *
+ *	Shutdown everything and perform a clean reboot.
+ *	This is not safe to call in interrupt context.
+ */
+void kernel_restart(char *cmd)
+{
+	kernel_restart_prepare(cmd);
+	do_kernel_restart_prepare();
+	migrate_to_reboot_cpu();
+	syscore_shutdown();
+	if (!cmd)
+		pr_emerg("Restarting system\n");
+	else
+		pr_emerg("Restarting system with command '%s'\n", cmd);
+	kmsg_dump(KMSG_DUMP_SHUTDOWN);
+	machine_restart(cmd);
+}
+EXPORT_SYMBOL_GPL(kernel_restart);
+
+// include/linux/kernel.h
+// 系统状态枚举变量
+extern enum system_states {
+	SYSTEM_BOOTING,
+	SYSTEM_SCHEDULING,
+	SYSTEM_FREEING_INITMEM,
+	SYSTEM_RUNNING,
+	SYSTEM_HALT,
+	SYSTEM_POWER_OFF,
+	SYSTEM_RESTART,
+	SYSTEM_SUSPEND,
+} system_state;
+
+
+// kernel/reboot.c
+void kernel_restart_prepare(char *cmd)
+{
+	// reboot_notifier_list定义在kernel/notifier.c中
+	// 向该通知链上发送SYS_RESTART事件，notifier执行各自的回调函数
+	blocking_notifier_call_chain(&reboot_notifier_list, SYS_RESTART, cmd);
+	// system_state 定义在init/main.c中
+	// 更新system_state的值
+	system_state = SYSTEM_RESTART;
+	usermodehelper_disable();
+	device_shutdown();
+}
+
+```
+
+
 
 ### power supply子系统
 #### power supply软件架构
