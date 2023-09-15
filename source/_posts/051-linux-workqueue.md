@@ -191,7 +191,7 @@ struct pool_workqueue {
 
 ```
 
-工作队列workqueue使用workqueue_struct结构体来实现
+workqueue使用workqueue_struct结构体来实现
 ```c
 /*
  * The externally visible workqueue.  It relays the issued work items to
@@ -394,7 +394,7 @@ void __init workqueue_init(void)
 			BUG_ON(!create_worker(pool));
 		}
 	}
-
+	// unbound woker pool也需要创建一个worker
 	hash_for_each(unbound_pool_hash, bkt, pool, hash_node)
 		BUG_ON(!create_worker(pool));
 
@@ -424,7 +424,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 	char id_buf[16];
 
 	/* ID is needed to determine kthread name */
-	// 这里用到了ida和idr的分配机制
+	// 这里用到了ida的分配机制
 	id = ida_alloc(&pool->worker_ida, GFP_KERNEL);
 	if (id < 0)
 		return NULL;
@@ -437,12 +437,14 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	worker->id = id;
 
+	// 线程名
 	if (pool->cpu >= 0)
 		snprintf(id_buf, sizeof(id_buf), "%d:%d%s", pool->cpu, id,
 			 pool->attrs->nice < 0  ? "H" : "");
 	else
 		snprintf(id_buf, sizeof(id_buf), "u%d:%d", pool->id, id);
 
+	// 创建线程，线程函数worker_thread
 	worker->task = kthread_create_on_node(worker_thread, worker, pool->node,
 					      "kworker/%s", id_buf);
 	if (IS_ERR(worker->task))
@@ -452,6 +454,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 	kthread_bind_mask(worker->task, pool->attrs->cpumask);
 
 	/* successful, attach the worker to the pool */
+	// 将worker挂到worker pool的workers链表下
 	worker_attach_to_pool(worker, pool);
 
 	/* start the newly created worker */
@@ -469,6 +472,8 @@ fail:
 	return NULL;
 }
 ```
+
+关于unbind workqueue的功耗节省：当workqueue收到一个要处理的work，如果该workqueue是unbound类型的话，那么该work由unbound thread pool处理并调度执行的策略交给系统的调度器模块来完成，对于scheduler而言，它会考虑CPU的idle状态，从而尽可能让CPU保持在idle状态，从而节省能耗。因此，如果一个workqueue有WQ_UNBOUND这样的flag，则说明该workqueue上挂入的work处理是考虑到power saving的。如果workqueue没有WQ_UNBOUND flag，则说明该workqueue是percpu的，这时候，调度哪一个CPU运行worker thread来处理work已经不是scheduler可以控制的了，这样，也就间接影响了功耗。
 
 
 ### workqueue创建过程
@@ -635,7 +640,7 @@ static int alloc_and_link_pwqs(struct workqueue_struct *wq)
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct worker_pool [NR_STD_WORKER_POOLS], cpu_worker_pools);
 ```
 
-关于unbind workqueue的功耗节省：当workqueue收到一个要处理的work，如果该workqueue是unbound类型的话，那么该work由unbound thread pool处理并调度执行的策略交给系统的调度器模块来完成，对于scheduler而言，它会考虑CPU的idle状态，从而尽可能让CPU保持在idle状态，从而节省能耗。因此，如果一个workqueue有WQ_UNBOUND这样的flag，则说明该workqueue上挂入的work处理是考虑到power saving的。如果workqueue没有WQ_UNBOUND flag，则说明该workqueue是percpu的，这时候，调度哪一个CPU运行worker thread来处理work已经不是scheduler可以控制的了，这样，也就间接影响了功耗。
+
 
 > 变参函数宏
 > + va_list：定义在编译器的头文件中

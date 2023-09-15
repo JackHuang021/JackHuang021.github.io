@@ -36,13 +36,15 @@ struct xarray {
  * IDA - ID Allocator, use when translation from id to pointer isn't necessary.
  */
 #define IDA_CHUNK_SIZE		128	/* 128 bytes per chunk */
+// IDA_BITMAP_LONGS大小为16
 #define IDA_BITMAP_LONGS	(IDA_CHUNK_SIZE / sizeof(long))
+// IDA_BITMAP_BITS大小为1024
 #define IDA_BITMAP_BITS 	(IDA_BITMAP_LONGS * sizeof(long) * 8)
 
+// ida_bitmap为一个长度16的unsigned long数组
 struct ida_bitmap {
 	unsigned long		bitmap[IDA_BITMAP_LONGS];
 };
-
 
 struct ida {
     struct xarray xa;
