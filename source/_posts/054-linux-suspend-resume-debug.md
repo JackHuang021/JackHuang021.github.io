@@ -12,6 +12,7 @@ Linux中的挂起、休眠，一般是指以下四种状态：
 2. Standby(power-on suspend)：是一种适度的功耗节省状态，同时系统也可以比较快的唤醒
 3. STR(suspend to ram)：提供了比较显著的功耗节省，系统中除了内存之外的部件都进入了低功耗状态
 4. STD(suspend to disk)：提供最大程度的功耗节省
+<!-- more -->
 
 | State | ACPI state | Label |
 | :-: | :-: | :-: |
