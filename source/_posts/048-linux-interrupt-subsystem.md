@@ -1,5 +1,5 @@
 ---
-title: 048_linux_interrupt_subsystem
+title: Linux中断子系统
 tags:
   - Linux
   - Interrupt

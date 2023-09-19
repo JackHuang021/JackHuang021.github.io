@@ -1,5 +1,5 @@
 ---
-title: 050-linux-notifier
+title: Linux notify机制
 date: 2023-09-07 15:38:46
 tags:
   - Linux

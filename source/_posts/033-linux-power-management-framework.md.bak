@@ -315,9 +315,6 @@ void device_shutdown(void)
 }
 ```
 
-
-
-
 ### power supply子系统
 #### power supply软件架构
 Linux内核抽象出来power supply子系统为驱动提供了统一的框架，功能包括：

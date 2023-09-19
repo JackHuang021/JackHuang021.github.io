@@ -1,5 +1,5 @@
 ---
-title: rootfs
+title: Linux根文件系统
 tags:
   - Linux
   - rootfs

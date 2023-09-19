@@ -1,5 +1,5 @@
 ---
-title: 047_linu_reboot
+title: Linux reboot流程
 abbrlink: 3fca1565
 date: 2023-08-11 17:55:25
 tags:

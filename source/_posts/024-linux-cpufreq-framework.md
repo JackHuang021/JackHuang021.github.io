@@ -1,5 +1,5 @@
 ---
-title: Linux Cpufreq 框架
+title: Linux Cpufreq框架
 tags:
   - Linux
   - Cpufreq

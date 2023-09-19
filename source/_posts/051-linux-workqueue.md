@@ -140,7 +140,7 @@ struct work_struct {
 };
 ```
 
-pool_workqueue结构体
+pool_workqueue结构体，连接workqueue和worker pool的中介
 ```c
 /*
  * The per-pool workqueue.  While queued, the lower WORK_STRUCT_FLAG_BITS
@@ -244,7 +244,13 @@ struct workqueue_struct {
 + list: 系统中所有的workqueue会挂入到一个全局链表`static LIST_HEAD(workqueues);`
 + cpu_pwqs：percpu workqueue指向percpu的pool_workqueue数据结构，用来维护workqueue和percpu thread pool之间的关系，每个CPU都有两个thread pool，normal和高优先级的线程池，cpu_pwqs指向哪一个pool_workqueue是和workqueue的flags相关的，如果标记有WQ_HIGHPRI，那么cpu_pwqs指向高优先级的线程池
 
-### workqueue初始化
+### woker pool初始化
+CMWQ对worker pool分成了两类：
++ percpu worker pool，给通用的workqueue使用，系统的规划是每个CPU创建两个worker pool，一个普通优先级(nice = 0)，一个高优先级(nice = HIGHPRI_NICE_LEVEL)，对应创建出来的worker线程nice值不一样
++ unbound woker pool，给WQ_UNBOUND类型的workqueue使用，unbound worker pool中的worer可以在多个CPU上调度，
+
+
+
 workqueue子系统的初始化分为两个阶段，`workqueue_init_early()`在`start_kernel()`中调用，在这个阶段主要是做一些基本的初始化工作，例如对percpu worker thread pool的一些基本初始化
 ```c
 // kernel/workqueue.c
@@ -597,6 +603,7 @@ static int alloc_and_link_pwqs(struct workqueue_struct *wq)
 
 	// percpu workqueue的处理
 	if (!(wq->flags & WQ_UNBOUND)) {
+		// 为percpu workqueue分配一个pool_workqueue(用来连接worker pool和workqueue)
 		wq->cpu_pwqs = alloc_percpu(struct pool_workqueue);
 		if (!wq->cpu_pwqs)
 			return -ENOMEM;
@@ -609,6 +616,7 @@ static int alloc_and_link_pwqs(struct workqueue_struct *wq)
 				per_cpu(cpu_worker_pools, cpu);
 			// 初始化pool_workqueue
 			// 最重要的是设置其对应的workqueue和woker_pool
+			// 在这里pool_workqueue和woker pool，workqueue关联上了
 			init_pwq(pwq, wq, &cpu_pools[highpri]);
 
 			mutex_lock(&wq->mutex);

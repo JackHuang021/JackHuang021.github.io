@@ -1,5 +1,5 @@
 ---
-title: Linux 字符设备驱动开发
+title: Linux字符设备驱动开发
 author: Jack
 tags:
   - Linux
