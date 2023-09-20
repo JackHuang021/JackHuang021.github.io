@@ -1,10 +1,11 @@
 ---
 title: Linux workqueue实现
-date: 2023-09-08 15:36:52
 tags:
   - Linux
   - workqueue
 categories: Linux
+abbrlink: c419f2e4
+date: 2023-09-08 15:36:52
 ---
 
 ### 概述

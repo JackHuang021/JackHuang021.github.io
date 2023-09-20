@@ -1,10 +1,11 @@
 ---
 title: Linux睡眠唤醒调试方法
-date: 2023-09-18 16:17:10
 tags:
   - Linux
   - suspend
 categories: Linux
+abbrlink: f183bd8
+date: 2023-09-18 16:17:10
 ---
 
 Linux中的挂起、休眠，一般是指以下四种状态：
@@ -24,7 +25,7 @@ Linux中的挂起、休眠，一般是指以下四种状态：
 > 具体的状态描述可以参考内核文档[Documentation/power/states.txt](https://www.kernel.org/doc/Documentation/power/states.txt)
 
 ### 基础调试方法
-1. 关闭串口睡眠：在启动参数中增加`no_console_suspend ignore_loglevel`
+1. 关闭串口睡眠：在启动参数中增加`no_console_suspend ignore_loglevel`，S3调试日志如下
 ```bash
 root@Ubuntu:~# echo mem > /sys/power/state
 [   74.403728] PM: suspend entry (deep)
@@ -43,7 +44,7 @@ root@Ubuntu:~# echo mem > /sys/power/state
 [   76.917236] Disabling non-boot CPUs ...
 ```
 
-2. 在启动参数中加入`initcall_debug`，打印init函数的进入和返回log，可以定位哪个init函数运行失败或运行时间过长
+2. 在启动参数中加入`initcall_debug`，打印init函数的进入和返回log，可以定位哪个init函数运行失败或运行时间过长，S3调试日志如下
 ```bash
 root@Ubuntu:~# echo mem > /sys/power/state
 [  409.072355] PM: suspend entry (deep)
@@ -68,9 +69,9 @@ root@Ubuntu:~# echo mem > /sys/power/state
 
 + freezer：测试进程冻结
 + devices：测试进程冻结和设备驱动suspend和resume
-+ platform：测试进程冻结和设备驱动suspend和resume
-+ processors：测试进程冻结、设备驱动suspend resume和关闭nonboot CPU
-+ core：
++ platform：测试进程冻结、设备驱动suspend和resume、suspending platform global control methods
++ processors：测试进程冻结、设备驱动suspend resume、suspending platform global control methods、关闭nonboot CPU
++ core：测试进程冻结、设备驱动suspend resume、关闭nonboot CPU、suspending platform/system devices
 
 使用该方法进行调试时，需要往`/sys/power/pm_test`中写入对应的测试模式，然后进行S3 S4休眠操作，休眠流程走完后，5秒后会自动唤醒系统，测试的时候可以从freezer devices platform...逐步进行测试
 
@@ -134,6 +135,6 @@ root@Ubuntu:/sys/power# echo mem > state
 
 ### 总结
 1. 调试休眠和唤醒首先配置启动参数`no_console_suspend initcall_debug ignore_loglevel`，通过打印的日志信息基本上可以排查出问题原因
-2. 通过上面步骤无法排查出阻碍休眠的原因时，可以打开`CONFIG_PM_DEBUG`选项，往`/sys/power/pm_test`中写入freezer devices platform...逐步进行测试，看哪个测试无法通过
+2. 通过上面步骤无法排查出阻碍休眠的原因时，可以打开`CONFIG_PM_DEBUG`选项，往`/sys/power/pm_test`中写入freezer devices platform...逐步进行测试，观察哪个测试无法通过，可以对应查找问题
 
 

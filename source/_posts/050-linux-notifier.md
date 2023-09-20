@@ -1,10 +1,11 @@
 ---
 title: Linux notify机制
-date: 2023-09-07 15:38:46
 tags:
   - Linux
   - notifier
 categories: Linux
+abbrlink: 2f609589
+date: 2023-09-07 15:38:46
 ---
 
 在linux内核中，各个子系统之间有很强的相互关系，某些子系统可能对其他子系统产生的事件比较感兴趣，因此内核引进了notifier机制。内核实现notifier机制的代码位于`kernel/notifier.c`
