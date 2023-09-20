@@ -13,6 +13,8 @@ date: 2023-08-17 17:46:52
 
 IRQ number： CPU需要为每一个外设中断编号，这里称之为IRQ Number，这个IRQ Number是一个虚拟的interrupt id，和硬件无关，仅仅是被CPU用来标识一个外设中断
 
+<!--more -->
+
 HW interrupt ID：对于interrupt controller而言，它收集了多个外设的interrupt request line并向上传递，所以interrupt controller需要对外设中断进行编码，interrupt controller使用HW interrupt ID来标识外设的中断，
 
 对于驱动工程师而言，我们只希望会得到一个IRQ number，而不关心具体是那个interrupt controller上的哪个HW Interrupt ID，因此linux kernel中的中断子系统需要提供一个将HW interrupt ID映射到IRQ number上来的机制
