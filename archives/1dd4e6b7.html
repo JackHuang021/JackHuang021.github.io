@@ -21,15 +21,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="I2C总线驱动 I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：">
+    <meta name="description" content="I2C总线驱动I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：">
 <meta property="og:type" content="article">
 <meta property="og:title" content="phytium i2c适配器驱动">
 <meta property="og:url" content="https://jackhuang021.github.io/archives/1dd4e6b7.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="I2C总线驱动 I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：">
+<meta property="og:description" content="I2C总线驱动I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2022-10-19T11:05:55.604Z">
-<meta property="article:modified_time" content="2022-10-21T09:04:36.496Z">
+<meta property="article:published_time" content="2023-08-25T05:40:43.337Z">
+<meta property="article:modified_time" content="2023-08-25T05:40:43.337Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="Linux">
 <meta property="article:tag" content="I2C">
@@ -161,7 +161,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">33</span>
+          <span class="site-state-item-count">35</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -236,14 +236,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2022-10-19 19:05:55" itemprop="dateCreated datePublished" datetime="2022-10-19T19:05:55+08:00">2022-10-19</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-10-21 17:04:36" itemprop="dateModified" datetime="2022-10-21T17:04:36+08:00">2022-10-21</time>
+      <time title="创建时间：2023-08-25 13:40:43" itemprop="dateCreated datePublished" datetime="2023-08-25T13:40:43+08:00">2023-08-25</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -287,19 +280,16 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h4 id="I2C总线驱动"><a href="#I2C总线驱动" class="headerlink" title="I2C总线驱动"></a>I2C总线驱动</h4><ul>
-<li><p>I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：</p>
+        <h4 id="I2C总线驱动"><a href="#I2C总线驱动" class="headerlink" title="I2C总线驱动"></a>I2C总线驱动</h4><p>I2C总线驱动重点是I2C适配器（也就是SOC的I2C接口）控制器驱动，这里涉及到两个重要的数据结构：i2c_adapter和i2c_algorithm，Linux内核将SOC的I2C控制器抽象成i2c_adapter，i2c_adapter定义在include&#x2F;linux&#x2F;i2c.h中，结构体的内容如下：</p>
 <span id="more"></span>
-  <figure class="highlight gauss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="type">i2c_adapter</span> &#123;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">module</span> *owner;</span><br><span class="line">    unsigned int class;		  <span class="comment">/* classes to allow probing for */</span></span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_algorithm</span> *algo; <span class="comment">/* the algorithm to access the bus */</span></span><br><span class="line">    void *algo_data;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* data fields that are valid for all devices	*/</span></span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_lock_operations</span> *lock_ops;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">rt_mutex</span> bus_lock;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">rt_mutex</span> mux_lock;</span><br><span class="line"></span><br><span class="line">    int timeout;			<span class="comment">/* in jiffies */</span></span><br><span class="line">    int retries;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">device</span> dev;		<span class="comment">/* the adapter device */</span></span><br><span class="line"></span><br><span class="line">    int nr;</span><br><span class="line">    char name[<span class="number">48</span>];</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">completion</span> dev_released;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">mutex</span> userspace_clients_lock;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">list_head</span> userspace_clients;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">i2c_bus_recovery_info</span> *bus_recovery_info;</span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_adapter_quirks</span> *quirks;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">irq_domain</span> *host_notify_domain;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>  其中algo成员为i2c适配器对外提供的API读写操作函数，i2c_algorithm为I2C适配器和I2C设备通信的方法，i2c_algorithm结构体的内容如下：</p>
-  <figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> i2c_algorithm &#123;</span><br><span class="line">    <span class="comment">/* If an adapter algorithm can&#x27;t do I2C-level access, set master_xfer</span></span><br><span class="line"><span class="comment">       to NULL. If an adapter algorithm can do SMBus access, set</span></span><br><span class="line"><span class="comment">       smbus_xfer. If set to NULL, the SMBus protocol is simulated</span></span><br><span class="line"><span class="comment">       using common I2C messages */</span></span><br><span class="line">    <span class="comment">/* master_xfer should return the number of messages successfully</span></span><br><span class="line"><span class="comment">       processed, or a negative value on error */</span></span><br><span class="line">    <span class="keyword">int</span> (*master_xfer)(<span class="keyword">struct</span> i2c_adapter *adap, <span class="keyword">struct</span> i2c_msg *msgs,</span><br><span class="line">               <span class="keyword">int</span> num);</span><br><span class="line">    <span class="keyword">int</span> (*smbus_xfer) (<span class="keyword">struct</span> i2c_adapter *adap, u16 addr,</span><br><span class="line">               <span class="keyword">unsigned</span> <span class="keyword">short</span> flags, <span class="keyword">char</span> read_write,</span><br><span class="line">               u8 command, <span class="keyword">int</span> size, <span class="keyword">union</span> i2c_smbus_data *data);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* To determine what the adapter supports */</span></span><br><span class="line">    u32 (*functionality) (<span class="keyword">struct</span> i2c_adapter *);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> IS_ENABLED(CONFIG_I2C_SLAVE)</span></span><br><span class="line">    <span class="keyword">int</span> (*reg_slave)(<span class="keyword">struct</span> i2c_client *client);</span><br><span class="line">    <span class="keyword">int</span> (*unreg_slave)(<span class="keyword">struct</span> i2c_client *client);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<pre><code><figure class="highlight gauss"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="type">i2c_adapter</span> &#123;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">module</span> *owner;</span><br><span class="line">    unsigned int class;		  <span class="comment">/* classes to allow probing for */</span></span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_algorithm</span> *algo; <span class="comment">/* the algorithm to access the bus */</span></span><br><span class="line">    void *algo_data;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* data fields that are valid for all devices	*/</span></span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_lock_operations</span> *lock_ops;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">rt_mutex</span> bus_lock;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">rt_mutex</span> mux_lock;</span><br><span class="line"></span><br><span class="line">    int timeout;			<span class="comment">/* in jiffies */</span></span><br><span class="line">    int retries;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">device</span> dev;		<span class="comment">/* the adapter device */</span></span><br><span class="line"></span><br><span class="line">    int nr;</span><br><span class="line">    char name[<span class="number">48</span>];</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">completion</span> dev_released;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">mutex</span> userspace_clients_lock;</span><br><span class="line">    <span class="keyword">struct</span> <span class="type">list_head</span> userspace_clients;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">i2c_bus_recovery_info</span> *bus_recovery_info;</span><br><span class="line">    const <span class="keyword">struct</span> <span class="type">i2c_adapter_quirks</span> *quirks;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">struct</span> <span class="type">irq_domain</span> *host_notify_domain;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+其中algo成员为i2c适配器对外提供的API读写操作函数，i2c_algorithm为I2C适配器和I2C设备通信的方法，i2c_algorithm结构体的内容如下：
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> i2c_algorithm &#123;</span><br><span class="line">    <span class="comment">/* If an adapter algorithm can&#x27;t do I2C-level access, set master_xfer</span></span><br><span class="line"><span class="comment">       to NULL. If an adapter algorithm can do SMBus access, set</span></span><br><span class="line"><span class="comment">       smbus_xfer. If set to NULL, the SMBus protocol is simulated</span></span><br><span class="line"><span class="comment">       using common I2C messages */</span></span><br><span class="line">    <span class="comment">/* master_xfer should return the number of messages successfully</span></span><br><span class="line"><span class="comment">       processed, or a negative value on error */</span></span><br><span class="line">    <span class="keyword">int</span> (*master_xfer)(<span class="keyword">struct</span> i2c_adapter *adap, <span class="keyword">struct</span> i2c_msg *msgs,</span><br><span class="line">               <span class="keyword">int</span> num);</span><br><span class="line">    <span class="keyword">int</span> (*smbus_xfer) (<span class="keyword">struct</span> i2c_adapter *adap, u16 addr,</span><br><span class="line">               <span class="keyword">unsigned</span> <span class="keyword">short</span> flags, <span class="keyword">char</span> read_write,</span><br><span class="line">               u8 command, <span class="keyword">int</span> size, <span class="keyword">union</span> i2c_smbus_data *data);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* To determine what the adapter supports */</span></span><br><span class="line">    u32 (*functionality) (<span class="keyword">struct</span> i2c_adapter *);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> IS_ENABLED(CONFIG_I2C_SLAVE)</span></span><br><span class="line">    <span class="keyword">int</span> (*reg_slave)(<span class="keyword">struct</span> i2c_client *client);</span><br><span class="line">    <span class="keyword">int</span> (*unreg_slave)(<span class="keyword">struct</span> i2c_client *client);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
++ master_xfer是I2C适配器的的传输函数
++ smbus_xfer是SMBUS总线的传输函数
+</code></pre>
 <ul>
-<li>master_xfer是I2C适配器的的传输函数</li>
-<li>smbus_xfer是SMBUS总线的传输函数</li>
-</ul>
-</li>
-<li><p>I2C适配器驱动的主要工作就是初始化i2c_adapter的结构体变量，然后实现i2c_algorithm中的传输函数，完成后通过<em>i2c_add_numbered_adapter</em>或者<em>i2c_add_adapter</em>这两个函数向系统注册设置好的i2c_adapter，函数原型如下：<br><code>int i2c_add_adapter(struct i2c_adapter *adapter)</code><br><code>int i2c_add_numbered_adapter(struct i2c_adapter *adap)</code><br>i2c_add_adapter()使用动态的总线号，i2c_add_numbered_adapter()使用静态的总线号</p>
-</li>
+<li>I2C适配器驱动的主要工作就是初始化i2c_adapter的结构体变量，然后实现i2c_algorithm中的传输函数，完成后通过<em>i2c_add_numbered_adapter</em>或者<em>i2c_add_adapter</em>这两个函数向系统注册设置好的i2c_adapter，函数原型如下：<br><code>int i2c_add_adapter(struct i2c_adapter *adapter)</code><br><code>int i2c_add_numbered_adapter(struct i2c_adapter *adap)</code><br>i2c_add_adapter()使用动态的总线号，i2c_add_numbered_adapter()使用静态的总线号</li>
 </ul>
 <h4 id="phytium-i2c适配器驱动分析"><a href="#phytium-i2c适配器驱动分析" class="headerlink" title="phytium i2c适配器驱动分析"></a>phytium i2c适配器驱动分析</h4><ul>
 <li><p>phytium i2c设备树节点内容</p>
@@ -333,24 +323,6 @@
     
 
     <footer class="post-footer">
-          <div class="reward-container">
-  <div>Buy me a coffee</div>
-  <button>
-    赞赏
-  </button>
-  <div class="post-reward">
-      <div>
-        <img src="/images/wechatpay.png" alt="Jack 微信">
-        <span>微信</span>
-      </div>
-      <div>
-        <img src="/images/alipay.png" alt="Jack 支付宝">
-        <span>支付宝</span>
-      </div>
-
-  </div>
-</div>
-
           
 
 <div class="post-copyright">
@@ -377,13 +349,13 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/57aaac13.html" rel="prev" title="C/C++ 中宏定义中#和##的作用">
-                  <i class="fa fa-chevron-left"></i> C/C++ 中宏定义中#和##的作用
+                <a href="/archives/6ea84d7b.html" rel="prev" title="Linux中断子系统">
+                  <i class="fa fa-chevron-left"></i> Linux中断子系统
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/4896cd7d.html" rel="next" title="Linux内核链表结构">
-                  Linux内核链表结构 <i class="fa fa-chevron-right"></i>
+                <a href="/archives/cedbb48.html" rel="next" title="Linux CPU状态管理">
+                  Linux CPU状态管理 <i class="fa fa-chevron-right"></i>
                 </a>
             </div>
           </div>
@@ -416,7 +388,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:25</span>
+    <span title="站点阅读时长">4:47</span>
   </span>
 </div>
 <div class="busuanzi-count">

@@ -21,15 +21,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="percpu机制在SMP架构中，每个CPU都拥有自己的高速缓存，通常，L1 cache是CPU独占的，每个CPU都有一份，它的速度自然是最快的，当CPU载入一个全局数据时，会逐级地查看高速缓存，如果没有在缓存中命中，就从内存中载入，并加入到各级cache中，当下次需要读取这个值时，直接读取cache将获得非常快的速度，比直接读取内存高出几个数量级。 对于读而言，cache带来了巨大的性能提升，当涉">
+    <meta name="description" content="percpu机制在SMP架构中，每个CPU都拥有自己的高速缓存，通常，L1 cache是CPU独占的，每个CPU都有一份，它的速度自然是最快的，当CPU载入一个全局数据时，会逐级地查看高速缓存，如果没有在缓存中命中，就从内存中载入，并加入到各级cache中，当下次需要读取这个值时，直接读取cache将获得非常快的速度，比直接读取内存高出几个数量级。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Linux percpu机制">
 <meta property="og:url" content="https://jackhuang021.github.io/archives/cda25bee.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="percpu机制在SMP架构中，每个CPU都拥有自己的高速缓存，通常，L1 cache是CPU独占的，每个CPU都有一份，它的速度自然是最快的，当CPU载入一个全局数据时，会逐级地查看高速缓存，如果没有在缓存中命中，就从内存中载入，并加入到各级cache中，当下次需要读取这个值时，直接读取cache将获得非常快的速度，比直接读取内存高出几个数量级。 对于读而言，cache带来了巨大的性能提升，当涉">
+<meta property="og:description" content="percpu机制在SMP架构中，每个CPU都拥有自己的高速缓存，通常，L1 cache是CPU独占的，每个CPU都有一份，它的速度自然是最快的，当CPU载入一个全局数据时，会逐级地查看高速缓存，如果没有在缓存中命中，就从内存中载入，并加入到各级cache中，当下次需要读取这个值时，直接读取cache将获得非常快的速度，比直接读取内存高出几个数量级。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-12-30T02:17:56.000Z">
-<meta property="article:modified_time" content="2023-02-20T10:07:12.870Z">
+<meta property="article:modified_time" content="2023-09-11T02:31:52.552Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="Linux">
 <meta property="article:tag" content="percpu">
@@ -161,7 +161,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">33</span>
+          <span class="site-state-item-count">35</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -243,7 +243,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-02-20 18:07:12" itemprop="dateModified" datetime="2023-02-20T18:07:12+08:00">2023-02-20</time>
+      <time title="修改时间：2023-09-11 10:31:52" itemprop="dateModified" datetime="2023-09-11T10:31:52+08:00">2023-09-11</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -288,9 +288,11 @@
     
     <div class="post-body" itemprop="articleBody">
         <h4 id="percpu机制"><a href="#percpu机制" class="headerlink" title="percpu机制"></a>percpu机制</h4><p>在SMP架构中，每个CPU都拥有自己的高速缓存，通常，L1 cache是CPU独占的，每个CPU都有一份，它的速度自然是最快的，当CPU载入一个全局数据时，会逐级地查看高速缓存，如果没有在缓存中命中，就从内存中载入，并加入到各级cache中，当下次需要读取这个值时，直接读取cache将获得非常快的速度，比直接读取内存高出几个数量级。</p>
+<span id="more"></span>
+
 <p>对于读而言，cache带来了巨大的性能提升，当涉及到修改时，也是在缓存中进行操作，然后同步到内存中，对于单CPU而言，这没有什么问题，但是对于SMP架构而言，一个CPU对全局数据的修改将会导致所有其它CPU上对该全局数据的缓存失效，需要全部进行更新，这个操作将带来性能上的损失。</p>
 <p>而最好的同步机制就是抑制同步产生的条件，因为每一种显式的同步机制都有着不可忽视的性能开销，percpu就是这样一种同步机制：为了避免多个CPU对全局数据的竞争而导致的性能损失，percpu直接为每个CPU生成一份独有的数据备份，每个数据备份占用独立的内存，CPU不应该修改不属于自己的这部分数据，这样就避免了多CPU对全局数据的竞争问题。</p>
-<p>事实上，percpu只适合在特殊条件下使用：也就是当它确定在系统的CPU上的数据在逻辑上是独立的时候。正因为它的这种应用场景，CPU之间的percpu变量并不需要同步，在整个percpu的生命周期内，percpu变量对应的CPU副本都被对应的CPU独占使用。</p>
+<p>事实上，percpu只适合在特殊条件下使用：也就是当它确定在系统的CPU上的<strong>数据在逻辑上是独立的</strong>时候。正因为它的这种应用场景，CPU之间的percpu变量并不需要同步，在整个percpu的生命周期内，percpu变量对应的CPU副本都被对应的CPU独占使用。</p>
 <h4 id="percpu的存储"><a href="#percpu的存储" class="headerlink" title="percpu的存储"></a>percpu的存储</h4><p>在linux内核的Image中，存在各种不同的section，在内核代码中也时常可以看到__attribute__关键字自定义section ：<code>__attribute__(section(&quot;.section&quot;))</code></p>
 <p><code>__attribute__(section())</code>的作用就是将所修饰的对象放在编译生成二进制文件的指定 section中，最常见的section有.data .bss，在程序链接的阶段将会确定每个section最终的加载地址</p>
 <p>对于普通的变量而言，</p>
@@ -326,24 +328,6 @@
     
 
     <footer class="post-footer">
-          <div class="reward-container">
-  <div>Buy me a coffee</div>
-  <button>
-    赞赏
-  </button>
-  <div class="post-reward">
-      <div>
-        <img src="/images/wechatpay.png" alt="Jack 微信">
-        <span>微信</span>
-      </div>
-      <div>
-        <img src="/images/alipay.png" alt="Jack 支付宝">
-        <span>支付宝</span>
-      </div>
-
-  </div>
-</div>
-
           
 
 <div class="post-copyright">
@@ -370,13 +354,13 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/6fc94ec3.html" rel="prev" title="025_use_fio.md">
-                  <i class="fa fa-chevron-left"></i> 025_use_fio.md
+                <a href="/archives/fbf46cf3.html" rel="prev" title="Linux Cpufreq框架">
+                  <i class="fa fa-chevron-left"></i> Linux Cpufreq框架
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/c7062853.html" rel="next" title="030_linux_task_schedule.md">
-                  030_linux_task_schedule.md <i class="fa fa-chevron-right"></i>
+                <a href="/archives/8c0c86d5.html" rel="next" title="Linux内核likely()和unlikely()">
+                  Linux内核likely()和unlikely() <i class="fa fa-chevron-right"></i>
                 </a>
             </div>
           </div>
@@ -409,7 +393,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:25</span>
+    <span title="站点阅读时长">4:47</span>
   </span>
 </div>
 <div class="busuanzi-count">
