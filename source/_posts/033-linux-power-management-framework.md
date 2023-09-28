@@ -240,8 +240,18 @@ void kernel_restart_prepare(char *cmd)
 ```
 
 来看一下`device_shutdown()`的实现
+
+`device_shutdown()`中和设备模型相关的逻辑：
++ 每个设备`struct device`都会保存该设备的驱动指针`struct device_driver`，以及该设备所在总线`struct bus_type`的指针
++ 设备驱动中有一个名称为`shutdown()`的回调函数，用于在`device_shutdown`时，关闭该设备
++ 总线中也有一个名称为`shutdown()`的回调函数，用于在`device_shutdown`时，关闭该设备
++ 系统中所有的设备，都存在于`/sys/devices/`目录下面，该目录由名称`device_kset`的kset表示，kset中会使用一个链表保存其下所有的kobject。以`device_kset`为root节点，将内核中所有的设备，组织成一个树状结构
+
 ```c
 // drivers/base/core.c
+/* /sys/devices */
+struct kset *devices_kset;
+
 /**
  * device_shutdown - call ->shutdown() on each device to shutdown.
  */
@@ -251,7 +261,7 @@ void device_shutdown(void)
 
 	wait_for_device_probe();
 	device_block_probing();
-
+	// cpufreq_suspended标志置为true
 	cpufreq_suspend();
 
 	spin_lock(&devices_kset->list_lock);
@@ -275,6 +285,7 @@ void device_shutdown(void)
 		 * Make sure the device is off the kset list, in the
 		 * event that dev->*->shutdown() doesn't remove it.
 		 */
+		// 将该device从devices_kset上删除
 		list_del_init(&dev->kobj.entry);
 		spin_unlock(&devices_kset->list_lock);
 
@@ -284,6 +295,8 @@ void device_shutdown(void)
 		device_lock(dev);
 
 		/* Don't allow any more runtime suspends */
+		// 直接增加dev->power.usage_count的计数，不做其他处理
+		// 这样不让设备进入到runtime suspend
 		pm_runtime_get_noresume(dev);
 		pm_runtime_barrier(dev);
 
@@ -314,6 +327,114 @@ void device_shutdown(void)
 	spin_unlock(&devices_kset->list_lock);
 }
 ```
+
+### Runtime PM
+runtime PM的思想：每个设备都处理好自己的电源管理工作，尽量以最低的能耗完成交代的任务，尽量在不需要工作的时候进入低功耗状态，尽量不和其它模块有过多的耦合。
+
+`device_driver`需要提供3个回调函数`runtime_suspend`, `runtime_resume`, `runtime_idle`，分别用于suspend device, resume device和idle device，它们一般由runtime pm core在合适的时机进行调用，以便device节能
+
+`device driver`会在适当的时机调用runtime pm core提供put, get系列接口，汇报device当前的状态，runtime pm core会为每个device维护一个引用计数`device->power.usage_count`，get时增加引用计数，put时减少引用计数，当计数为0时，表明device不再被使用，可以立即或一段时间后suspend
+
+
+
+```c
+// device_driver需要实现的runtime接口
+struct dev_pm_ops {
+	...
+	int (*runtime_suspend)(struct device *dev);
+	int (*runtime_resume)(struct device *dev);
+	int (*runtime_idle)(struct device *dev);
+};
+
+struct device {
+	...
+	struct dev_pm_info power;
+	...
+};
+
+// device中的电源状态信息
+struct dev_pm_info {
+	pm_message_t		power_state;
+	unsigned int		can_wakeup:1;
+	unsigned int		async_suspend:1;
+	bool			in_dpm_list:1;	/* Owned by the PM core */
+	bool			is_prepared:1;	/* Owned by the PM core */
+	bool			is_suspended:1;	/* Ditto */
+	bool			is_noirq_suspended:1;
+	bool			is_late_suspended:1;
+	bool			no_pm:1;
+	bool			early_init:1;	/* Owned by the PM core */
+	bool			direct_complete:1;	/* Owned by the PM core */
+	u32			driver_flags;
+	spinlock_t		lock;
+#ifdef CONFIG_PM_SLEEP
+	struct list_head	entry;
+	struct completion	completion;
+	struct wakeup_source	*wakeup;
+	bool			wakeup_path:1;
+	bool			syscore:1;
+	bool			no_pm_callbacks:1;	/* Owned by the PM core */
+	unsigned int		must_resume:1;	/* Owned by the PM core */
+	unsigned int		may_skip_resume:1;	/* Set by subsystems */
+#else
+	unsigned int		should_wakeup:1;
+#endif
+#ifdef CONFIG_PM
+	struct hrtimer		suspend_timer;
+	u64			timer_expires;
+	struct work_struct	work;
+	wait_queue_head_t	wait_queue;
+	struct wake_irq		*wakeirq;
+	atomic_t		usage_count;
+	atomic_t		child_count;
+	unsigned int		disable_depth:3;
+	unsigned int		idle_notification:1;
+	unsigned int		request_pending:1;
+	unsigned int		deferred_resume:1;
+	unsigned int		needs_force_resume:1;
+	unsigned int		runtime_auto:1;
+	bool			ignore_children:1;
+	unsigned int		no_callbacks:1;
+	unsigned int		irq_safe:1;
+	unsigned int		use_autosuspend:1;
+	unsigned int		timer_autosuspends:1;
+	unsigned int		memalloc_noio:1;
+	unsigned int		links_count;
+	enum rpm_request	request;
+	enum rpm_status		runtime_status;
+	enum rpm_status		last_status;
+	int			runtime_error;
+	int			autosuspend_delay;
+	u64			last_busy;
+	u64			active_time;
+	u64			suspended_time;
+	u64			accounting_timestamp;
+#endif
+	struct pm_subsys_data	*subsys_data;  /* Owned by the subsystem. */
+	void (*set_latency_tolerance)(struct device *, s32);
+	struct dev_pm_qos	*qos;
+};
+```
+
+在runtime PM的过程中，设备可处于如下四种状态
++ RPM_ACTIVE：设备处于正常工作的状态
++ RPM_SUSPENDED：设备处于suspend状态
++ RPM_RESUMING：设备runtime_resume正在被执行
++ RPM_SUSPENDING：设备runtime_suspend正在被执行
+
+#### runtime PM的异步和同步
+设备驱动代码可在进程和中断两种上下文执行，因此put和get等接口，要么是由用户进程调用，要么是由中断处理函数调用。由于这些接口可能会执行device的.runtime_xxx回调函数，而这些接口的执行时间是不确定的，有些可能还会睡眠等待。
+
+runtime PM core提供默认的接口(pm_runtime_get, pm_runtime_put)，这两个接口采用异步调用的方式（传入ASYNC标志），会启动一个work挂入到workqueue，在worker线程中调用runtime_suspend, runtime_resume回调函数，这可以保证设备驱动之外的其它模块正常运行
+
+如果驱动工程师很清楚的知道自己要做什么，也可以使用同步接口（pm_runtime_get_sync, pm_runtime_put_sync），它们会直接调用runtime_suspend, runtime_resume回调函数
+
+#### runtime PM API接口
+runtime PM提供的接口位于`include/linux/pm_runtime.h`
+
+1. 
+
+
 
 ### power supply子系统
 #### power supply软件架构
