@@ -9,6 +9,22 @@ date: 2022-11-17 16:14:27
 本文记录git使用过程中用到的一些功能
 <!-- more -->
 
+#### git ssh设置代理
+在没有设置代理的情况下，git拉取 更新偶尔无法成功，在~/.ssh/config加入如下的配置
+```bash
+Host github.com
+	HostName github.com
+	User git
+    # socks代理
+	ProxyCommand nc -v -x 127.0.0.1:1089 %h %p
+```
+测试ssh是否能连接github.com
+```bash
+jack@linux:~/Documents/source/vim (master) $ ssh -T git@github.com
+Connection to github.com 22 port [tcp/ssh] succeeded!
+Hi JackHuang021! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
 #### 创建worktree
 在各个差异较大的分支中切换，工程需要做全局编译，导致开发效率下降，创建worktree可以在多个分支并行开发，从而实多个工程环境的缓存，达到提升开发效率的目的，特点：
 + 可为一个分支创建一个工作区
@@ -23,16 +39,18 @@ date: 2022-11-17 16:14:27
 ```bash
 # 进入工程目录
 cd path/to/project
+
+# 查看worktree信息
+git worktree list
+
 # 创建worktree
 git worktree add worktree test_branch
+
 # 进入工作区worktree上进行开发
 cd worktree
 
 # 删除工作区
-rm -rf worktree
-
-# 清理工作区信息
-git worktree prune
+git worktree remove path/to/worktree
 ```
 
 #### 合并其他分支commit到当前分支
@@ -107,4 +125,7 @@ git restore --staged .
 # 将某个暂存文件转为unstage状态
 git restore --staged <filename>
 ```
+
+#### git bisect定位问题
+git bisect命令使用二分搜索算法来查找提交历史中的哪一次提交引入了错误，只需要告诉这个命令一个包含该bug的坏commit ID和一个引入该bug之前的好commit ID，这个命令会用二分法在这两个提交之间选择一个中间的commit ID，切换到那个commit ID的代码，然后询问你这是好的commit ID还是坏的commit ID，你告诉它是好还是坏，然后它会不断缩小范围，直到找到那次引入bug的commit ID
 
