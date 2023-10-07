@@ -298,6 +298,10 @@ void device_shutdown(void)
 		// 直接增加dev->power.usage_count的计数，不做其他处理
 		// 这样不让设备进入到runtime suspend
 		pm_runtime_get_noresume(dev);
+		// 查看设备当前的状态
+		// 1. 若现在正有唤醒的请求则唤醒设备
+		// 2. 取消当前挂入到workqueue的工作任务
+		// 3. 若设备正处于RPM_SUSPENDING或RPM_RESUMING则等待work执行完
 		pm_runtime_barrier(dev);
 
 		if (dev->class && dev->class->shutdown_pre) {
