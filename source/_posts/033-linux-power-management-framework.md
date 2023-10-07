@@ -303,7 +303,11 @@ void device_shutdown(void)
 		// 2. 取消当前挂入到workqueue的工作任务
 		// 3. 若设备正处于RPM_SUSPENDING或RPM_RESUMING则等待work执行完
 		pm_runtime_barrier(dev);
-
+		// 调用shutdown接口
+		// 调用顺序:
+		// class->shutdown_pre()
+		// bus->shutdown()
+		// driver->shutdown()
 		if (dev->class && dev->class->shutdown_pre) {
 			if (initcall_debug)
 				dev_info(dev, "shutdown_pre\n");
@@ -322,7 +326,7 @@ void device_shutdown(void)
 		device_unlock(dev);
 		if (parent)
 			device_unlock(parent);
-
+		// 引用计数减1
 		put_device(dev);
 		put_device(parent);
 
@@ -338,8 +342,6 @@ runtime PM的思想：每个设备都处理好自己的电源管理工作，尽�
 `device_driver`需要提供3个回调函数`runtime_suspend`, `runtime_resume`, `runtime_idle`，分别用于suspend device, resume device和idle device，它们一般由runtime pm core在合适的时机进行调用，以便device节能
 
 `device driver`会在适当的时机调用runtime pm core提供put, get系列接口，汇报device当前的状态，runtime pm core会为每个device维护一个引用计数`device->power.usage_count`，get时增加引用计数，put时减少引用计数，当计数为0时，表明device不再被使用，可以立即或一段时间后suspend
-
-
 
 ```c
 // device_driver需要实现的runtime接口
