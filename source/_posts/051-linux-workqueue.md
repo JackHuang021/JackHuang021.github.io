@@ -130,10 +130,11 @@ struct worker_pool {
 typedef void (*work_func_t)(struct work_struct *work);
 
 struct work_struct {
+	// 该work的一些标志位
 	atomic_long_t data;
-  // 将工作任务链接起来
+	// 将工作任务链接起来
 	struct list_head entry;
-  // 处理工作任务的回调函数
+	// 处理工作任务的回调函数
 	work_func_t func;
 #ifdef CONFIG_LOCKDEP
 	struct lockdep_map lockdep_map;
@@ -647,6 +648,113 @@ static int alloc_and_link_pwqs(struct workqueue_struct *wq)
 // 对于percpu workqueue这里静态定义了如下的cpu_worker_pools
 /* the per-cpu worker pools */
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct worker_pool [NR_STD_WORKER_POOLS], cpu_worker_pools);
+```
+
+### workqueue API函数
+1. `bool flush_work(struct work_struct *work)`
+```c
+// kernel/workqueue.c
+
+struct wq_barrier {
+	struct work_struct	work;
+	struct completion	done;
+	struct task_struct	*task;	/* purely informational */
+};
+
+/**
+ * flush_work - wait for a work to finish executing the last queueing instance
+ * @work: the work to flush
+ *
+ * Wait until @work has finished execution.  @work is guaranteed to be idle
+ * on return if it hasn't been requeued since flush started.
+ *
+ * Return:
+ * %true if flush_work() waited for the work to finish execution,
+ * %false if it was already idle.
+ */
+bool flush_work(struct work_struct *work)
+{
+	return __flush_work(work, false);
+}
+EXPORT_SYMBOL_GPL(flush_work);
+
+static bool __flush_work(struct work_struct *work, bool from_cancel)
+{
+	struct wq_barrier barr;
+
+	if (WARN_ON(!wq_online))
+		return false;
+
+	if (WARN_ON(!work->func))
+		return false;
+
+	lock_map_acquire(&work->lockdep_map);
+	lock_map_release(&work->lockdep_map);
+
+	if (start_flush_work(work, &barr, from_cancel)) {
+		wait_for_completion(&barr.done);
+		destroy_work_on_stack(&barr.work);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+static bool start_flush_work(struct work_struct *work, struct wq_barrier *barr,
+			     bool from_cancel)
+{
+	struct worker *worker = NULL;
+	struct worker_pool *pool;
+	struct pool_workqueue *pwq;
+
+	might_sleep();
+
+	rcu_read_lock();
+	pool = get_work_pool(work);
+	if (!pool) {
+		rcu_read_unlock();
+		return false;
+	}
+
+	raw_spin_lock_irq(&pool->lock);
+	/* see the comment in try_to_grab_pending() with the same code */
+	pwq = get_work_pwq(work);
+	if (pwq) {
+		if (unlikely(pwq->pool != pool))
+			goto already_gone;
+	} else {
+		worker = find_worker_executing_work(pool, work);
+		if (!worker)
+			goto already_gone;
+		pwq = worker->current_pwq;
+	}
+
+	check_flush_dependency(pwq->wq, work);
+
+	insert_wq_barrier(pwq, barr, work, worker);
+	raw_spin_unlock_irq(&pool->lock);
+
+	/*
+	 * Force a lock recursion deadlock when using flush_work() inside a
+	 * single-threaded or rescuer equipped workqueue.
+	 *
+	 * For single threaded workqueues the deadlock happens when the work
+	 * is after the work issuing the flush_work(). For rescuer equipped
+	 * workqueues the deadlock happens when the rescuer stalls, blocking
+	 * forward progress.
+	 */
+	if (!from_cancel &&
+	    (pwq->wq->saved_max_active == 1 || pwq->wq->rescuer)) {
+		lock_map_acquire(&pwq->wq->lockdep_map);
+		lock_map_release(&pwq->wq->lockdep_map);
+	}
+	rcu_read_unlock();
+	return true;
+already_gone:
+	raw_spin_unlock_irq(&pool->lock);
+	rcu_read_unlock();
+	return false;
+}
 ```
 
 

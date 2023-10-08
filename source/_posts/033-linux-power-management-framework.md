@@ -1,19 +1,19 @@
 ---
-title: Linux电源管理框架
+title: linux电源管理框架
 tags:
-  - Linux
+  - linux
   - Power Management Framework
-categories: Linux
+categories: linux
 abbrlink: '43564739'
 date: 2023-01-13 08:12:46
 ---
 
 ### 概述
-Linux内核中电源管理主要涉及到供电、充电、时钟、频率、电压、睡眠唤醒等内容
+linux内核中电源管理主要涉及到供电、充电、时钟、频率、电压、睡眠唤醒等内容
 
 <!-- more -->
 
-Linux内核电源管理的组成：
+linux内核电源管理的组成：
 1. Gerneric PM：传统意义上的电源管理，主要是Power off, sleep, hibernate, restart等，涉及到各个层级的suspend, resume, prepare_suspend, suspend_early, suspend_noirq, resume_late, complete
 2. Runtime PM和wakelock，kernel层级的调度
 3. CPU Idle
@@ -24,9 +24,380 @@ Linux内核电源管理的组成：
 8. Regulator Framework，电压和电流
 9. Power Supply，电源供电状态
 
-### Linux内核电源状态
-在Linux内核中，将电源划分为如下几个状态
-| ACPI | State | Linux State Drscription |
+### 设备电源管理接口
+linux电源管理中，相当多的部分是在处理suspend，Runtime PM等功能。而这些功能都基于一套相似的逻辑，即power management interface，该interface的代码实现在`include/linux/pm.h`, `drivers/base/power/main.c`等文件中
+
+power management interface的主要功能：
++ 对下，定义device PM相关的回调函数，让各个dirver实现
++ 对上，实现统一的PM操作函数，供PM核心逻辑调用
+
+#### device PM回调函数
+在一个系统中，数量最多的是设备，耗电最多的也是设备，设备的电源管理是linux电源管理的核心内容，设备电源管理最核心的操作就是：**在合适的时机，将设备置为合理的状态**，device pm callbacks的目的就是：定义一套统一的方式，让设备在特定的时机进入合适的状态
+
+这些pm callbacks统一封装在一个数据结构`struct dev_pm_ops`，上层的数据结构只需要包含这个结构即可，旧版本的内核在`struct device; struct class; struct bus_type`中也有suspend/resume类型的callbacks，为了兼容旧的设计，这些接口也保留下来了，只是不建议使用
+
+`struct dev_pm_ops`定义在`include/linux/pm.h`中，内核也对各个接口有详细的注释
+```c
+// include/linux/pm.h
+/**
+ * struct dev_pm_ops - device PM callbacks.
+ *
+ * @prepare: The principal role of this callback is to prevent new children of
+ *	the device from being registered after it has returned (the driver's
+ *	subsystem and generally the rest of the kernel is supposed to prevent
+ *	new calls to the probe method from being made too once @prepare() has
+ *	succeeded).  If @prepare() detects a situation it cannot handle (e.g.
+ *	registration of a child already in progress), it may return -EAGAIN, so
+ *	that the PM core can execute it once again (e.g. after a new child has
+ *	been registered) to recover from the race condition.
+ *	This method is executed for all kinds of suspend transitions and is
+ *	followed by one of the suspend callbacks: @suspend(), @freeze(), or
+ *	@poweroff().  If the transition is a suspend to memory or standby (that
+ *	is, not related to hibernation), the return value of @prepare() may be
+ *	used to indicate to the PM core to leave the device in runtime suspend
+ *	if applicable.  Namely, if @prepare() returns a positive number, the PM
+ *	core will understand that as a declaration that the device appears to be
+ *	runtime-suspended and it may be left in that state during the entire
+ *	transition and during the subsequent resume if all of its descendants
+ *	are left in runtime suspend too.  If that happens, @complete() will be
+ *	executed directly after @prepare() and it must ensure the proper
+ *	functioning of the device after the system resume.
+ *	The PM core executes subsystem-level @prepare() for all devices before
+ *	starting to invoke suspend callbacks for any of them, so generally
+ *	devices may be assumed to be functional or to respond to runtime resume
+ *	requests while @prepare() is being executed.  However, device drivers
+ *	may NOT assume anything about the availability of user space at that
+ *	time and it is NOT valid to request firmware from within @prepare()
+ *	(it's too late to do that).  It also is NOT valid to allocate
+ *	substantial amounts of memory from @prepare() in the GFP_KERNEL mode.
+ *	[To work around these limitations, drivers may register suspend and
+ *	hibernation notifiers to be executed before the freezing of tasks.]
+ *
+ * @complete: Undo the changes made by @prepare().  This method is executed for
+ *	all kinds of resume transitions, following one of the resume callbacks:
+ *	@resume(), @thaw(), @restore().  Also called if the state transition
+ *	fails before the driver's suspend callback: @suspend(), @freeze() or
+ *	@poweroff(), can be executed (e.g. if the suspend callback fails for one
+ *	of the other devices that the PM core has unsuccessfully attempted to
+ *	suspend earlier).
+ *	The PM core executes subsystem-level @complete() after it has executed
+ *	the appropriate resume callbacks for all devices.  If the corresponding
+ *	@prepare() at the beginning of the suspend transition returned a
+ *	positive number and the device was left in runtime suspend (without
+ *	executing any suspend and resume callbacks for it), @complete() will be
+ *	the only callback executed for the device during resume.  In that case,
+ *	@complete() must be prepared to do whatever is necessary to ensure the
+ *	proper functioning of the device after the system resume.  To this end,
+ *	@complete() can check the power.direct_complete flag of the device to
+ *	learn whether (unset) or not (set) the previous suspend and resume
+ *	callbacks have been executed for it.
+ *
+ * @suspend: Executed before putting the system into a sleep state in which the
+ *	contents of main memory are preserved.  The exact action to perform
+ *	depends on the device's subsystem (PM domain, device type, class or bus
+ *	type), but generally the device must be quiescent after subsystem-level
+ *	@suspend() has returned, so that it doesn't do any I/O or DMA.
+ *	Subsystem-level @suspend() is executed for all devices after invoking
+ *	subsystem-level @prepare() for all of them.
+ *
+ * @suspend_late: Continue operations started by @suspend().  For a number of
+ *	devices @suspend_late() may point to the same callback routine as the
+ *	runtime suspend callback.
+ *
+ * @resume: Executed after waking the system up from a sleep state in which the
+ *	contents of main memory were preserved.  The exact action to perform
+ *	depends on the device's subsystem, but generally the driver is expected
+ *	to start working again, responding to hardware events and software
+ *	requests (the device itself may be left in a low-power state, waiting
+ *	for a runtime resume to occur).  The state of the device at the time its
+ *	driver's @resume() callback is run depends on the platform and subsystem
+ *	the device belongs to.  On most platforms, there are no restrictions on
+ *	availability of resources like clocks during @resume().
+ *	Subsystem-level @resume() is executed for all devices after invoking
+ *	subsystem-level @resume_noirq() for all of them.
+ *
+ * @resume_early: Prepare to execute @resume().  For a number of devices
+ *	@resume_early() may point to the same callback routine as the runtime
+ *	resume callback.
+ *
+ * @freeze: Hibernation-specific, executed before creating a hibernation image.
+ *	Analogous to @suspend(), but it should not enable the device to signal
+ *	wakeup events or change its power state.  The majority of subsystems
+ *	(with the notable exception of the PCI bus type) expect the driver-level
+ *	@freeze() to save the device settings in memory to be used by @restore()
+ *	during the subsequent resume from hibernation.
+ *	Subsystem-level @freeze() is executed for all devices after invoking
+ *	subsystem-level @prepare() for all of them.
+ *
+ * @freeze_late: Continue operations started by @freeze().  Analogous to
+ *	@suspend_late(), but it should not enable the device to signal wakeup
+ *	events or change its power state.
+ *
+ * @thaw: Hibernation-specific, executed after creating a hibernation image OR
+ *	if the creation of an image has failed.  Also executed after a failing
+ *	attempt to restore the contents of main memory from such an image.
+ *	Undo the changes made by the preceding @freeze(), so the device can be
+ *	operated in the same way as immediately before the call to @freeze().
+ *	Subsystem-level @thaw() is executed for all devices after invoking
+ *	subsystem-level @thaw_noirq() for all of them.  It also may be executed
+ *	directly after @freeze() in case of a transition error.
+ *
+ * @thaw_early: Prepare to execute @thaw().  Undo the changes made by the
+ *	preceding @freeze_late().
+ *
+ * @poweroff: Hibernation-specific, executed after saving a hibernation image.
+ *	Analogous to @suspend(), but it need not save the device's settings in
+ *	memory.
+ *	Subsystem-level @poweroff() is executed for all devices after invoking
+ *	subsystem-level @prepare() for all of them.
+ *
+ * @poweroff_late: Continue operations started by @poweroff().  Analogous to
+ *	@suspend_late(), but it need not save the device's settings in memory.
+ *
+ * @restore: Hibernation-specific, executed after restoring the contents of main
+ *	memory from a hibernation image, analogous to @resume().
+ *
+ * @restore_early: Prepare to execute @restore(), analogous to @resume_early().
+ *
+ * @suspend_noirq: Complete the actions started by @suspend().  Carry out any
+ *	additional operations required for suspending the device that might be
+ *	racing with its driver's interrupt handler, which is guaranteed not to
+ *	run while @suspend_noirq() is being executed.
+ *	It generally is expected that the device will be in a low-power state
+ *	(appropriate for the target system sleep state) after subsystem-level
+ *	@suspend_noirq() has returned successfully.  If the device can generate
+ *	system wakeup signals and is enabled to wake up the system, it should be
+ *	configured to do so at that time.  However, depending on the platform
+ *	and device's subsystem, @suspend() or @suspend_late() may be allowed to
+ *	put the device into the low-power state and configure it to generate
+ *	wakeup signals, in which case it generally is not necessary to define
+ *	@suspend_noirq().
+ *
+ * @resume_noirq: Prepare for the execution of @resume() by carrying out any
+ *	operations required for resuming the device that might be racing with
+ *	its driver's interrupt handler, which is guaranteed not to run while
+ *	@resume_noirq() is being executed.
+ *
+ * @freeze_noirq: Complete the actions started by @freeze().  Carry out any
+ *	additional operations required for freezing the device that might be
+ *	racing with its driver's interrupt handler, which is guaranteed not to
+ *	run while @freeze_noirq() is being executed.
+ *	The power state of the device should not be changed by either @freeze(),
+ *	or @freeze_late(), or @freeze_noirq() and it should not be configured to
+ *	signal system wakeup by any of these callbacks.
+ *
+ * @thaw_noirq: Prepare for the execution of @thaw() by carrying out any
+ *	operations required for thawing the device that might be racing with its
+ *	driver's interrupt handler, which is guaranteed not to run while
+ *	@thaw_noirq() is being executed.
+ *
+ * @poweroff_noirq: Complete the actions started by @poweroff().  Analogous to
+ *	@suspend_noirq(), but it need not save the device's settings in memory.
+ *
+ * @restore_noirq: Prepare for the execution of @restore() by carrying out any
+ *	operations required for thawing the device that might be racing with its
+ *	driver's interrupt handler, which is guaranteed not to run while
+ *	@restore_noirq() is being executed.  Analogous to @resume_noirq().
+ *
+ * @runtime_suspend: Prepare the device for a condition in which it won't be
+ *	able to communicate with the CPU(s) and RAM due to power management.
+ *	This need not mean that the device should be put into a low-power state.
+ *	For example, if the device is behind a link which is about to be turned
+ *	off, the device may remain at full power.  If the device does go to low
+ *	power and is capable of generating runtime wakeup events, remote wakeup
+ *	(i.e., a hardware mechanism allowing the device to request a change of
+ *	its power state via an interrupt) should be enabled for it.
+ *
+ * @runtime_resume: Put the device into the fully active state in response to a
+ *	wakeup event generated by hardware or at the request of software.  If
+ *	necessary, put the device into the full-power state and restore its
+ *	registers, so that it is fully operational.
+ *
+ * @runtime_idle: Device appears to be inactive and it might be put into a
+ *	low-power state if all of the necessary conditions are satisfied.
+ *	Check these conditions, and return 0 if it's appropriate to let the PM
+ *	core queue a suspend request for the device.
+ *
+ * Several device power state transitions are externally visible, affecting
+ * the state of pending I/O queues and (for drivers that touch hardware)
+ * interrupts, wakeups, DMA, and other hardware state.  There may also be
+ * internal transitions to various low-power modes which are transparent
+ * to the rest of the driver stack (such as a driver that's ON gating off
+ * clocks which are not in active use).
+ *
+ * The externally visible transitions are handled with the help of callbacks
+ * included in this structure in such a way that, typically, two levels of
+ * callbacks are involved.  First, the PM core executes callbacks provided by PM
+ * domains, device types, classes and bus types.  They are the subsystem-level
+ * callbacks expected to execute callbacks provided by device drivers, although
+ * they may choose not to do that.  If the driver callbacks are executed, they
+ * have to collaborate with the subsystem-level callbacks to achieve the goals
+ * appropriate for the given system transition, given transition phase and the
+ * subsystem the device belongs to.
+ *
+ * All of the above callbacks, except for @complete(), return error codes.
+ * However, the error codes returned by @resume(), @thaw(), @restore(),
+ * @resume_noirq(), @thaw_noirq(), and @restore_noirq(), do not cause the PM
+ * core to abort the resume transition during which they are returned.  The
+ * error codes returned in those cases are only printed to the system logs for
+ * debugging purposes.  Still, it is recommended that drivers only return error
+ * codes from their resume methods in case of an unrecoverable failure (i.e.
+ * when the device being handled refuses to resume and becomes unusable) to
+ * allow the PM core to be modified in the future, so that it can avoid
+ * attempting to handle devices that failed to resume and their children.
+ *
+ * It is allowed to unregister devices while the above callbacks are being
+ * executed.  However, a callback routine MUST NOT try to unregister the device
+ * it was called for, although it may unregister children of that device (for
+ * example, if it detects that a child was unplugged while the system was
+ * asleep).
+ *
+ * There also are callbacks related to runtime power management of devices.
+ * Again, as a rule these callbacks are executed by the PM core for subsystems
+ * (PM domains, device types, classes and bus types) and the subsystem-level
+ * callbacks are expected to invoke the driver callbacks.  Moreover, the exact
+ * actions to be performed by a device driver's callbacks generally depend on
+ * the platform and subsystem the device belongs to.
+ *
+ * Refer to Documentation/power/runtime_pm.rst for more information about the
+ * role of the @runtime_suspend(), @runtime_resume() and @runtime_idle()
+ * callbacks in device runtime power management.
+ */
+struct dev_pm_ops {
+	int (*prepare)(struct device *dev);
+	void (*complete)(struct device *dev);
+	int (*suspend)(struct device *dev);
+	int (*resume)(struct device *dev);
+	int (*freeze)(struct device *dev);
+	int (*thaw)(struct device *dev);
+	int (*poweroff)(struct device *dev);
+	int (*restore)(struct device *dev);
+	int (*suspend_late)(struct device *dev);
+	int (*resume_early)(struct device *dev);
+	int (*freeze_late)(struct device *dev);
+	int (*thaw_early)(struct device *dev);
+	int (*poweroff_late)(struct device *dev);
+	int (*restore_early)(struct device *dev);
+	int (*suspend_noirq)(struct device *dev);
+	int (*resume_noirq)(struct device *dev);
+	int (*freeze_noirq)(struct device *dev);
+	int (*thaw_noirq)(struct device *dev);
+	int (*poweroff_noirq)(struct device *dev);
+	int (*restore_noirq)(struct device *dev);
+	int (*runtime_suspend)(struct device *dev);
+	int (*runtime_resume)(struct device *dev);
+	int (*runtime_idle)(struct device *dev);
+};
+```
+
+device pm calssbacks在设备模型中的体现，在linux设备模型中的很多数据结构都会包含`struct dev_pm_ops`变量
+```c
+// include/linux/device/driver.h
+struct device_driver {
+	...
+	struct dev_pm_ops *pm;
+	...
+};
+
+// include/linux/device/bus.h
+struct bus_type {
+	...
+	struct dev_pm_ops *pm;
+	...
+};
+
+// include/linux/device/class.h
+struct class {
+	...
+	struct dev_pm_ops *pm;
+	...
+};
+```
+
+device pm callbacks的操作函数：内核在定义device pm callbacks数据结构的同时，为了方便使用该数据结构，也定义了大量的操作API，这些API分为两类
++ 通用的辅助性质的API，直接调用指定device所绑定driver的pm指针相应的callback
+```c
+// include/linux/pm.h
+extern int pm_generic_prepare(struct device *dev);
+extern int pm_generic_suspend_late(struct device *dev);
+extern int pm_generic_suspend_noirq(struct device *dev);
+extern int pm_generic_suspend(struct device *dev);
+extern int pm_generic_resume_early(struct device *dev);
+extern int pm_generic_resume_noirq(struct device *dev);
+extern int pm_generic_resume(struct device *dev);
+extern int pm_generic_freeze_noirq(struct device *dev);
+extern int pm_generic_freeze_late(struct device *dev);
+extern int pm_generic_freeze(struct device *dev);
+extern int pm_generic_thaw_noirq(struct device *dev);
+extern int pm_generic_thaw_early(struct device *dev);
+extern int pm_generic_thaw(struct device *dev);
+extern int pm_generic_restore_noirq(struct device *dev);
+extern int pm_generic_restore_early(struct device *dev);
+extern int pm_generic_restore(struct device *dev);
+extern int pm_generic_poweroff_noirq(struct device *dev);
+extern int pm_generic_poweroff_late(struct device *dev);
+extern int pm_generic_poweroff(struct device *dev);
+extern void pm_generic_complete(struct device *dev);
+
+// 以pm_generic_suspend()为例，其他的接口与之类似
+// driver/base/power/generic_ops.c
+/**
+ * pm_generic_suspend - Generic suspend callback for subsystems.
+ * @dev: Device to suspend.
+ */
+int pm_generic_suspend(struct device *dev)
+{
+	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
+
+	return pm && pm->suspend ? pm->suspend(dev) : 0;
+}
+EXPORT_SYMBOL_GPL(pm_generic_suspend);
+```
++ 和整体电源管理行为相关的API
+```c
+// drivers/base/power/main.c
+/* 
+ * 设备模型在添加设备(device_add())时，会调用device_pm_add接口
+ * 将该设备添加到全局链表dpm_list中，以方便后续的遍历操作
+ */
+LIST_HEAD(dpm_list);
+static LIST_HEAD(dpm_prepared_list);
+static LIST_HEAD(dpm_suspended_list);
+static LIST_HEAD(dpm_late_early_list);
+static LIST_HEAD(dpm_noirq_list);
+
+// include/linux/pm.h
+// 为dpm_list_mtx加锁
+extern void device_pm_lock(void);
+extern void dpm_resume_start(pm_message_t state);
+extern void dpm_resume_end(pm_message_t state);
+extern void dpm_resume_noirq(pm_message_t state);
+extern void dpm_resume_early(pm_message_t state);
+extern void dpm_resume(pm_message_t state);
+extern void dpm_complete(pm_message_t state);
+
+extern void device_pm_unlock(void);
+extern int dpm_suspend_end(pm_message_t state);
+extern int dpm_suspend_start(pm_message_t state);
+extern int dpm_suspend_noirq(pm_message_t state);
+extern int dpm_suspend_late(pm_message_t state);
+extern int dpm_suspend(pm_message_t state);
+extern int dpm_prepare(pm_message_t state);
+
+extern void __suspend_report_result(const char *function, void *fn, int ret);
+
+#define suspend_report_result(fn, ret)					\
+	do {								\
+		__suspend_report_result(__func__, fn, ret);		\
+	} while (0)
+
+extern int device_pm_wait_for_dev(struct device *sub, struct device *dev);
+extern void dpm_for_each_dev(void *data, void (*fn)(struct device *, void *));
+```
+
+### 内核电源状态
+在linux内核中，将电源划分为如下几个状态
+| ACPI | State | linux State Drscription |
 | :-: | :-: | :- |
 | S0 | On | Working |
 | S1 | Standby | CPU and RAM are powered but not executed |
@@ -36,12 +407,19 @@ Linux内核电源管理的组成：
 | S5 | Shutdown | Shutdown the system |
 
 ### Generic PM
-Generic PM指的是Linux系统中常规的电源管理，包括关机、待机、重启等
+Generic PM指的是linux系统中常规的电源管理，包括关机、待机、重启等
 
 Generic PM的软件层次：
 + API Layer：用于向用户空间提供接口，其中关机、重启的接口形式是系统调用，Hibernate、Suspend的接口形式是sysfs
 + PM Core：位于`kernel/power`目录下，主要处理和硬件无关的核心逻辑
 + PM Driver：分为两个部分，一个是和体系结构无关的Driver，提供pm框架；另一部分是具体的体系结构相关的driver，也是开发者关注的部分
+
+#### Generic PM软件架构
+
+
+#### 用户空间接口
+generic PM的用户
+
 
 #### Generic PM reboot的过程
 
@@ -52,11 +430,11 @@ kernel支持的reboot的方式定义在`include/uapi/linux/reboot.h`中，代码
  * Magic values required to use _reboot() system call.
  */
 
-#define	LINUX_REBOOT_MAGIC1	0xfee1dead
-#define	LINUX_REBOOT_MAGIC2	672274793
-#define	LINUX_REBOOT_MAGIC2A	85072278
-#define	LINUX_REBOOT_MAGIC2B	369367448
-#define	LINUX_REBOOT_MAGIC2C	537993216
+#define	linux_REBOOT_MAGIC1	0xfee1dead
+#define	linux_REBOOT_MAGIC2	672274793
+#define	linux_REBOOT_MAGIC2A	85072278
+#define	linux_REBOOT_MAGIC2B	369367448
+#define	linux_REBOOT_MAGIC2C	537993216
 
 
 /*
@@ -69,20 +447,20 @@ kernel支持的reboot的方式定义在`include/uapi/linux/reboot.h`中，代码
  * POWER_OFF   Stop OS and remove all power from system, if possible.
  * RESTART2    Restart system using given command string.
  * SW_SUSPEND  Suspend system using software suspend if compiled in.
- * KEXEC       Restart system using a previously loaded Linux kernel
+ * KEXEC       Restart system using a previously loaded linux kernel
  */
 
-#define	LINUX_REBOOT_CMD_RESTART	0x01234567
-#define	LINUX_REBOOT_CMD_HALT		0xCDEF0123
-#define	LINUX_REBOOT_CMD_CAD_ON		0x89ABCDEF
-#define	LINUX_REBOOT_CMD_CAD_OFF	0x00000000
-#define	LINUX_REBOOT_CMD_POWER_OFF	0x4321FEDC
-#define	LINUX_REBOOT_CMD_RESTART2	0xA1B2C3D4
-#define	LINUX_REBOOT_CMD_SW_SUSPEND	0xD000FCE2
-#define	LINUX_REBOOT_CMD_KEXEC		0x45584543
+#define	linux_REBOOT_CMD_RESTART	0x01234567
+#define	linux_REBOOT_CMD_HALT		0xCDEF0123
+#define	linux_REBOOT_CMD_CAD_ON		0x89ABCDEF
+#define	linux_REBOOT_CMD_CAD_OFF	0x00000000
+#define	linux_REBOOT_CMD_POWER_OFF	0x4321FEDC
+#define	linux_REBOOT_CMD_RESTART2	0xA1B2C3D4
+#define	linux_REBOOT_CMD_SW_SUSPEND	0xD000FCE2
+#define	linux_REBOOT_CMD_KEXEC		0x45584543
 ```
 
-#### reboot过程的代码分析
+##### reboot过程的代码分析
 reboot的系统调用定义在`kernel/reboot.c`中，其代码如下
 ```c
 /*
@@ -108,11 +486,11 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 
 	/* For safety, we require "magic" arguments. */
 	// 判断magic number是否匹配
-	if (magic1 != LINUX_REBOOT_MAGIC1 ||
-			(magic2 != LINUX_REBOOT_MAGIC2 &&
-			magic2 != LINUX_REBOOT_MAGIC2A &&
-			magic2 != LINUX_REBOOT_MAGIC2B &&
-			magic2 != LINUX_REBOOT_MAGIC2C))
+	if (magic1 != linux_REBOOT_MAGIC1 ||
+			(magic2 != linux_REBOOT_MAGIC2 &&
+			magic2 != linux_REBOOT_MAGIC2A &&
+			magic2 != linux_REBOOT_MAGIC2B &&
+			magic2 != linux_REBOOT_MAGIC2C))
 		return -EINVAL;
 
 	/*
@@ -127,33 +505,33 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	/* Instead of trying to make the power_off code look like
 	 * halt when pm_power_off is not set do it the easy way.
 	 */
-	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !kernel_can_power_off())
-		cmd = LINUX_REBOOT_CMD_HALT;
+	if ((cmd == linux_REBOOT_CMD_POWER_OFF) && !kernel_can_power_off())
+		cmd = linux_REBOOT_CMD_HALT;
 
 	mutex_lock(&system_transition_mutex);
 	switch (cmd) {
-	case LINUX_REBOOT_CMD_RESTART:
+	case linux_REBOOT_CMD_RESTART:
 		kernel_restart(NULL);
 		break;
 
-	case LINUX_REBOOT_CMD_CAD_ON:
+	case linux_REBOOT_CMD_CAD_ON:
 		C_A_D = 1;
 		break;
 
-	case LINUX_REBOOT_CMD_CAD_OFF:
+	case linux_REBOOT_CMD_CAD_OFF:
 		C_A_D = 0;
 		break;
 
-	case LINUX_REBOOT_CMD_HALT:
+	case linux_REBOOT_CMD_HALT:
 		kernel_halt();
 		do_exit(0);
 
-	case LINUX_REBOOT_CMD_POWER_OFF:
+	case linux_REBOOT_CMD_POWER_OFF:
 		kernel_power_off();
 		do_exit(0);
 		break;
 
-	case LINUX_REBOOT_CMD_RESTART2:
+	case linux_REBOOT_CMD_RESTART2:
 		ret = strncpy_from_user(&buffer[0], arg, sizeof(buffer) - 1);
 		if (ret < 0) {
 			ret = -EFAULT;
@@ -165,13 +543,13 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		break;
 
 #ifdef CONFIG_KEXEC_CORE
-	case LINUX_REBOOT_CMD_KEXEC:
+	case linux_REBOOT_CMD_KEXEC:
 		ret = kernel_kexec();
 		break;
 #endif
 
 #ifdef CONFIG_HIBERNATION
-	case LINUX_REBOOT_CMD_SW_SUSPEND:
+	case linux_REBOOT_CMD_SW_SUSPEND:
 		ret = hibernate();
 		break;
 #endif
@@ -336,6 +714,25 @@ void device_shutdown(void)
 }
 ```
 
+向`restart_prep_handler_list`通知链发送消息
+```c
+/*
+ *	Notifier list for kernel code which wants to be called
+ *	to prepare system for restart.
+ */
+static BLOCKING_NOTIFIER_HEAD(restart_prep_handler_list);
+
+static void do_kernel_restart_prepare(void)
+{
+	blocking_notifier_call_chain(&restart_prep_handler_list, 0, NULL);
+}
+```
+
+#### suspend过程分析
+linux内核提供了三种suspend: freeze、standby和STR(Suspend to RAM)，在用户空间向`/sys/power/state`文件分别写入freeze、standby、mem，即可触发它们
+
+
+
 ### Runtime PM
 runtime PM的思想：每个设备都处理好自己的电源管理工作，尽量以最低的能耗完成交代的任务，尽量在不需要工作的时候进入低功耗状态，尽量不和其它模块有过多的耦合。
 
@@ -444,14 +841,14 @@ runtime PM提供的接口位于`include/linux/pm_runtime.h`
 
 ### power supply子系统
 #### power supply软件架构
-Linux内核抽象出来power supply子系统为驱动提供了统一的框架，功能包括：
+linux内核抽象出来power supply子系统为驱动提供了统一的框架，功能包括：
 1. 抽象power supply设备的共性，向用户空间提供统一的API
 2. 为底层power supply驱动的编写，提供简单统一的方式，同时封装并实现公共逻辑
 
 power supply class位于`driver/power/supply`目录中，主要由3部分组成：
 1. power supply core：用于抽象核心数据结构，实现公共逻辑
 2. power supply sysfs：实现sysfs以及uevent功能
-3. power supply leds：给予Linux led class，提供power supply设备状态指示的通用实现
+3. power supply leds：给予linux led class，提供power supply设备状态指示的通用实现
 
 驱动工程师可以基于power supply class实现具体的power supply driver，主要处理平台相关、硬件相关的逻辑
 
