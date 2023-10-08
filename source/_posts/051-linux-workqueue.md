@@ -130,7 +130,7 @@ struct worker_pool {
 typedef void (*work_func_t)(struct work_struct *work);
 
 struct work_struct {
-	// 该work的一些标志位
+	// 该work的一些标志位，另外还存储了pool_workqueue的指针
 	atomic_long_t data;
 	// 将工作任务链接起来
 	struct list_head entry;
