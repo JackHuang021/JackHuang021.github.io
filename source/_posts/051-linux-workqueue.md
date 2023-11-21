@@ -678,6 +678,7 @@ bool flush_work(struct work_struct *work)
 }
 EXPORT_SYMBOL_GPL(flush_work);
 
+
 static bool __flush_work(struct work_struct *work, bool from_cancel)
 {
 	struct wq_barrier barr;
@@ -764,4 +765,6 @@ already_gone:
 > + va_start(args, fmt)：根据参数fmt的地址，获取fmt后面的参数地址，并保存在args指针变量中
 > + va_end(args)：释放args指针，将其值赋为NULL
 
-
+### 参考
++ [https://docs.kernel.org/translations/zh_CN/core-api/workqueue.html](https://docs.kernel.org/translations/zh_CN/core-api/workqueue.html)
++ 
