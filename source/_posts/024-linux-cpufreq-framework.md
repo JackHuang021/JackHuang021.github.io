@@ -19,9 +19,9 @@ Linux Kernel主要通过三类机制来实现SMP（Symmetric Multiprocessing，�
 cpufreq framework的核心功能，是通过调整CPU core的电压或频率，兼顾系统的性能和功耗。在不需要高性能时，降低电压或频率，以降低功耗；在需要高性能时，提高电压或频率，以提高性能。
 
 cpufreq framework中的几个重要概念：
-1. policy（策略）：同一个簇的CPU动态调频的一个集合结构体，包含了当前使用的governor和cpufreq driver
+1. policy（策略）：同一个power domain CPU动态调频策略，包含了当前使用的governor和cpufreq driver
 2. governor（调节器）：决定如何计算合适的频率或电压
-3. cpufreq driver：来实现真正的调频执行工作（与平台相关）
+3. cpufreq driver（调频驱动）：实现真正的调频执行工作（与平台相关）
 
 除此之外，cpufreq还包含cpufreq stats, cpufreq qos, cpufreq notifier等辅助模块，其主要功能如下：
 1. cpufreq stats：用于搜集cpufreq的一些统计数据，如CPU在每个频点下的运行时间，总的频率切换次数等
@@ -57,6 +57,7 @@ sysfs用户层接口，目录位于`/sys/devices/system/cpu/cpufreq/policy`
 #### cpufreq软件架构
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103092146.png)
 cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑和接口代码抽象出来
+
 + `cpufreq`作为所有cpu设备的一个功能，注册到了`cpu_subsys`总线上
 + 对上以sysfs的形式向用户空间提供统一的接口，以notifier的形式向其他driver提供频率变化的通知
 + 对下提供CPU频率和电压控制的驱动框架，方便底层driver的开发，同时提供governor框架，用于实现不同的频率调整机制
@@ -141,10 +142,8 @@ struct cpufreq_policy {
 ```c
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 ```
-这里对应E2000 sysfs中3个policy文件夹，两个小核在一个簇中，使用1个policy，另外两个大核分别对应1个policy  
+这里对应E2000 sysfs中3个policy文件夹，两个小核使用1个policy，另外两个大核分别对应1个policy  
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103094857.png)
-
-> per-CPU变量是linux系统一个非常重要的特性，它为系统中的每个处理器都分配了该变量的副本。这样做的好处是，在多处理器系统中，当处理器操作属于它的变量副本时，不需要考虑与其他处理器的竞争的问题，同时该副本还可以充分利用处理器本地的硬件缓冲cache来提供访问速度
 
 #### cpufreq初始化
 ##### 内核配置
@@ -1622,6 +1621,7 @@ struct sugov_policy {
 ```
 
 `sugov_cpu`结构体，sugov为每个cpu构建了该数据结构，记录每个CPU的调频数据信息
+
 ```c
 struct sugov_cpu {
 	// 保存了cpu util变化后的回调函数
@@ -1818,7 +1818,7 @@ CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到ca
 
 #### EAS代码相关结构体
 
-perf_domain结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的，性能域之间形成链，链表头存放在root_domian中
+perf_domain结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的，性能域之间形成链，链表头存放在root_domain中
 ```c
 // kernel/sched/sched.h
 // perf_comain 结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的
@@ -1934,8 +1934,6 @@ struct em_perf_domain {
 ```
 
 #### perf_domain初始化
-
-
 start_kernel() -> sched_init() -> init_defrootdomain()
 ```c
 // kernel/sched/core.c
@@ -1943,93 +1941,9 @@ void __init sched_init(void)
 {
 	...
 #ifdef CONFIG_SMP
-	// 这里只是一些简单的初始化
 	init_defrootdmain();
 #endif
 	...
-}
-
-// include/linux/bitmap.h
-#define small_const_nbits(nbits) \
-	(__builtin_constant_p(nbits) && (nbits) <= BITS_PER_LONG && (nbits) > 0)
-
-static __always_inline int bitmap_weight(const unsigned long *src,
-								unsigned int nbits)
-{
-	// 这个条件不满足，直接执行下面的__bitmap_weight()
-	if (small_const_nbits(nbits))
-		return hweight_long(*src & BITMAP_LAST_WORD_MASK(nbits));
-	// 这里传入的src实际就是所有CPU状态位
-	return __bitmap_weight(src, nbits);
-}
-
-// lib/bitmap.c
-int __bitmap_weight(const unsigned long *bitmap, unsigned int bits)
-{
-	unsigned int k, lim = bits/BITS_PER_LONG;
-	int w = 0;
-
-	for (k = 0; k < lim; k++)
-		w += hweight_long(bitmap[k]);
-
-	if (bits % BITS_PER_LONG)
-		w += hweight_long(bitmap[k] & BITMAP_LAST_WORD_MASK(bits));
-
-	return w;
-}
-
-// include/linux/bitops.h
-static __always_inline unsigned long hweight_long(unsigned long w)
-{
-	return sizeof(w) == 4 ? hweight32(w) : hweight64((__64)w);
-}
-
-// include/asm-generic/bitops/const_hweight.h
-// __builtin_constant_p(w) gcc的内建函数
-// 如果w的值在编译时能确定，那么该函数返回值为1
-// 这里传入的bitmap[k]不是常量，计算走__arch_hweight64()
-#define hweight64(w) (__builtin_constant_p(w) ? \
-			__const_hweight64(w) : __arch_hweight64(w))
-
-// include/asm-generic/bitops/arch_hweight.h
-static inline unsigned long __arch_hweight64(u64 w)
-{
-	return __sw_hweight64(w);
-}
-
-// lib/weight.c
-// 统计给定数字w中值为1的bit位个数
-unsigned long __sw_hweight64(__u64 w)
-{
-#if BITS_PER_LONG == 32
-	return __sw_hweight32((unsigned int)(w >> 32)) +
-	       __sw_hweight32((unsigned int)w);
-#elif BITS_PER_LONG == 64
-#ifdef CONFIG_ARCH_HAS_FAST_MULTIPLIER
-	w -= (w >> 1) & 0x5555555555555555ul;
-	w =  (w & 0x3333333333333333ul) + ((w >> 2) & 0x3333333333333333ul);
-	w =  (w + (w >> 4)) & 0x0f0f0f0f0f0f0f0ful;
-	return (w * 0x0101010101010101ul) >> 56;
-#else
-	__u64 res = w - ((w >> 1) & 0x5555555555555555ul);
-	res = (res & 0x3333333333333333ul) + ((res >> 2) & 0x3333333333333333ul);
-	res = (res + (res >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
-	res = res + (res >> 8);
-	res = res + (res >> 16);
-	return (res + (res >> 32)) & 0x00000000000000FFul;
-#endif
-#endif
-}
-EXPORT_SYMBOL(__sw_hweight64);
-
-// include/linux/cpumask.h
-// cpumask_weight()
-#define nr_cpumask_bits		((unsigned int)NR_CPUS)
-#define cpumask_bits(maskp)	((maskp)->bits)							
-
-static inline unsigned int cpumask_weight(const struct cpumask *srcp)
-{
-	return bitmap_weight(cpumask_bits(srcp), nr_cpumask_bits);
 }
 
 // kernel/sched/topology.c
@@ -2144,7 +2058,7 @@ E2000Q 5.10内核，perf_domain_debug 打印信息
 ```
 
 root_domain的overload和overutilized说明：
-+ 对于一个 CPU 而言，其处于 overload 状态则说明其 rq 上有大于等于2个任务，或者虽然只有一个任务，但是是 misfit task
++ 对于一个 CPU 而言，其处于 overload 状态则说明其 rq 上有大于等于2个任务
 + 对于一个 CPU 而言，其处于 overutilized 状态说明该 cpu 的 utility 超过其 capacity（缺省预留20%的算力，另外，这里的 capacity 是用于cfs任务的算力）
 + 对于 root domain，overload 表示至少有一个 cpu 处于 overload 状态。overutilized 表示至少有一个 cpu 处于 overutilized 状态
 + overutilized 状态非常重要，它决定了调度器是否启用EAS，只有在系统没有 overutilized 的情况下EAS才会生效。overload和newidle balance的频次控制相关，当系统在overload的情况下，newidle balance才会启动进行均衡。
@@ -2468,3 +2382,6 @@ fail:
 	return -1;
 }
 ```
+
+### EAS Mainline
+https://git.gitlab.arm.com/linux-arm/linux-power.git
