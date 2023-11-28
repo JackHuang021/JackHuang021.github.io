@@ -334,6 +334,7 @@ struct drm_plane_helper_funcs {
  */
 struct drm_crtc {
 	/** @dev: parent DRM device */
+	// 指向drm_device
 	struct drm_device *dev;
 	/** @port: OF node used by drm_of_find_possible_crtcs(). */
 	struct device_node *port;
@@ -344,9 +345,11 @@ struct drm_crtc {
 	 * Invariant over the lifetime of @dev and therefore does not need
 	 * locking.
 	 */
+	// 链接到drm_device->drm_mode_config->crtc_list链表
 	struct list_head head;
 
 	/** @name: human readable name, can be overwritten by the driver */
+	// crtc名称，Phytium DC驱动里面CRTC的名字是phys_pipe 0和phys_pipe 1
 	char *name;
 
 	/**
@@ -371,6 +374,7 @@ struct drm_crtc {
 	 * the SETCRTC and PAGE_FLIP IOCTLs. It does not have any significance
 	 * beyond that.
 	 */
+	// 指向主图层
 	struct drm_plane *primary;
 
 	/**
@@ -380,6 +384,7 @@ struct drm_crtc {
 	 * and SETCURSOR2 IOCTLs. It does not have any significance
 	 * beyond that.
 	 */
+	// 指向光标图层
 	struct drm_plane *cursor;
 
 	/**
@@ -459,6 +464,7 @@ struct drm_crtc {
 	int y;
 
 	/** @funcs: CRTC control functions */
+	// CRTC控制的相关接口，由厂家实现
 	const struct drm_crtc_funcs *funcs;
 
 	/**
@@ -627,8 +633,366 @@ struct drm_device {
     struct drm_vram_mm *vram_mm;
     enum switch_power_state switch_power_state;
     struct drm_fb_helper *fb_helper;
-
 	...
+};
+```
+
+#### struct drm_mode_config
+```c
+struct drm_mode_config {
+	struct mutex mutex;
+	struct drm_modeset_lock connection_mutex;
+	struct drm_modeset_acquire_ctx *acquire_ctx;
+	struct mutex idr_mutex;
+	struct idr object_idr;
+	struct idr tile_idr;
+
+	struct mutex fb_lock;
+	int num_fb;
+	struct list_head fb_list;
+
+	spinlock_t connector_list_lock;
+	int num_connector;
+	struct ida connector_ida;
+	struct list_head connector_list;
+	struct list_head connector_free_list;
+	struct work_struct connector_free_work;
+
+	int num_encoder;
+	struct list_head encoder_list;
+
+	int num_total_planel;
+	struct list_head plane_list;
+
+	int num_crtc;
+	struct list_head crtc_list;
+
+	struct list_head property_list;
+	struct list_head privobj_list;
+
+	int min_width;
+	int min_height;
+	int max_width;
+	int max_height;
+	const struct drm_mode_config_funcs *funcs;
+	resource_size_t fb_base;
+
+	bool poll_enabled;
+	bool poll_running;
+	bool delayed_event;
+	struct delayed_work output_poll_work;
+
+	struct mutex blob_lock;
+	struct list_head property_blob_list;
+
+	struct drm_property *edid_property;
+	struct drm_property *dpms_property;
+	struct drm_property *path_property;
+	struct drm_property *tile_property;
+	struct drm_property *link_status_property;
+	struct drm_property *plane_type_property;
+	struct drm_property *prop_src_x;
+	struct drm_property *prop_src_y;
+	struct drm_property *prop_src_w;
+	struct drm_property *prop_src_h;
+	struct drm_property *prop_crtc_x;
+	struct drm_property *prop_crtc_y;
+	struct drm_property *prop_crtc_w;
+	struct drm_property *prop_crtc_h;
+	struct drm_property *prop_fb_id;
+	struct drm_property *prop_in_fence_id;
+	struct drm_property *prop_out_fence_id;
+	struct drm_property *prop_crtc_id;
+	struct drm_property *prop_fb_damage_clips;
+	struct drm_property *prop_active;
+	/**
+	 * @prop_mode_id: Default atomic CRTC property to set the mode for a
+	 * CRTC. A 0 mode implies that the CRTC is entirely disabled - all
+	 * connectors must be of and active must be set to disabled, too.
+	 */
+	struct drm_property *prop_mode_id;
+	/**
+	 * @prop_vrr_enabled: Default atomic CRTC property to indicate
+	 * whether variable refresh rate should be enabled on the CRTC.
+	 */
+	struct drm_property *prop_vrr_enabled;
+
+	/**
+	 * @dvi_i_subconnector_property: Optional DVI-I property to
+	 * differentiate between analog or digital mode.
+	 */
+	struct drm_property *dvi_i_subconnector_property;
+	/**
+	 * @dvi_i_select_subconnector_property: Optional DVI-I property to
+	 * select between analog or digital mode.
+	 */
+	struct drm_property *dvi_i_select_subconnector_property;
+
+	/**
+	 * @dp_subconnector_property: Optional DP property to differentiate
+	 * between different DP downstream port types.
+	 */
+	struct drm_property *dp_subconnector_property;
+
+	/**
+	 * @tv_subconnector_property: Optional TV property to differentiate
+	 * between different TV connector types.
+	 */
+	struct drm_property *tv_subconnector_property;
+	/**
+	 * @tv_select_subconnector_property: Optional TV property to select
+	 * between different TV connector types.
+	 */
+	struct drm_property *tv_select_subconnector_property;
+	/**
+	 * @tv_mode_property: Optional TV property to select
+	 * the output TV mode.
+	 */
+	struct drm_property *tv_mode_property;
+	/**
+	 * @tv_left_margin_property: Optional TV property to set the left
+	 * margin (expressed in pixels).
+	 */
+	struct drm_property *tv_left_margin_property;
+	/**
+	 * @tv_right_margin_property: Optional TV property to set the right
+	 * margin (expressed in pixels).
+	 */
+	struct drm_property *tv_right_margin_property;
+	/**
+	 * @tv_top_margin_property: Optional TV property to set the right
+	 * margin (expressed in pixels).
+	 */
+	struct drm_property *tv_top_margin_property;
+	/**
+	 * @tv_bottom_margin_property: Optional TV property to set the right
+	 * margin (expressed in pixels).
+	 */
+	struct drm_property *tv_bottom_margin_property;
+	/**
+	 * @tv_brightness_property: Optional TV property to set the
+	 * brightness.
+	 */
+	struct drm_property *tv_brightness_property;
+	/**
+	 * @tv_contrast_property: Optional TV property to set the
+	 * contrast.
+	 */
+	struct drm_property *tv_contrast_property;
+	/**
+	 * @tv_flicker_reduction_property: Optional TV property to control the
+	 * flicker reduction mode.
+	 */
+	struct drm_property *tv_flicker_reduction_property;
+	/**
+	 * @tv_overscan_property: Optional TV property to control the overscan
+	 * setting.
+	 */
+	struct drm_property *tv_overscan_property;
+	/**
+	 * @tv_saturation_property: Optional TV property to set the
+	 * saturation.
+	 */
+	struct drm_property *tv_saturation_property;
+	/**
+	 * @tv_hue_property: Optional TV property to set the hue.
+	 */
+	struct drm_property *tv_hue_property;
+
+	/**
+	 * @scaling_mode_property: Optional connector property to control the
+	 * upscaling, mostly used for built-in panels.
+	 */
+	struct drm_property *scaling_mode_property;
+	/**
+	 * @aspect_ratio_property: Optional connector property to control the
+	 * HDMI infoframe aspect ratio setting.
+	 */
+	struct drm_property *aspect_ratio_property;
+	/**
+	 * @content_type_property: Optional connector property to control the
+	 * HDMI infoframe content type setting.
+	 */
+	struct drm_property *content_type_property;
+	/**
+	 * @degamma_lut_property: Optional CRTC property to set the LUT used to
+	 * convert the framebuffer's colors to linear gamma.
+	 */
+	struct drm_property *degamma_lut_property;
+	/**
+	 * @degamma_lut_size_property: Optional CRTC property for the size of
+	 * the degamma LUT as supported by the driver (read-only).
+	 */
+	struct drm_property *degamma_lut_size_property;
+	/**
+	 * @ctm_property: Optional CRTC property to set the
+	 * matrix used to convert colors after the lookup in the
+	 * degamma LUT.
+	 */
+	struct drm_property *ctm_property;
+	/**
+	 * @gamma_lut_property: Optional CRTC property to set the LUT used to
+	 * convert the colors, after the CTM matrix, to the gamma space of the
+	 * connected screen.
+	 */
+	struct drm_property *gamma_lut_property;
+	/**
+	 * @gamma_lut_size_property: Optional CRTC property for the size of the
+	 * gamma LUT as supported by the driver (read-only).
+	 */
+	struct drm_property *gamma_lut_size_property;
+
+	/**
+	 * @suggested_x_property: Optional connector property with a hint for
+	 * the position of the output on the host's screen.
+	 */
+	struct drm_property *suggested_x_property;
+	/**
+	 * @suggested_y_property: Optional connector property with a hint for
+	 * the position of the output on the host's screen.
+	 */
+	struct drm_property *suggested_y_property;
+
+	/**
+	 * @non_desktop_property: Optional connector property with a hint
+	 * that device isn't a standard display, and the console/desktop,
+	 * should not be displayed on it.
+	 */
+	struct drm_property *non_desktop_property;
+
+	/**
+	 * @panel_orientation_property: Optional connector property indicating
+	 * how the lcd-panel is mounted inside the casing (e.g. normal or
+	 * upside-down).
+	 */
+	struct drm_property *panel_orientation_property;
+
+	/**
+	 * @writeback_fb_id_property: Property for writeback connectors, storing
+	 * the ID of the output framebuffer.
+	 * See also: drm_writeback_connector_init()
+	 */
+	struct drm_property *writeback_fb_id_property;
+
+	/**
+	 * @writeback_pixel_formats_property: Property for writeback connectors,
+	 * storing an array of the supported pixel formats for the writeback
+	 * engine (read-only).
+	 * See also: drm_writeback_connector_init()
+	 */
+	struct drm_property *writeback_pixel_formats_property;
+	/**
+	 * @writeback_out_fence_ptr_property: Property for writeback connectors,
+	 * fd pointer representing the outgoing fences for a writeback
+	 * connector. Userspace should provide a pointer to a value of type s32,
+	 * and then cast that pointer to u64.
+	 * See also: drm_writeback_connector_init()
+	 */
+	struct drm_property *writeback_out_fence_ptr_property;
+
+	/**
+	 * @hdr_output_metadata_property: Connector property containing hdr
+	 * metatada. This will be provided by userspace compositors based
+	 * on HDR content
+	 */
+	struct drm_property *hdr_output_metadata_property;
+
+	/**
+	 * @content_protection_property: DRM ENUM property for content
+	 * protection. See drm_connector_attach_content_protection_property().
+	 */
+	struct drm_property *content_protection_property;
+
+	/**
+	 * @hdcp_content_type_property: DRM ENUM property for type of
+	 * Protected Content.
+	 */
+	struct drm_property *hdcp_content_type_property;
+
+	/* dumb ioctl parameters */
+	uint32_t preferred_depth, prefer_shadow;
+
+	/**
+	 * @prefer_shadow_fbdev:
+	 *
+	 * Hint to framebuffer emulation to prefer shadow-fb rendering.
+	 */
+	bool prefer_shadow_fbdev;
+
+	/**
+	 * @fbdev_use_iomem:
+	 *
+	 * Set to true if framebuffer reside in iomem.
+	 * When set to true memcpy_toio() is used when copying the framebuffer in
+	 * drm_fb_helper.drm_fb_helper_dirty_blit_real().
+	 *
+	 * FIXME: This should be replaced with a per-mapping is_iomem
+	 * flag (like ttm does), and then used everywhere in fbdev code.
+	 */
+	bool fbdev_use_iomem;
+
+	/**
+	 * @quirk_addfb_prefer_xbgr_30bpp:
+	 *
+	 * Special hack for legacy ADDFB to keep nouveau userspace happy. Should
+	 * only ever be set by the nouveau kernel driver.
+	 */
+	bool quirk_addfb_prefer_xbgr_30bpp;
+
+	/**
+	 * @quirk_addfb_prefer_host_byte_order:
+	 *
+	 * When set to true drm_mode_addfb() will pick host byte order
+	 * pixel_format when calling drm_mode_addfb2().  This is how
+	 * drm_mode_addfb() should have worked from day one.  It
+	 * didn't though, so we ended up with quirks in both kernel
+	 * and userspace drivers to deal with the broken behavior.
+	 * Simply fixing drm_mode_addfb() unconditionally would break
+	 * these drivers, so add a quirk bit here to allow drivers
+	 * opt-in.
+	 */
+	bool quirk_addfb_prefer_host_byte_order;
+
+	/**
+	 * @async_page_flip: Does this device support async flips on the primary
+	 * plane?
+	 */
+	bool async_page_flip;
+
+	/**
+	 * @allow_fb_modifiers:
+	 *
+	 * Whether the driver supports fb modifiers in the ADDFB2.1 ioctl call.
+	 */
+	bool allow_fb_modifiers;
+
+	/**
+	 * @normalize_zpos:
+	 *
+	 * If true the drm core will call drm_atomic_normalize_zpos() as part of
+	 * atomic mode checking from drm_atomic_helper_check()
+	 */
+	bool normalize_zpos;
+
+	/**
+	 * @modifiers_property: Plane property to list support modifier/format
+	 * combination.
+	 */
+	struct drm_property *modifiers_property;
+
+	/* cursor size */
+	uint32_t cursor_width, cursor_height;
+
+	/**
+	 * @suspend_state:
+	 *
+	 * Atomic state when suspended.
+	 * Set by drm_mode_config_helper_suspend() and cleared by
+	 * drm_mode_config_helper_resume().
+	 */
+	struct drm_atomic_state *suspend_state;
+
+	const struct drm_mode_config_helper_funcs *helper_private;
 };
 ```
 
@@ -1098,6 +1462,7 @@ struct phytium_display_private {
 	struct phytium_device_info info;
 	char support_memory_type;
 	char reserve[3];
+	/* DC寄存器基地址，目前E2000有两路DC */
 	uint32_t dc_reg_base[3];
 	uint32_t dcreq_reg_base[3];
 	uint32_t address_transform_base;
@@ -1137,6 +1502,22 @@ struct phytium_display_private {
 };
 ```
 
+struct phytium_device_info结构体定义
+```c
+struct phytium_device_info {
+	unsigned char platform_mask;
+	unsigned char pipe_mask;
+	unsigned char num_pipes;
+	unsigned char total_pipes;
+	unsigned char edp_mask;
+	unsigned int crtc_clock_max;
+	unsigned int hdisplay_max;
+	unsigned int vdisplay_max;
+	unsigned int backlight_max;
+	unsigned long address_mask;
+};
+```
+
 struct phytium_dp_device结构体定义
 ```c
 struct phytium_dp_device {
@@ -1147,6 +1528,7 @@ struct phytium_dp_device {
 	struct drm_display_mode mode;
 	bool link_trained;
 	bool detect_done;
+	// 是否为edp接口
 	bool is_edp;
 	bool reserve0;
 	struct drm_dp_aux aux;
@@ -1191,6 +1573,64 @@ struct phytium_dp_device {
 
 	struct phytium_panel panel;
 	struct drm_display_mode native_mode;
+};
+```
+
+phytium crtc相关结构体定义
+```c
+// drivers/gpu/drm/phytium/phytium_crtc.h
+struct phytium_crtc {
+	struct drm_crtc base;
+	int phys_pipe;
+	unsigned int bpc;
+
+	uint32_t src_width;
+	uint32_t src_height;
+	uint32_t dst_width;
+	uint32_t dst_height; 
+	uint32_t dst_x;
+	uint32_t dst_y;
+	bool scale_enable;
+	bool reserve[3];
+
+	// 像素时钟寄存器配置
+	void (*dc_hw_config_pix_clock)(struct drm_crtc *crtc, int clock);
+	void (*dc_hw_disable)(struct drm_crtc *crtc);
+	void (*dc_hw_reset)(struct drm_crtc *crtc);
+};
+```
+
+phytium_plane结构体定义
+```c
+// drivers/gpu/drm/phytium/phytium_plane.h
+struct phytium_plane {
+	struct drm_plane base;
+	int phys_pipe;
+	// framebuffer数据起始地址
+	unsigned long iova[PHYTIUM_FORMAT_MAX_PLANE];
+	unsigned long size[PHYTIUM_FORMAT_MAX_PLANE];
+	unsigned int format;
+	unsigned int tiling[PHYTIUM_FORMAT_MAX_PLANE];
+	unsigned int swizzle;
+	unsigned int uv_swizzle;
+	unsigned int rot_angle;
+
+	/* only for cursor */
+	bool enable;
+	bool reserve[3];
+	unsigned int cursor_x;
+	unsigned int cursor_y;
+	unsigned int cursor_hot_x;
+	unsigned int cursor_hot_y;
+
+	// 获取像素颜色格式
+	void (*dc_hw_plane_get_format)(const uint64_t **format_modifiers,
+								   const uint32_t **formats,
+								   uint32_t *format_count);
+	void (*dc_hw_update_dcreq)(struct drm_plane *plane);
+	// 配置framebuffer数据起始地址的高8位
+	void (*dc_hw_update_primary_hi_addr)(struct drm_plane *plane);
+	void (*dc_hw_update_cursor_hi_addr)(struct drm_plane *plane, uint64_t iova);
 };
 ```
 
@@ -1260,7 +1700,7 @@ static int phytium_platform_probe(struct platform_device *pdev)
 		goto failed_carveout_mem_init;
 	}
 
-	// 注册drm_device
+	// 注册drm_device，主要的初始化过程在这里面
 	ret = drm_dev_register(dev, 0);
 	if (ret) {
 		DRM_ERROR("failed to register drm dev\n");
@@ -1282,6 +1722,376 @@ failed_platform_private_init:
 }
 ```
 
+drm_dev_register()分析
+```c
+int drm_dev_register(struct drm_device *dev, unsigned long flags)
+{
+	struct drm_driver *driver = dev->driver;
+	int ret;
+
+	if (!driver->load)
+		drm_mode_config_validate(dev);
+
+	WARN_ON(!dev->managed.final_kfree);
+
+	if (drm_dev_needs_global_mutex(dev))
+		mutex_lock(&drm_global_mutex);
+	// phytium dc驱动没有DRM_RENDER特性
+	ret = drm_minor_register(dev, DRM_MINOR_RENDER);
+	if (ret)
+		goto err_minors;
+	// 创建sysfs目录，/sys/kernel/debug/dri/目录
+	ret = drm_minor_register(dev, DRM_MINOR_PRIMARY);
+	if (ret)
+		goto err_minors;
+
+	ret = create_compat_control_link(dev);
+	if (ret)
+		goto err_minors;
+
+	dev->registered = true;
+
+	if (dev->driver->load) {
+		ret = dev->driver->load(dev, flags);
+		if (ret)
+			goto err_minors;
+	}
+
+	// register_all接口里面主要是各个对象funcs中late_register接口的调用
+	// Phytium驱动中没有实现该接口
+	if (drm_core_check_feature(dev, DRIVER_MODESET))
+		drm_modeset_register_all(dev);
+
+	ret = 0;
+
+	DRM_INFO("Initialized %s %d.%d.%d %s for %s on minor %d\n",
+		 driver->name, driver->major, driver->minor,
+		 driver->patchlevel, driver->date,
+		 dev->dev ? dev_name(dev->dev) : "virtual device",
+		 dev->primary->index);
+
+	goto out_unlock;
+
+err_minors:
+	remove_compat_control_link(dev);
+	drm_minor_unregister(dev, DRM_MINOR_PRIMARY);
+	drm_minor_unregister(dev, DRM_MINOR_RENDER);
+out_unlock:
+	if (drm_dev_needs_global_mutex(dev))
+		mutex_unlock(&drm_global_mutex);
+	return ret;
+}
+EXPORT_SYMBOL(drm_dev_register);
+```
+
+phytium_display_load()分析
+```c
+static int phytium_display_load(struct drm_device *dev, unsigned long flags)
+{
+	struct phytium_display_private *priv = dev->dev_private;
+	int ret = 0;
+	
+	// 初始化drm_device->vblank，创建两个工作线程card0-crtc0 card0-crtc1
+	ret = drm_vblank_init(dev, priv->info.num_pipes);
+	if (ret) {
+		DRM_ERROR("vblank init failed\n");
+		goto failed_vblank_init;
+	}
+
+	// crtc和plane初始化
+	ret = phytium_modeset_init(dev);
+	if (ret) {
+		DRM_ERROR("phytium_modeset_init failed\n");
+		goto failed_modeset_init;
+	}
+
+	if (priv->support_memory_type & MEMORY_TYPE_VRAM)
+		priv->vram_hw_init(priv);
+
+	ret = drm_irq_install(dev, priv->irq);
+	if (ret) {
+		DRM_ERROR("install irq failed\n");
+		goto failed_irq_install;
+	}
+
+	ret = phytium_drm_fbdev_init(dev);
+	if (ret)
+		DRM_ERROR("failed to init dev\n");
+
+	phytium_debugfs_display_register(priv);
+
+	return ret;
+
+failed_irq_install:
+	drm_mode_config_cleanup(dev);
+failed_modeset_init:
+failed_vblank_init:
+	return ret;
+}
+```
+
+phytium_crtc_init()分析
+```c
+int phytium_crtc_init(struct drm_device *dev, int phys_pipe)
+{
+	struct phytium_crtc *phytium_crtc;
+	struct phytium_crtc_state *phytium_crtc_state;
+	struct phytium_plane *phytium_primary_plane = NULL;
+	struct phytium_plane *phytium_cursor_plane = NULL;
+	struct phytium_display_private *priv = dev->dev_private;
+	int ret;
+
+	phytium_crtc = kzalloc(sizeof(*phytium_crtc), GFP_KERNEL);
+	if (!phytium_crtc) {
+		ret = -ENOMEM;
+		goto failed_malloc_crtc;
+	}
+
+	phytium_crtc_state = kzalloc(sizeof(*phytium_crtc_state), GFP_KERNEL);
+	if (!phytium_crtc_state) {
+		ret = -ENOMEM;
+		goto failed_malloc_crtc_state;
+	}
+
+	phytium_crtc_state->base.crtc = &phytium_crtc->base;
+	phytium_crtc->base.state = &phytium_crtc_state->base;
+	// phys_pipe代表的应该是两路display
+	phytium_crtc->phys_pipe = phys_pipe;
+
+	// 在phytium_crtc中对硬件相关的结构进行了剥离
+	if (IS_PX210(priv)) {
+		// x100的crtc hw相关配置drivers/gpu/drm/phytium/px210_dc.c中
+		phytium_crtc->dc_hw_config_pix_clock = px210_dc_hw_config_pix_clock;
+		phytium_crtc->dc_hw_disable = px210_dc_hw_disable;
+		phytium_crtc->dc_hw_reset = NULL;
+		priv->dc_reg_base[phys_pipe] = PX210_DC_BASE(phys_pipe);
+		priv->dcreq_reg_base[phys_pipe] = PX210_DCREQ_BASE(phys_pipe);
+		priv->address_transform_base = PX210_ADDRESS_TRANSFORM_BASE;
+	} else if (IS_PE220X(priv)) {
+		// e2000的crtc hw相关配置drivers/gpu/drm/phytium/pe220x_dc.c中
+		phytium_crtc->dc_hw_config_pix_clock = pe220x_dc_hw_config_pix_clock;
+		phytium_crtc->dc_hw_disable = pe220x_dc_hw_disable;
+		phytium_crtc->dc_hw_reset = pe220x_dc_hw_reset;
+		priv->dc_reg_base[phys_pipe] = PE220X_DC_BASE(phys_pipe);
+		priv->dcreq_reg_base[phys_pipe] = 0x0;
+		priv->address_transform_base = PE220X_ADDRESS_TRANSFORM_BASE;
+	}
+
+	// 每个DC有两个plane，分别是主图层和鼠标图层
+	phytium_primary_plane = phytium_primary_plane_create(dev, phys_pipe);
+	if (IS_ERR(phytium_primary_plane)) {
+		ret = PTR_ERR(phytium_primary_plane);
+		DRM_ERROR("create primary plane failed, phys_pipe(%d)\n", phys_pipe);
+		goto failed_create_primary;
+	}
+
+	phytium_cursor_plane = phytium_cursor_plane_create(dev, phys_pipe);
+	if (IS_ERR(phytium_cursor_plane)) {
+		ret = PTR_ERR(phytium_cursor_plane);
+		DRM_ERROR("create cursor plane failed, phys_pipe(%d)\n", phys_pipe);
+		goto failed_create_cursor;
+	}
+
+	// crtc初始化
+	ret = drm_crtc_init_with_planes(dev, &phytium_crtc->base,
+					&phytium_primary_plane->base,
+					&phytium_cursor_plane->base,
+					&phytium_crtc_funcs,
+					"phys_pipe %d", phys_pipe);
+
+	if (ret) {
+		DRM_ERROR("init crtc with plane failed, phys_pipe(%d)\n", phys_pipe);
+		goto failed_crtc_init;
+	}
+	drm_crtc_helper_add(&phytium_crtc->base, &phytium_crtc_helper_funcs);
+	drm_crtc_vblank_reset(&phytium_crtc->base);
+	// 配置gamma校正
+	drm_mode_crtc_set_gamma_size(&phytium_crtc->base, GAMMA_INDEX_MAX);
+	drm_crtc_enable_color_mgmt(&phytium_crtc->base, 0, false, GAMMA_INDEX_MAX);
+	if (phytium_crtc->dc_hw_reset)
+		phytium_crtc->dc_hw_reset(&phytium_crtc->base);
+	phytium_crtc_gamma_init(&phytium_crtc->base);
+
+	return 0;
+
+failed_crtc_init:
+failed_create_cursor:
+	/* drm_mode_config_cleanup() will free any crtcs/planes already initialized */
+failed_create_primary:
+	kfree(phytium_crtc_state);
+failed_malloc_crtc_state:
+	kfree(phytium_crtc);
+failed_malloc_crtc:
+	return ret;
+}
+```
+
+phytium_dp_init()分析
+```c
+int phytium_dp_init(struct drm_device *dev, int port)
+{
+	struct phytium_display_private *priv = dev->dev_private;
+	struct phytium_dp_device *phytium_dp = NULL;
+	int ret, type;
+
+	DRM_DEBUG_KMS("%s: port %d\n", __func__, port);
+	phytium_dp = kzalloc(sizeof(*phytium_dp), GFP_KERNEL);
+	if (!phytium_dp) {
+		ret = -ENOMEM;
+		goto failed_malloc_dp;
+	}
+
+	phytium_dp->dev = dev;
+	phytium_dp->port = port;
+
+	if (IS_PX210(priv)) {
+		px210_dp_func_register(phytium_dp);
+		priv->dp_reg_base[port] = PX210_DP_BASE(port);
+		priv->phy_access_base[port] = PX210_PHY_ACCESS_BASE(port);
+	} else if (IS_PE220X(priv)) {
+		pe220x_dp_func_register(phytium_dp);
+		priv->dp_reg_base[port] = PE220X_DP_BASE(port);
+		priv->phy_access_base[port] = PE220X_PHY_ACCESS_BASE(port);
+	}
+
+	// 根据设备树中配置的ddp_mask属性来判断
+	if (phytium_dp_is_edp(phytium_dp, port)) {
+		phytium_dp->is_edp = true;
+		type = DRM_MODE_CONNECTOR_eDP;
+		phytium_dp_panel_init_backlight_funcs(phytium_dp);
+		phytium_edp_backlight_off(phytium_dp);
+		phytium_edp_panel_poweroff(phytium_dp);
+	} else {
+		phytium_dp->is_edp = false;
+		type = DRM_MODE_CONNECTOR_DisplayPort;
+	}
+
+	ret = phytium_dp_hw_init(phytium_dp);
+	if (ret) {
+		DRM_ERROR("failed to initialize dp %d\n", phytium_dp->port);
+		goto failed_init_dp;
+	}
+
+	ret = drm_encoder_init(dev, &phytium_dp->encoder,
+			       &phytium_encoder_funcs,
+			       DRM_MODE_ENCODER_TMDS, "DP %d", port);
+	if (ret) {
+		DRM_ERROR("failed to initialize encoder with drm\n");
+		goto failed_encoder_init;
+	}
+	drm_encoder_helper_add(&phytium_dp->encoder, &phytium_encoder_helper_funcs);
+	phytium_dp->encoder.possible_crtcs = phytium_get_encoder_crtc_mask(phytium_dp, port);
+
+	phytium_dp->connector.dpms   = DRM_MODE_DPMS_OFF;
+	phytium_dp->connector.polled = DRM_CONNECTOR_POLL_CONNECT | DRM_CONNECTOR_POLL_DISCONNECT;
+	ret = drm_connector_init(dev, &phytium_dp->connector, &phytium_connector_funcs,
+				 type);
+	if (ret) {
+		DRM_ERROR("failed to initialize connector with drm\n");
+		goto failed_connector_init;
+	}
+	drm_connector_helper_add(&phytium_dp->connector, &phytium_connector_helper_funcs);
+	drm_connector_attach_encoder(&phytium_dp->connector, &phytium_dp->encoder);
+
+	ret = phytium_dp_audio_codec_init(phytium_dp, port);
+	if (ret) {
+		DRM_ERROR("failed to initialize audio codec\n");
+		goto failed_connector_init;
+	}
+
+	phytium_dp->train_retry_count = 0;
+	INIT_WORK(&phytium_dp->train_retry_work, phytium_dp_train_retry_work_fn);
+	drm_connector_register(&phytium_dp->connector);
+
+	return 0;
+failed_connector_init:
+failed_encoder_init:
+failed_init_dp:
+	kfree(phytium_dp);
+failed_malloc_dp:
+	return ret;
+}
+```
+
+phytium_primary_plane_create()分析
+```c
+// drivers/gpu/drm/phytium/pe220x_dc.c
+struct phytium_plane *phytium_primary_plane_create(struct drm_device *dev, int phys_pipe)
+{
+	struct phytium_display_private *priv = dev->dev_private;
+	struct phytium_plane *phytium_plane = NULL;
+	struct phytium_plane_state *phytium_plane_state = NULL;
+	int ret = 0;
+	unsigned int flags = 0;
+	const uint32_t *formats = NULL;
+	uint32_t format_count;
+	const uint64_t *format_modifiers;
+
+	phytium_plane = kzalloc(sizeof(*phytium_plane), GFP_KERNEL);
+	if (!phytium_plane) {
+		ret = -ENOMEM;
+		goto failed_malloc_plane;
+	}
+
+	phytium_plane_state = kzalloc(sizeof(*phytium_plane_state), GFP_KERNEL);
+	if (!phytium_plane_state) {
+		ret = -ENOMEM;
+		goto failed_malloc_plane_state;
+	}
+	phytium_plane_state->base.plane = &phytium_plane->base;
+	phytium_plane_state->base.rotation = DRM_MODE_ROTATE_0;
+	phytium_plane->base.state = &phytium_plane_state->base;
+	phytium_plane->phys_pipe = phys_pipe;
+
+	if (IS_PX210(priv)) {
+		phytium_plane->dc_hw_plane_get_format = px210_dc_hw_plane_get_primary_format;
+		phytium_plane->dc_hw_update_dcreq = px210_dc_hw_update_dcreq;
+		phytium_plane->dc_hw_update_primary_hi_addr = px210_dc_hw_update_primary_hi_addr;
+		phytium_plane->dc_hw_update_cursor_hi_addr = NULL;
+	}  else if (IS_PE220X(priv)) {
+		phytium_plane->dc_hw_plane_get_format = pe220x_dc_hw_plane_get_primary_format;
+		phytium_plane->dc_hw_update_dcreq = NULL;
+		phytium_plane->dc_hw_update_primary_hi_addr = pe220x_dc_hw_update_primary_hi_addr;
+		phytium_plane->dc_hw_update_cursor_hi_addr = NULL;
+	}
+
+	// 获取像素颜色格式
+	phytium_plane->dc_hw_plane_get_format(&format_modifiers, &formats, &format_count);
+	// 创建plane
+	ret = drm_universal_plane_init(dev, &phytium_plane->base, 0x0,
+				       &phytium_plane_funcs, formats,
+				       format_count,
+				       format_modifiers,
+				       DRM_PLANE_TYPE_PRIMARY, "primary %d", phys_pipe);
+
+	if (ret)
+		goto failed_plane_init;
+
+	flags = DRM_MODE_ROTATE_0;
+	drm_plane_create_rotation_property(&phytium_plane->base, DRM_MODE_ROTATE_0, flags);
+	drm_plane_helper_add(&phytium_plane->base, &phytium_plane_helper_funcs);
+
+	return phytium_plane;
+failed_plane_init:
+	kfree(phytium_plane_state);
+failed_malloc_plane_state:
+	kfree(phytium_plane);
+failed_malloc_plane:
+	return ERR_PTR(ret);
+}
+```
+
+#### 热插拔中断过程
+drm_driver->irq_handler()
+	phytium_display_irq_handler()
+		phytium_dp_hpd_irq_handler()
+			phytium_dp_hpd_work_func()
+
+
+phytium_dp_hpd_work_func()分析
+```c
+
+```
 
 ### DRM调试
 针对xorg的显示问题排查步骤
@@ -1291,3 +2101,104 @@ failed_platform_private_init:
 2. 查看drm sysfs目录信息`/sys/class/drm`，
 
 3. 打开drm驱动调试信息，增加内核启动参数`drm.debug=0x1f`
+
+```bash
+plane[31]: primary 0
+        crtc=phys_pipe 0
+        fb=60
+                allocated by = gnome-shell
+                refcount=3
+                format=XR24 little-endian (0x34325258)
+                modifier=0x0
+                size=1920x1080
+                layers:
+                        size[0]=1920x1080
+                        pitch[0]=7680
+                        offset[0]=0
+                        obj[0]:
+                                name=0
+                                refcount=1
+                                start=00000000
+                                size=8355840
+                                imported=yes
+        crtc-pos=1920x1080+0+0
+        src-pos=1920.000000x1080.000000+0.000000+0.000000
+        rotation=1
+        normalized-zpos=0
+        color-encoding=ITU-R BT.601 YCbCr
+        color-range=YCbCr limited range
+plane[34]: cursor 0
+        crtc=phys_pipe 0
+        fb=63
+                allocated by = gnome-shell
+                refcount=2
+                format=AR24 little-endian (0x34325241)
+                modifier=0x0
+                size=32x32
+                layers:
+                        size[0]=32x32
+                        pitch[0]=128
+                        offset[0]=0
+                        obj[0]:
+                                name=0
+                                refcount=3
+                                start=00100fd2
+                                size=4096
+                                imported=no
+        crtc-pos=32x32+868+165
+        src-pos=32.000000x32.000000+0.000000+0.000000
+        rotation=1
+        normalized-zpos=0
+        color-encoding=ITU-R BT.601 YCbCr
+        color-range=YCbCr limited range
+```
+
+
+plane[31]: primary 0
+        crtc=phys_pipe 0
+        fb=54
+                allocated by = gnome-shell
+                refcount=3
+                format=XR24 little-endian (0x34325258)
+                modifier=0x0
+                size=1280x720
+                layers:
+                        size[0]=1280x720
+                        pitch[0]=5120
+                        offset[0]=0
+                        obj[0]:
+                                name=0
+                                refcount=2
+                                start=001013b1
+                                size=3932160
+                                imported=no
+        crtc-pos=1280x720+0+0
+        src-pos=1280.000000x720.000000+0.000000+0.000000
+        rotation=1
+        normalized-zpos=0
+        color-encoding=ITU-R BT.601 YCbCr
+        color-range=YCbCr limited range
+plane[34]: cursor 0
+        crtc=phys_pipe 0
+        fb=52
+                allocated by = gnome-shell
+                refcount=2
+                format=AR24 little-endian (0x34325241)
+                modifier=0x0
+                size=32x32
+                layers:
+                        size[0]=32x32
+                        pitch[0]=128
+                        offset[0]=0
+                        obj[0]:
+                                name=0
+                                refcount=3
+                                start=00100ff0
+                                size=4096
+                                imported=no
+        crtc-pos=32x32+714+172
+        src-pos=32.000000x32.000000+0.000000+0.000000
+        rotation=1
+        normalized-zpos=0
+        color-encoding=ITU-R BT.601 YCbCr
+        color-range=YCbCr limited range
