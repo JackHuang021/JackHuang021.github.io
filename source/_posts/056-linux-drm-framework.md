@@ -1537,6 +1537,7 @@ struct phytium_dp_device {
 	unsigned char downstream_ports[DP_MAX_DOWNSTREAM_PORTS];
 	unsigned char sink_count;
 
+	// dp链路速率，飞腾E2000为1.62Gbps/lane 2.7Gbps/lane 5.4Gbps/lane 8.1Gbps/lane
 	int *source_rates;
 	int num_source_rates;
 	int sink_rates[DP_MAX_SUPPORTED_RATES];
@@ -1965,13 +1966,13 @@ int phytium_dp_init(struct drm_device *dev, int port)
 		phytium_dp->is_edp = false;
 		type = DRM_MODE_CONNECTOR_DisplayPort;
 	}
-
+	// DP复位和一些初始化工作，完善phtium_dp结构体
 	ret = phytium_dp_hw_init(phytium_dp);
 	if (ret) {
 		DRM_ERROR("failed to initialize dp %d\n", phytium_dp->port);
 		goto failed_init_dp;
 	}
-
+	// 初始phytium_dp->encoder的某些成员，将其加入到drm_device->mode_config.encoder_list上
 	ret = drm_encoder_init(dev, &phytium_dp->encoder,
 			       &phytium_encoder_funcs,
 			       DRM_MODE_ENCODER_TMDS, "DP %d", port);
@@ -1984,6 +1985,7 @@ int phytium_dp_init(struct drm_device *dev, int port)
 
 	phytium_dp->connector.dpms   = DRM_MODE_DPMS_OFF;
 	phytium_dp->connector.polled = DRM_CONNECTOR_POLL_CONNECT | DRM_CONNECTOR_POLL_DISCONNECT;
+	// 初始化connector，对于E2000Q DEMO板分别是DP-1 DP-2
 	ret = drm_connector_init(dev, &phytium_dp->connector, &phytium_connector_funcs,
 				 type);
 	if (ret) {
@@ -2153,52 +2155,12 @@ plane[34]: cursor 0
         color-range=YCbCr limited range
 ```
 
+[    4.563524] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x0000001040000000 size:0x7e9000
+[   17.467329] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000010407e9000 size:0x7e9000
+[   17.467407] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x0000001040fd2000 size:0x7e9000
+[   17.468791] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000000f6100000 size:0x7f8000
+[   17.661906] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000010417bb000 size:0x1000
+[   21.247311] [drm:phytium_gem_free_object] free phytium_gem_obj iova:0x0x00000010407e9000 size:0x7e9000
+[   21.247417] [drm:phytium_gem_free_object] free phytium_gem_obj iova:0x0x0000001040fd2000 size:0x7e9000
+[   21.338981] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000000f6900000 size:0x7f8000
 
-plane[31]: primary 0
-        crtc=phys_pipe 0
-        fb=54
-                allocated by = gnome-shell
-                refcount=3
-                format=XR24 little-endian (0x34325258)
-                modifier=0x0
-                size=1280x720
-                layers:
-                        size[0]=1280x720
-                        pitch[0]=5120
-                        offset[0]=0
-                        obj[0]:
-                                name=0
-                                refcount=2
-                                start=001013b1
-                                size=3932160
-                                imported=no
-        crtc-pos=1280x720+0+0
-        src-pos=1280.000000x720.000000+0.000000+0.000000
-        rotation=1
-        normalized-zpos=0
-        color-encoding=ITU-R BT.601 YCbCr
-        color-range=YCbCr limited range
-plane[34]: cursor 0
-        crtc=phys_pipe 0
-        fb=52
-                allocated by = gnome-shell
-                refcount=2
-                format=AR24 little-endian (0x34325241)
-                modifier=0x0
-                size=32x32
-                layers:
-                        size[0]=32x32
-                        pitch[0]=128
-                        offset[0]=0
-                        obj[0]:
-                                name=0
-                                refcount=3
-                                start=00100ff0
-                                size=4096
-                                imported=no
-        crtc-pos=32x32+714+172
-        src-pos=32.000000x32.000000+0.000000+0.000000
-        rotation=1
-        normalized-zpos=0
-        color-encoding=ITU-R BT.601 YCbCr
-        color-range=YCbCr limited range
