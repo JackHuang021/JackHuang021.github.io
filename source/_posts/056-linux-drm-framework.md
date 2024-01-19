@@ -16,6 +16,8 @@ DRM(Direct Rendering Manager)，DRM将现代显示领域中会涉及的一些操
     + KMS(Kernel Mode Settings，内核显示模式设置)
     + GEM(Graphic Execution Manager，图形执行管理器)
 
+DRM的发展历史: [https://blog.csdn.net/hexiaolong2009/article/details/88075520](https://blog.csdn.net/hexiaolong2009/article/details/88075520)
+
 #### libdrm
 DRM框架在用户空间提供的Lib，用户或应用程序在用户空间调用libdrm提供的库函数， 即可访问到显示的资源，并对显示资源进行管理和使用。这样通过libdrm对显示资源进行统一访问，libdrm将命令传递到内核最终由DRM驱动接管各应用的请求并处理， 可以有效避免访问冲突。
 
@@ -51,6 +53,15 @@ GEM负责对DRM使用的内存进行管理，GEM框架提供的功能包括：�
 
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20231027140940.png)
+
+#### dumb buffer
+dumb buffer代表所有的绘图操作都是由CPU来完成的framebuffer，它只是一种软件功能上的定义，与你系统上是否带GPU硬件无关。即使你的硬件支持GPU加速，也不妨碍你使用dumb buffer来做CPU纯软绘的工作。正因为dumb buffer的这一功能特性，使得它普遍应用于简单UI场景，如Android的Recovery模式。
+
+#### prime
+prime在DRM驱动中其实是一种buffer共享机制，他是基于dma-buf来实现的
+
+
+### DRM框架中模块和Phytium DC/DP硬件的联系
 
 
 ### DRM驱动框架中常用的结构体
@@ -1635,6 +1646,139 @@ struct phytium_plane {
 };
 ```
 
+ioctl命令的定义
+```c
+#define DRM_IOCTL_BASE			'd'
+#define DRM_IO(nr)			_IO(DRM_IOCTL_BASE,nr)
+#define DRM_IOR(nr,type)		_IOR(DRM_IOCTL_BASE,nr,type)
+#define DRM_IOW(nr,type)		_IOW(DRM_IOCTL_BASE,nr,type)
+#define DRM_IOWR(nr,type)		_IOWR(DRM_IOCTL_BASE,nr,type)
+
+#define DRM_IOCTL_VERSION		DRM_IOWR(0x00, struct drm_version)
+#define DRM_IOCTL_GET_UNIQUE		DRM_IOWR(0x01, struct drm_unique)
+#define DRM_IOCTL_GET_MAGIC		DRM_IOR( 0x02, struct drm_auth)
+#define DRM_IOCTL_IRQ_BUSID		DRM_IOWR(0x03, struct drm_irq_busid)
+#define DRM_IOCTL_GET_MAP               DRM_IOWR(0x04, struct drm_map)
+#define DRM_IOCTL_GET_CLIENT            DRM_IOWR(0x05, struct drm_client)
+#define DRM_IOCTL_GET_STATS             DRM_IOR( 0x06, struct drm_stats)
+#define DRM_IOCTL_SET_VERSION		DRM_IOWR(0x07, struct drm_set_version)
+#define DRM_IOCTL_MODESET_CTL           DRM_IOW(0x08, struct drm_modeset_ctl)
+#define DRM_IOCTL_GEM_CLOSE		DRM_IOW (0x09, struct drm_gem_close)
+#define DRM_IOCTL_GEM_FLINK		DRM_IOWR(0x0a, struct drm_gem_flink)
+#define DRM_IOCTL_GEM_OPEN		DRM_IOWR(0x0b, struct drm_gem_open)
+#define DRM_IOCTL_GET_CAP		DRM_IOWR(0x0c, struct drm_get_cap)
+#define DRM_IOCTL_SET_CLIENT_CAP	DRM_IOW( 0x0d, struct drm_set_client_cap)
+
+#define DRM_IOCTL_SET_UNIQUE		DRM_IOW( 0x10, struct drm_unique)
+#define DRM_IOCTL_AUTH_MAGIC		DRM_IOW( 0x11, struct drm_auth)
+#define DRM_IOCTL_BLOCK			DRM_IOWR(0x12, struct drm_block)
+#define DRM_IOCTL_UNBLOCK		DRM_IOWR(0x13, struct drm_block)
+#define DRM_IOCTL_CONTROL		DRM_IOW( 0x14, struct drm_control)
+#define DRM_IOCTL_ADD_MAP		DRM_IOWR(0x15, struct drm_map)
+#define DRM_IOCTL_ADD_BUFS		DRM_IOWR(0x16, struct drm_buf_desc)
+#define DRM_IOCTL_MARK_BUFS		DRM_IOW( 0x17, struct drm_buf_desc)
+#define DRM_IOCTL_INFO_BUFS		DRM_IOWR(0x18, struct drm_buf_info)
+#define DRM_IOCTL_MAP_BUFS		DRM_IOWR(0x19, struct drm_buf_map)
+#define DRM_IOCTL_FREE_BUFS		DRM_IOW( 0x1a, struct drm_buf_free)
+
+#define DRM_IOCTL_RM_MAP		DRM_IOW( 0x1b, struct drm_map)
+
+#define DRM_IOCTL_SET_SAREA_CTX		DRM_IOW( 0x1c, struct drm_ctx_priv_map)
+#define DRM_IOCTL_GET_SAREA_CTX 	DRM_IOWR(0x1d, struct drm_ctx_priv_map)
+
+#define DRM_IOCTL_SET_MASTER            DRM_IO(0x1e)
+#define DRM_IOCTL_DROP_MASTER           DRM_IO(0x1f)
+
+#define DRM_IOCTL_ADD_CTX		DRM_IOWR(0x20, struct drm_ctx)
+#define DRM_IOCTL_RM_CTX		DRM_IOWR(0x21, struct drm_ctx)
+#define DRM_IOCTL_MOD_CTX		DRM_IOW( 0x22, struct drm_ctx)
+#define DRM_IOCTL_GET_CTX		DRM_IOWR(0x23, struct drm_ctx)
+#define DRM_IOCTL_SWITCH_CTX		DRM_IOW( 0x24, struct drm_ctx)
+#define DRM_IOCTL_NEW_CTX		DRM_IOW( 0x25, struct drm_ctx)
+#define DRM_IOCTL_RES_CTX		DRM_IOWR(0x26, struct drm_ctx_res)
+#define DRM_IOCTL_ADD_DRAW		DRM_IOWR(0x27, struct drm_draw)
+#define DRM_IOCTL_RM_DRAW		DRM_IOWR(0x28, struct drm_draw)
+#define DRM_IOCTL_DMA			DRM_IOWR(0x29, struct drm_dma)
+#define DRM_IOCTL_LOCK			DRM_IOW( 0x2a, struct drm_lock)
+#define DRM_IOCTL_UNLOCK		DRM_IOW( 0x2b, struct drm_lock)
+#define DRM_IOCTL_FINISH		DRM_IOW( 0x2c, struct drm_lock)
+
+#define DRM_IOCTL_PRIME_HANDLE_TO_FD    DRM_IOWR(0x2d, struct drm_prime_handle)
+#define DRM_IOCTL_PRIME_FD_TO_HANDLE    DRM_IOWR(0x2e, struct drm_prime_handle)
+
+#define DRM_IOCTL_AGP_ACQUIRE		DRM_IO(  0x30)
+#define DRM_IOCTL_AGP_RELEASE		DRM_IO(  0x31)
+#define DRM_IOCTL_AGP_ENABLE		DRM_IOW( 0x32, struct drm_agp_mode)
+#define DRM_IOCTL_AGP_INFO		DRM_IOR( 0x33, struct drm_agp_info)
+#define DRM_IOCTL_AGP_ALLOC		DRM_IOWR(0x34, struct drm_agp_buffer)
+#define DRM_IOCTL_AGP_FREE		DRM_IOW( 0x35, struct drm_agp_buffer)
+#define DRM_IOCTL_AGP_BIND		DRM_IOW( 0x36, struct drm_agp_binding)
+#define DRM_IOCTL_AGP_UNBIND		DRM_IOW( 0x37, struct drm_agp_binding)
+
+#define DRM_IOCTL_SG_ALLOC		DRM_IOWR(0x38, struct drm_scatter_gather)
+#define DRM_IOCTL_SG_FREE		DRM_IOW( 0x39, struct drm_scatter_gather)
+
+#define DRM_IOCTL_WAIT_VBLANK		DRM_IOWR(0x3a, union drm_wait_vblank)
+
+#define DRM_IOCTL_CRTC_GET_SEQUENCE	DRM_IOWR(0x3b, struct drm_crtc_get_sequence)
+#define DRM_IOCTL_CRTC_QUEUE_SEQUENCE	DRM_IOWR(0x3c, struct drm_crtc_queue_sequence)
+
+#define DRM_IOCTL_UPDATE_DRAW		DRM_IOW(0x3f, struct drm_update_draw)
+
+#define DRM_IOCTL_MODE_GETRESOURCES	DRM_IOWR(0xA0, struct drm_mode_card_res)
+#define DRM_IOCTL_MODE_GETCRTC		DRM_IOWR(0xA1, struct drm_mode_crtc)
+#define DRM_IOCTL_MODE_SETCRTC		DRM_IOWR(0xA2, struct drm_mode_crtc)
+#define DRM_IOCTL_MODE_CURSOR		DRM_IOWR(0xA3, struct drm_mode_cursor)
+#define DRM_IOCTL_MODE_GETGAMMA		DRM_IOWR(0xA4, struct drm_mode_crtc_lut)
+#define DRM_IOCTL_MODE_SETGAMMA		DRM_IOWR(0xA5, struct drm_mode_crtc_lut)
+#define DRM_IOCTL_MODE_GETENCODER	DRM_IOWR(0xA6, struct drm_mode_get_encoder)
+#define DRM_IOCTL_MODE_GETCONNECTOR	DRM_IOWR(0xA7, struct drm_mode_get_connector)
+#define DRM_IOCTL_MODE_ATTACHMODE	DRM_IOWR(0xA8, struct drm_mode_mode_cmd) /* deprecated (never worked) */
+#define DRM_IOCTL_MODE_DETACHMODE	DRM_IOWR(0xA9, struct drm_mode_mode_cmd) /* deprecated (never worked) */
+
+#define DRM_IOCTL_MODE_GETPROPERTY	DRM_IOWR(0xAA, struct drm_mode_get_property)
+#define DRM_IOCTL_MODE_SETPROPERTY	DRM_IOWR(0xAB, struct drm_mode_connector_set_property)
+#define DRM_IOCTL_MODE_GETPROPBLOB	DRM_IOWR(0xAC, struct drm_mode_get_blob)
+#define DRM_IOCTL_MODE_GETFB		DRM_IOWR(0xAD, struct drm_mode_fb_cmd)
+#define DRM_IOCTL_MODE_ADDFB		DRM_IOWR(0xAE, struct drm_mode_fb_cmd)
+#define DRM_IOCTL_MODE_RMFB		DRM_IOWR(0xAF, unsigned int)
+#define DRM_IOCTL_MODE_PAGE_FLIP	DRM_IOWR(0xB0, struct drm_mode_crtc_page_flip)
+#define DRM_IOCTL_MODE_DIRTYFB		DRM_IOWR(0xB1, struct drm_mode_fb_dirty_cmd)
+
+#define DRM_IOCTL_MODE_CREATE_DUMB DRM_IOWR(0xB2, struct drm_mode_create_dumb)
+#define DRM_IOCTL_MODE_MAP_DUMB    DRM_IOWR(0xB3, struct drm_mode_map_dumb)
+#define DRM_IOCTL_MODE_DESTROY_DUMB    DRM_IOWR(0xB4, struct drm_mode_destroy_dumb)
+#define DRM_IOCTL_MODE_GETPLANERESOURCES DRM_IOWR(0xB5, struct drm_mode_get_plane_res)
+#define DRM_IOCTL_MODE_GETPLANE	DRM_IOWR(0xB6, struct drm_mode_get_plane)
+#define DRM_IOCTL_MODE_SETPLANE	DRM_IOWR(0xB7, struct drm_mode_set_plane)
+#define DRM_IOCTL_MODE_ADDFB2		DRM_IOWR(0xB8, struct drm_mode_fb_cmd2)
+#define DRM_IOCTL_MODE_OBJ_GETPROPERTIES	DRM_IOWR(0xB9, struct drm_mode_obj_get_properties)
+#define DRM_IOCTL_MODE_OBJ_SETPROPERTY	DRM_IOWR(0xBA, struct drm_mode_obj_set_property)
+#define DRM_IOCTL_MODE_CURSOR2		DRM_IOWR(0xBB, struct drm_mode_cursor2)
+#define DRM_IOCTL_MODE_ATOMIC		DRM_IOWR(0xBC, struct drm_mode_atomic)
+#define DRM_IOCTL_MODE_CREATEPROPBLOB	DRM_IOWR(0xBD, struct drm_mode_create_blob)
+#define DRM_IOCTL_MODE_DESTROYPROPBLOB	DRM_IOWR(0xBE, struct drm_mode_destroy_blob)
+
+#define DRM_IOCTL_SYNCOBJ_CREATE	DRM_IOWR(0xBF, struct drm_syncobj_create)
+#define DRM_IOCTL_SYNCOBJ_DESTROY	DRM_IOWR(0xC0, struct drm_syncobj_destroy)
+#define DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD	DRM_IOWR(0xC1, struct drm_syncobj_handle)
+#define DRM_IOCTL_SYNCOBJ_FD_TO_HANDLE	DRM_IOWR(0xC2, struct drm_syncobj_handle)
+#define DRM_IOCTL_SYNCOBJ_WAIT		DRM_IOWR(0xC3, struct drm_syncobj_wait)
+#define DRM_IOCTL_SYNCOBJ_RESET		DRM_IOWR(0xC4, struct drm_syncobj_array)
+#define DRM_IOCTL_SYNCOBJ_SIGNAL	DRM_IOWR(0xC5, struct drm_syncobj_array)
+
+#define DRM_IOCTL_MODE_CREATE_LEASE	DRM_IOWR(0xC6, struct drm_mode_create_lease)
+#define DRM_IOCTL_MODE_LIST_LESSEES	DRM_IOWR(0xC7, struct drm_mode_list_lessees)
+#define DRM_IOCTL_MODE_GET_LEASE	DRM_IOWR(0xC8, struct drm_mode_get_lease)
+#define DRM_IOCTL_MODE_REVOKE_LEASE	DRM_IOWR(0xC9, struct drm_mode_revoke_lease)
+
+#define DRM_IOCTL_SYNCOBJ_TIMELINE_WAIT	DRM_IOWR(0xCA, struct drm_syncobj_timeline_wait)
+#define DRM_IOCTL_SYNCOBJ_QUERY		DRM_IOWR(0xCB, struct drm_syncobj_timeline_array)
+#define DRM_IOCTL_SYNCOBJ_TRANSFER	DRM_IOWR(0xCC, struct drm_syncobj_transfer)
+#define DRM_IOCTL_SYNCOBJ_TIMELINE_SIGNAL	DRM_IOWR(0xCD, struct drm_syncobj_timeline_array)
+
+#define DRM_IOCTL_MODE_GETFB2		DRM_IOWR(0xCE, struct drm_mode_fb_cmd2)
+```
 
 phytium_display_drm_driver定义
 ```c
@@ -2102,65 +2246,20 @@ phytium_dp_hpd_work_func()分析
 
 2. 查看drm sysfs目录信息`/sys/class/drm`，
 
-3. 打开drm驱动调试信息，增加内核启动参数`drm.debug=0x1f`
-
+3. 打开drm驱动调试信息，增加内核启动参数`drm.debug`，调试级别如下：
 ```bash
-plane[31]: primary 0
-        crtc=phys_pipe 0
-        fb=60
-                allocated by = gnome-shell
-                refcount=3
-                format=XR24 little-endian (0x34325258)
-                modifier=0x0
-                size=1920x1080
-                layers:
-                        size[0]=1920x1080
-                        pitch[0]=7680
-                        offset[0]=0
-                        obj[0]:
-                                name=0
-                                refcount=1
-                                start=00000000
-                                size=8355840
-                                imported=yes
-        crtc-pos=1920x1080+0+0
-        src-pos=1920.000000x1080.000000+0.000000+0.000000
-        rotation=1
-        normalized-zpos=0
-        color-encoding=ITU-R BT.601 YCbCr
-        color-range=YCbCr limited range
-plane[34]: cursor 0
-        crtc=phys_pipe 0
-        fb=63
-                allocated by = gnome-shell
-                refcount=2
-                format=AR24 little-endian (0x34325241)
-                modifier=0x0
-                size=32x32
-                layers:
-                        size[0]=32x32
-                        pitch[0]=128
-                        offset[0]=0
-                        obj[0]:
-                                name=0
-                                refcount=3
-                                start=00100fd2
-                                size=4096
-                                imported=no
-        crtc-pos=32x32+868+165
-        src-pos=32.000000x32.000000+0.000000+0.000000
-        rotation=1
-        normalized-zpos=0
-        color-encoding=ITU-R BT.601 YCbCr
-        color-range=YCbCr limited range
+root@Ubuntu:~# modinfo -p drm
+name:           drm
+vblankoffdelay:Delay until vblank irq auto-disable [msecs] (0: never disable, <0: disable immediately) (int)
+timestamp_precision_usec:Max. error on timestamps [usecs] (int)
+debug:Enable debug output, where each bit enables a debug category.
+		Bit 0 (0x01)  will enable CORE messages (drm core code)
+		Bit 1 (0x02)  will enable DRIVER messages (drm controller code)
+		Bit 2 (0x04)  will enable KMS messages (modesetting code)
+		Bit 3 (0x08)  will enable PRIME messages (prime code)
+		Bit 4 (0x10)  will enable ATOMIC messages (atomic code)
+		Bit 5 (0x20)  will enable VBL messages (vblank code)
+		Bit 7 (0x80)  will enable LEASE messages (leasing code)
+		Bit 8 (0x100) will enable DP messages (displayport code) (int)
+edid_fixup:Minimum number of valid EDID header bytes (0-8, default 6) (int)
 ```
-
-[    4.563524] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x0000001040000000 size:0x7e9000
-[   17.467329] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000010407e9000 size:0x7e9000
-[   17.467407] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x0000001040fd2000 size:0x7e9000
-[   17.468791] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000000f6100000 size:0x7f8000
-[   17.661906] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000010417bb000 size:0x1000
-[   21.247311] [drm:phytium_gem_free_object] free phytium_gem_obj iova:0x0x00000010407e9000 size:0x7e9000
-[   21.247417] [drm:phytium_gem_free_object] free phytium_gem_obj iova:0x0x0000001040fd2000 size:0x7e9000
-[   21.338981] [drm:phytium_gem_create_object] phytium_gem_obj iova:0x0x00000000f6900000 size:0x7f8000
-
