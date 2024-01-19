@@ -25,10 +25,17 @@ ALSA作为Linux现在主流的音频体系架构，提供了内核的驱动框�
 
 
 ### ASoC驱动框架
-+ ASoC是建立在标准ALSA驱动层上，对底层的ALSA框架封装了一层，为了更好的支持嵌入式CPU和音频编解码设备的一套软件体系，ASoC驱动主要由Platform驱动、Codec驱动、Machine驱动组成。
++ ASoC是建立在标准ALSA驱动层上，对底层的ALSA框架封装了一层，为了更好的支持嵌入式CPU和音频编解码设备的一套软件体系，ASoC驱动主要由platform驱动、codec驱动、machine驱动组成。
+
+machine驱动：该驱动实现`struct snd_soc_card`的定义和注册，并通过指定`struct snd_soc_dai_link`中的`codec_name`, `platform_name`, `codec_dai_name`, `platform_dai_name`从而实现与其他各个驱动组件的绑定
+
+platform驱动：向ALSA `platform_list`注册`snd_soc_platform_driver`，并通过`snd_soc_ops`暴露其音频能力
+
+codec驱动：通过注册`devm_snd_soc_register_component()`挂载自己的音频能力，通常codec驱动还需要注册kcontrol, widget, route等信息
 
 
-+ CPU DAI：在嵌入式系统中通常指CPU的I2S或PCM总线控制器
+
++ CPU DAI(Digital Audio Interface)：在嵌入式系统中通常指CPU的I2S或PCM总线控制器
     ```c
     /*
     * Digital Audio Interface Driver.
