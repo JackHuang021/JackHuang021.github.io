@@ -45,6 +45,20 @@ DAI(Digital Audio Interface)：
 
 Components：
 
+Kcontrols：代表声卡里面的各种硬件开关，滑动控件等，通过软件定义kcontrol可以通过用户态配置硬件寄存器的开关，ALSA用snd_kcontrol_new定义kcontrol
+
+widgets：DAPM通路切换是通过配置不同的route表来实现的，影响音频route开关的组件称为widget
+影响path通路最常用的几种widget，如mixer, mux, switch等
+
+mixer：多个输入混合成一个输出，可以使用SND_SOC_DAPM_MIXER来定义这种类型的widget，mixer的widget类型为snd_soc_dapm_mixer
+
+mux：多路选择器，多路输入，但是只能选择一路作为输出，可以使用SND_SOC_DAPM_MUX来定义这个widget，widget类型为snd_soc_dapm_mux
+
+pga：单路输入，单路输出，带gain调整的部件，可以使用SND_SOC_DAPM_PGA来定义这个widget，所属widget类型为snd_soc_dapm_pga
+
+router：定义了mixer mux以及其它widget后需要定义route结构将它们连接起来，否则ALSA并不知道这些widget是如何连接的
+
+
 
 ### PCM数据流
 
@@ -136,6 +150,7 @@ struct snd_soc_card {
 	char topology_shortname[32];
 
 	struct device *dev;
+	/* 指向struct snd_card声卡 */
 	struct snd_card *snd_card;
 	struct module *owner;
 
@@ -175,9 +190,11 @@ struct snd_soc_card {
 	/* CPU <--> Codec DAI links  */
 	/* 存储所有的dai link */
 	struct snd_soc_dai_link *dai_link;  /* predefined links only */
+	/* dai_link的数量 */
 	int num_links;  /* predefined links only */
-
+	/* 链接所有的snd_soc_pcm_runtime，一个dai_link对应一个runtime */
 	struct list_head rtd_list;
+	/* pcm runtime的数量 */
 	int num_rtd;
 
 	/* optional codec specific configuration */
@@ -371,6 +388,7 @@ struct snd_soc_component {
 	int id;
 	const char *name_prefix;
 	struct device *dev;
+	/* 该component绑定的snd_soc_card声卡 */
 	struct snd_soc_card *card;
 
 	unsigned int active;
@@ -439,10 +457,11 @@ struct snd_soc_pcm_runtime {
 
 	/* Dynamic PCM BE runtime data */
 	struct snd_soc_dpcm_runtime dpcm[2];
-
+	/* stream关闭后经过pmdown_time后DAPM才掉电，单位毫秒，默认是5S */
 	long pmdown_time;
 
 	/* runtime devices */
+	/* 指向所属的pcm */
 	struct snd_pcm *pcm;
 	struct snd_compr *compr;
 
@@ -454,7 +473,9 @@ struct snd_soc_pcm_runtime {
 	 *	asoc_rtd_to_codec()
 	 */
 	struct snd_soc_dai **dais;
+	/* runtime中codec的数量，从snd_soc_card中获得 */
 	unsigned int num_codecs;
+	/* runtime中cpu的数量，从snd_soc_card中获得 */
 	unsigned int num_cpus;
 
 	struct snd_soc_dapm_widget *playback_widget;
@@ -467,6 +488,7 @@ struct snd_soc_pcm_runtime {
 #endif
 
 	unsigned int num; /* 0-based and monotonic increasing */
+	/* 通过list节点链接到snd_sco_card->rtd_lists */
 	struct list_head list; /* rtd list of the soc card */
 
 	/* function mark */
@@ -479,12 +501,113 @@ struct snd_soc_pcm_runtime {
 	unsigned int pop_wait:1;
 	unsigned int fe_compr:1; /* for Dynamic PCM */
 
-	// dai link中所有的components，cpu dai和codec都看做是一个component
+	/* dai link中所有的components，cpu dai和codec都看做是一个component */
 	int num_components;
+	/* 指向runtime中所有的component，按照cpu, codec, platform的顺序 */
 	struct snd_soc_component *components[]; /* CPU/Codec/Platform */
 };
 ```
 
+`struct snd_pcm`
+```c
+// include/sound/pcm.h
+struct snd_pcm {
+	/* 指向pcm_runtime->card->snd_card */
+	struct snd_card *card;
+	struct list_head list;
+	/* 这里一般情况下就是rtd->num的值 */
+	int device; /* device number */
+	unsigned int info_flags;
+	unsigned short dev_class;
+	unsigned short dev_subclass;
+	char id[64];
+	char name[80];
+	struct snd_pcm_str streams[2];
+	struct mutex open_mutex;
+	wait_queue_head_t open_wait;
+	void *private_data;
+	void (*private_free) (struct snd_pcm *pcm);
+	bool internal; /* pcm is for internal use only */
+	bool nonatomic; /* whole PCM operations are in non-atomic context */
+	bool no_device_suspend; /* don't invoke device PM suspend */
+#if IS_ENABLED(CONFIG_SND_PCM_OSS)
+	struct snd_pcm_oss oss;
+#endif
+};
+```
+
+`struct snd_pcm_str`
+```c
+struct snd_pcm_str {
+	/* stream方向 */
+	int stream;				/* stream (direction) */
+	/* 指向所属pcm */
+	struct snd_pcm *pcm;
+	/* -- substreams -- */
+	unsigned int substream_count;
+	unsigned int substream_opened;
+	struct snd_pcm_substream *substream;
+#if IS_ENABLED(CONFIG_SND_PCM_OSS)
+	/* -- OSS things -- */
+	struct snd_pcm_oss_stream oss;
+#endif
+#ifdef CONFIG_SND_VERBOSE_PROCFS
+	struct snd_info_entry *proc_root;
+#ifdef CONFIG_SND_PCM_XRUN_DEBUG
+	unsigned int xrun_debug;	/* 0 = disabled, 1 = verbose, 2 = stacktrace */
+#endif
+#endif
+	struct snd_kcontrol *chmap_kctl; /* channel-mapping controls */
+	struct device dev;
+};
+```
+
+`struct snd_pcm_substream`
+```c
+struct snd_pcm_substream {
+	struct snd_pcm *pcm;
+	struct snd_pcm_str *pstr;
+	/* 指向pcm_runtime */
+	void *private_data;		/* copied from pcm->private_data */
+	int number;
+	char name[32];			/* substream name */
+	int stream;			/* stream (direction) */
+	struct pm_qos_request latency_pm_qos_req; /* pm_qos request */
+	size_t buffer_bytes_max;	/* limit ring buffer size */
+	struct snd_dma_buffer dma_buffer;
+	size_t dma_max;
+	/* -- hardware operations -- */
+	const struct snd_pcm_ops *ops;
+	/* -- runtime information -- */
+	struct snd_pcm_runtime *runtime;
+        /* -- timer section -- */
+	struct snd_timer *timer;		/* timer */
+	unsigned timer_running: 1;	/* time is running */
+	long wait_time;	/* time in ms for R/W to wait for avail */
+	/* -- next substream -- */
+	struct snd_pcm_substream *next;
+	/* -- linked substreams -- */
+	struct list_head link_list;	/* linked list member */
+	struct snd_pcm_group self_group;	/* fake group for non linked substream (with substream lock inside) */
+	struct snd_pcm_group *group;		/* pointer to current group */
+	/* -- assigned files -- */
+	int ref_count;
+	atomic_t mmap_count;
+	unsigned int f_flags;
+	void (*pcm_release)(struct snd_pcm_substream *);
+	struct pid *pid;
+#if IS_ENABLED(CONFIG_SND_PCM_OSS)
+	/* -- OSS things -- */
+	struct snd_pcm_oss_substream oss;
+#endif
+#ifdef CONFIG_SND_VERBOSE_PROCFS
+	struct snd_info_entry *proc_root;
+#endif /* CONFIG_SND_VERBOSE_PROCFS */
+	/* misc flags */
+	unsigned int hw_opened: 1;
+	unsigned int managed_buffer_alloc:1;
+};
+```
 
 `struct snd_dma_buffer`记录dma内存分配的地址
 ```c
@@ -546,6 +669,7 @@ struct snd_soc_dai_driver {
     unsigned int symmetric_samplebits:1;
 
     /* probe ordering - for components with runtime dependencies */
+	/* probe的顺序，在snd_soc_pcm_dai_probe()被用到 */
     int probe_order;
     int remove_order;
 }
@@ -757,6 +881,104 @@ struct snd_soc_dai_link {
 #ifdef CONFIG_SND_SOC_TOPOLOGY
 	struct snd_soc_dobj dobj; /* For topology */
 #endif
+};
+```
+
+`struct snd_kcontrol_new`
+```c
+// inlcude/sound/control.h
+struct snd_kcontrol_new {
+	snd_ctl_elem_iface_t iface;	/* interface identifier */
+	unsigned int device;		/* device/client number */
+	unsigned int subdevice;		/* subdevice (substream) number */
+	/* control的名字 */
+	const char *name;		/* ASCII name of item */
+	unsigned int index;		/* index of item */
+	unsigned int access;		/* access rights */
+	unsigned int count;		/* count of same elements */
+	/* 回调函数，用于获取control的详细信息 */
+	snd_kcontrol_info_t *info;
+	/* 回调函数，用于读取control的当前值 */
+	snd_kcontrol_get_t *get;
+	/* 回调函数，用于把应用程序的控制值设置到control中 */
+	snd_kcontrol_put_t *put;
+	union {
+		snd_kcontrol_tlv_rw_t *c;
+		const unsigned int *p;
+	} tlv;
+	unsigned long private_value;
+};
+```
+
+widget的类型枚举
+```c
+/* dapm widget types */
+enum snd_soc_dapm_type {
+	snd_soc_dapm_input = 0,		/* input pin */
+	snd_soc_dapm_output,		/* output pin */
+	snd_soc_dapm_mux,			/* selects 1 analog signal from many inputs */
+	snd_soc_dapm_demux,			/* connects the input to one of multiple outputs */
+	snd_soc_dapm_mixer,			/* mixes several analog signals together */
+	snd_soc_dapm_mixer_named_ctl,		/* mixer with named controls */
+	snd_soc_dapm_pga,			/* programmable gain/attenuation (volume) */
+	snd_soc_dapm_out_drv,			/* output driver */
+	snd_soc_dapm_adc,			/* analog to digital converter */
+	snd_soc_dapm_dac,			/* digital to analog converter */
+	snd_soc_dapm_micbias,		/* microphone bias (power) - DEPRECATED: use snd_soc_dapm_supply */
+	snd_soc_dapm_mic,			/* microphone */
+	snd_soc_dapm_hp,			/* headphones */
+	snd_soc_dapm_spk,			/* speaker */
+	snd_soc_dapm_line,			/* line input/output */
+	snd_soc_dapm_switch,		/* analog switch */
+	snd_soc_dapm_vmid,			/* codec bias/vmid - to minimise pops */
+	snd_soc_dapm_pre,			/* machine specific pre widget - exec first */
+	snd_soc_dapm_post,			/* machine specific post widget - exec last */
+	snd_soc_dapm_supply,		/* power/clock supply */
+	snd_soc_dapm_pinctrl,		/* pinctrl */
+	snd_soc_dapm_regulator_supply,	/* external regulator */
+	snd_soc_dapm_clock_supply,	/* external clock */
+	snd_soc_dapm_aif_in,		/* audio interface input */
+	snd_soc_dapm_aif_out,		/* audio interface output */
+	snd_soc_dapm_siggen,		/* signal generator */
+	snd_soc_dapm_sink,
+	snd_soc_dapm_dai_in,		/* link to DAI structure */
+	snd_soc_dapm_dai_out,
+	snd_soc_dapm_dai_link,		/* link between two DAI structures */
+	snd_soc_dapm_kcontrol,		/* Auto-disabled kcontrol */
+	snd_soc_dapm_buffer,		/* DSP/CODEC internal buffer */
+	snd_soc_dapm_scheduler,		/* DSP/CODEC internal scheduler */
+	snd_soc_dapm_effect,		/* DSP/CODEC effect component */
+	snd_soc_dapm_src,		/* DSP/CODEC SRC component */
+	snd_soc_dapm_asrc,		/* DSP/CODEC ASRC component */
+	snd_soc_dapm_encoder,		/* FW/SW audio encoder component */
+	snd_soc_dapm_decoder,		/* FW/SW audio decoder component */
+
+	/* Don't edit below this line */
+	SND_SOC_DAPM_TYPE_COUNT
+};
+```
+
+`struct snd_soc_dapm_route`的定义
+```c
+/*
+ * DAPM audio route definition.
+ *
+ * Defines an audio route originating at source via control and finishing
+ * at sink.
+ */
+struct snd_soc_dapm_route {
+	/* 要连接的控件的名字 */
+	const char *sink;
+	/* 连接开关的名字 */
+	const char *control;
+	/* 要连接的控件的名字 */
+	const char *source;
+
+	/* Note: currently only supported for links where source is a supply */
+	int (*connected)(struct snd_soc_dapm_widget *source,
+			 struct snd_soc_dapm_widget *sink);
+
+	struct snd_soc_dobj dobj;
 };
 ```
 
@@ -1135,17 +1357,159 @@ static struct snd_soc_dai_driver phytium_i2s_dai = {
 ```
 
 
-```bash
-[   48.027787] hdmi-audio-codec hdmi-audio-codec.1346918656: Only one simultaneous stream supported!
-[   48.036832] hdmi-audio-codec hdmi-audio-codec.1346918656: ASoC: error at snd_soc_dai_startup on i2s-hifi: -22
-[   48.047484]  Phytium dp0-audio: __soc_pcm_open() failed (-22)
-[   48.053534] hdmi-audio-codec hdmi-audio-codec.1346918656: Only one simultaneous stream supported!
-[   48.062900] hdmi-audio-codec hdmi-audio-codec.1346918656: ASoC: error at snd_soc_dai_startup on i2s-hifi: -22
-[   48.073510]  Phytium dp0-audio: __soc_pcm_open() failed (-22)
-[   48.080718] hdmi-audio-codec hdmi-audio-codec.1346918656: Only one simultaneous stream supported!
-[   48.089620] hdmi-audio-codec hdmi-audio-codec.1346918656: ASoC: error at snd_soc_dai_startup on i2s-hifi: -22
-[   48.099544]  Phytium dp0-audio: __soc_pcm_open() failed (-22)
-[   48.105461] hdmi-audio-codec hdmi-audio-codec.1346918656: Only one simultaneous stream supported!
-[   48.114338] hdmi-audio-codec hdmi-audio-codec.1346918656: ASoC: error at snd_soc_dai_startup on i2s-hifi: -22
-[   48.124252]  Phytium dp0-audio: __soc_pcm_open() failed (-22)
+### 音频数据传递流程
+linux用户空间应用程序通过声卡驱动程序和linux内核ALSA框架导出的PCM设备文件，如`/dev/snd/pcmC0D0c`和`/dev/snd/pcmC0D0p`等，与linux内核音频设备驱动程序和音频硬件进行数据传递，PCM设备文件的`file_operations`定义如下
+```c
+// sound/core/pcm_native.c
+/*
+ *  Register section
+ */
+
+const struct file_operations snd_pcm_f_ops[2] = {
+	{
+		.owner =		THIS_MODULE,
+		.write =		snd_pcm_write,
+		.write_iter =		snd_pcm_writev,
+		.open =			snd_pcm_playback_open,
+		.release =		snd_pcm_release,
+		.llseek =		no_llseek,
+		.poll =			snd_pcm_poll,
+		.unlocked_ioctl =	snd_pcm_ioctl,
+		.compat_ioctl = 	snd_pcm_ioctl_compat,
+		.mmap =			snd_pcm_mmap,
+		.fasync =		snd_pcm_fasync,
+		.get_unmapped_area =	snd_pcm_get_unmapped_area,
+	},
+	{
+		.owner =		THIS_MODULE,
+		.read =			snd_pcm_read,
+		.read_iter =		snd_pcm_readv,
+		.open =			snd_pcm_capture_open,
+		.release =		snd_pcm_release,
+		.llseek =		no_llseek,
+		.poll =			snd_pcm_poll,
+		.unlocked_ioctl =	snd_pcm_ioctl,
+		.compat_ioctl = 	snd_pcm_ioctl_compat,
+		.mmap =			snd_pcm_mmap,
+		.fasync =		snd_pcm_fasync,
+		.get_unmapped_area =	snd_pcm_get_unmapped_area,
+	}
+};
 ```
+
+大多数情况下，音频设备会同时提供播放和录制功能，用于播放和录制的PCM设备文件是一起导出的，播放和录制的PCM设备文件的文件操作也是一起定义的。其中播放的索引为`SNDRV_PCM_STREAM_PLAYBACK`，其值为0；录制的索引为`SNDRV_PCM_STREAM_CAPTURE`，其值为1。
+
+linux用户空间有alsa-lib和tinyalsa等库用于与linux内核alsa框架交互，alsa-lib和tinyalsa等库主要通过ioctl命令与linux内核ALSA框架交互。PCM设备文件的`ioctl`操作函数定义如下：
+```c
+// sound/core/pcm_native.c
+static int snd_pcm_common_ioctl(struct file *file,
+				 struct snd_pcm_substream *substream,
+				 unsigned int cmd, void __user *arg)
+{
+	struct snd_pcm_file *pcm_file = file->private_data;
+	int res;
+
+	if (PCM_RUNTIME_CHECK(substream))
+		return -ENXIO;
+
+	res = snd_power_wait(substream->pcm->card);
+	if (res < 0)
+		return res;
+
+	switch (cmd) {
+	case SNDRV_PCM_IOCTL_PVERSION:
+		return put_user(SNDRV_PCM_VERSION, (int __user *)arg) ? -EFAULT : 0;
+	case SNDRV_PCM_IOCTL_INFO:
+		return snd_pcm_info_user(substream, arg);
+	case SNDRV_PCM_IOCTL_TSTAMP:	/* just for compatibility */
+		return 0;
+	case SNDRV_PCM_IOCTL_TTSTAMP:
+		return snd_pcm_tstamp(substream, arg);
+	case SNDRV_PCM_IOCTL_USER_PVERSION:
+		if (get_user(pcm_file->user_pversion,
+			     (unsigned int __user *)arg))
+			return -EFAULT;
+		return 0;
+	case SNDRV_PCM_IOCTL_HW_REFINE:
+		return snd_pcm_hw_refine_user(substream, arg);
+	case SNDRV_PCM_IOCTL_HW_PARAMS:
+		return snd_pcm_hw_params_user(substream, arg);
+	case SNDRV_PCM_IOCTL_HW_FREE:
+		return snd_pcm_hw_free(substream);
+	case SNDRV_PCM_IOCTL_SW_PARAMS:
+		return snd_pcm_sw_params_user(substream, arg);
+	case SNDRV_PCM_IOCTL_STATUS32:
+		return snd_pcm_status_user32(substream, arg, false);
+	case SNDRV_PCM_IOCTL_STATUS_EXT32:
+		return snd_pcm_status_user32(substream, arg, true);
+	case SNDRV_PCM_IOCTL_STATUS64:
+		return snd_pcm_status_user64(substream, arg, false);
+	case SNDRV_PCM_IOCTL_STATUS_EXT64:
+		return snd_pcm_status_user64(substream, arg, true);
+	case SNDRV_PCM_IOCTL_CHANNEL_INFO:
+		return snd_pcm_channel_info_user(substream, arg);
+	case SNDRV_PCM_IOCTL_PREPARE:
+		return snd_pcm_prepare(substream, file);
+	case SNDRV_PCM_IOCTL_RESET:
+		return snd_pcm_reset(substream);
+	case SNDRV_PCM_IOCTL_START:
+		return snd_pcm_start_lock_irq(substream);
+	case SNDRV_PCM_IOCTL_LINK:
+		return snd_pcm_link(substream, (int)(unsigned long) arg);
+	case SNDRV_PCM_IOCTL_UNLINK:
+		return snd_pcm_unlink(substream);
+	case SNDRV_PCM_IOCTL_RESUME:
+		return snd_pcm_resume(substream);
+	case SNDRV_PCM_IOCTL_XRUN:
+		return snd_pcm_xrun(substream);
+	case SNDRV_PCM_IOCTL_HWSYNC:
+		return snd_pcm_hwsync(substream);
+	case SNDRV_PCM_IOCTL_DELAY:
+	{
+		snd_pcm_sframes_t delay;
+		snd_pcm_sframes_t __user *res = arg;
+		int err;
+
+		err = snd_pcm_delay(substream, &delay);
+		if (err)
+			return err;
+		if (put_user(delay, res))
+			return -EFAULT;
+		return 0;
+	}
+	case __SNDRV_PCM_IOCTL_SYNC_PTR32:
+		return snd_pcm_ioctl_sync_ptr_compat(substream, arg);
+	case __SNDRV_PCM_IOCTL_SYNC_PTR64:
+		return snd_pcm_sync_ptr(substream, arg);
+#ifdef CONFIG_SND_SUPPORT_OLD_API
+	case SNDRV_PCM_IOCTL_HW_REFINE_OLD:
+		return snd_pcm_hw_refine_old_user(substream, arg);
+	case SNDRV_PCM_IOCTL_HW_PARAMS_OLD:
+		return snd_pcm_hw_params_old_user(substream, arg);
+#endif
+	case SNDRV_PCM_IOCTL_DRAIN:
+		return snd_pcm_drain(substream, file);
+	case SNDRV_PCM_IOCTL_DROP:
+		return snd_pcm_drop(substream);
+	case SNDRV_PCM_IOCTL_PAUSE:
+		return snd_pcm_pause_lock_irq(substream, (unsigned long)arg);
+	case SNDRV_PCM_IOCTL_WRITEI_FRAMES:
+	case SNDRV_PCM_IOCTL_READI_FRAMES:
+		return snd_pcm_xferi_frames_ioctl(substream, arg);
+	case SNDRV_PCM_IOCTL_WRITEN_FRAMES:
+	case SNDRV_PCM_IOCTL_READN_FRAMES:
+		return snd_pcm_xfern_frames_ioctl(substream, arg);
+	case SNDRV_PCM_IOCTL_REWIND:
+		return snd_pcm_rewind_ioctl(substream, arg);
+	case SNDRV_PCM_IOCTL_FORWARD:
+		return snd_pcm_forward_ioctl(substream, arg);
+	}
+	pcm_dbg(substream->pcm, "unknown ioctl = 0x%x\n", cmd);
+	return -ENOTTY;
+}
+```
+
+
+
+
+
