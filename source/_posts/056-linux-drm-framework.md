@@ -61,9 +61,6 @@ dumb buffer代表所有的绘图操作都是由CPU来完成的framebuffer，它�
 prime在DRM驱动中其实是一种buffer共享机制，他是基于dma-buf来实现的
 
 
-### DRM框架中模块和Phytium DC/DP硬件的联系
-
-
 ### DRM驱动框架中常用的结构体
 
 #### struct drm_mode_object
@@ -221,118 +218,918 @@ struct drm_framebuffer {
 ```
 
 #### struct drm_plane
+linux内核使用`struct drm_plane`表示一个plane，plane从一个drm_framebuffer接收输入数据，并将其传递给一个drm_crtc
 ```c
+/**
+ * struct drm_plane - central DRM plane control structure
+ *
+ * Planes represent the scanout hardware of a display block. They receive their
+ * input data from a &drm_framebuffer and feed it to a &drm_crtc. Planes control
+ * the color conversion, see `Plane Composition Properties`_ for more details,
+ * and are also involved in the color conversion of input pixels, see `Color
+ * Management Properties`_ for details on that.
+ */
 struct drm_plane {
-    struct drm_device *dev;
-    struct list_head head;
-    char *name;
-    struct drm_modeset_lock mutex;
-    struct drm_modeset_object base;
+	/** @dev: DRM device this plane belongs to */
+	/* 对应的drm_device */
+	struct drm_device *dev;
 
-    uint32_t possible_crtcs;
-    uint32_t *format_types;
-    unsigned int format_count;
+	/**
+	 * @head:
+	 *
+	 * List of all planes on @dev, linked from &drm_mode_config.plane_list.
+	 * Invariant over the lifetime of @dev and therefore does not need
+	 * locking.
+	 */
+	/* 用于链接到drm_mode_config的plane_list链表 */
+	struct list_head head;
 
-    bool format_default;
-    uint64_t *modifiers;
-    unsigned int modifier_count;
+	/** @name: human readable name, can be overwritten by the driver */
+	char *name;
 
-    struct drm_crtc *crtc;
-    struct drm_framebuffer *fb;
-    struct frm framebuffer *old_fb;
+	/**
+	 * @mutex:
+	 *
+	 * Protects modeset plane state, together with the &drm_crtc.mutex of
+	 * CRTC this plane is linked to (when active, getting activated or
+	 * getting disabled).
+	 *
+	 * For atomic drivers specifically this protects @state.
+	 */
+	struct drm_modeset_lock mutex;
 
-    const struct drm_plane_funcs *funcs;
+	/** @base: base mode object */
+	struct drm_mode_object base;
 
-    struct drm_object_properties properties;
+	/**
+	 * @possible_crtcs: pipes this plane can be bound to constructed from
+	 * drm_crtc_mask()
+	 */
+	uint32_t possible_crtcs;
+	/** @format_types: array of formats supported by this plane */
+	/* 存放所有的视频格式 */
+	uint32_t *format_types;
+	/** @format_count: Size of the array pointed at by @format_types. */
+	/* 支持的视频格式的个数 */
+	unsigned int format_count;
+	/**
+	 * @format_default: driver hasn't supplied supported formats for the
+	 * plane. Used by the non-atomic driver compatibility wrapper only.
+	 */
+	bool format_default;
 
-    enum drm_plane_type type;
-    unsigned index;
+	/** @modifiers: array of modifiers supported by this plane */
+	uint64_t *modifiers;
+	/** @modifier_count: Size of the array pointed at by @modifier_count. */
+	unsigned int modifier_count;
 
-    const struct drm_plane_helper_funcs *helper_private;
+	/**
+	 * @crtc:
+	 *
+	 * Currently bound CRTC, only meaningful for non-atomic drivers. For
+	 * atomic drivers this is forced to be NULL, atomic drivers should
+	 * instead check &drm_plane_state.crtc.
+	 */
+	/* 该plane对应的crtc */
+	struct drm_crtc *crtc;
 
-    struct drm_plane_state *state;
+	/**
+	 * @fb:
+	 *
+	 * Currently bound framebuffer, only meaningful for non-atomic drivers.
+	 * For atomic drivers this is forced to be NULL, atomic drivers should
+	 * instead check &drm_plane_state.fb.
+	 */
+	/* plane对应的framebuffer */
+	struct drm_framebuffer *fb;
 
-    struct drm_property *alpha_property;
-    struct drm_property *zpos_property;
-    struct drm_property *rotation_property;
-    struct drm_property *blend_mode_property;
-    struct drm_property *color_encoding_property;
-    struct drm_property *color_range_property;
+	/**
+	 * @old_fb:
+	 *
+	 * Temporary tracking of the old fb while a modeset is ongoing. Only
+	 * used by non-atomic drivers, forced to be NULL for atomic drivers.
+	 */
+	struct drm_framebuffer *old_fb;
+
+	/** @funcs: plane control functions */
+	const struct drm_plane_funcs *funcs;
+
+	/** @properties: property tracking for this plane */
+	struct drm_object_properties properties;
+
+	/** @type: Type of plane, see &enum drm_plane_type for details. */
+	/* 层类型，主层和光标层 */
+	enum drm_plane_type type;
+
+	/**
+	 * @index: Position inside the mode_config.list, can be used as an array
+	 * index. It is invariant over the lifetime of the plane.
+	 */
+	/* plane的编号 */
+	unsigned index;
+
+	/** @helper_private: mid-layer private data */
+	const struct drm_plane_helper_funcs *helper_private;
+
+	/**
+	 * @state:
+	 *
+	 * Current atomic state for this plane.
+	 *
+	 * This is protected by @mutex. Note that nonblocking atomic commits
+	 * access the current plane state without taking locks. Either by going
+	 * through the &struct drm_atomic_state pointers, see
+	 * for_each_oldnew_plane_in_state(), for_each_old_plane_in_state() and
+	 * for_each_new_plane_in_state(). Or through careful ordering of atomic
+	 * commit operations as implemented in the atomic helpers, see
+	 * &struct drm_crtc_commit.
+	 */
+	struct drm_plane_state *state;
+
+	/**
+	 * @alpha_property:
+	 * Optional alpha property for this plane. See
+	 * drm_plane_create_alpha_property().
+	 */
+	struct drm_property *alpha_property;
+	/**
+	 * @zpos_property:
+	 * Optional zpos property for this plane. See
+	 * drm_plane_create_zpos_property().
+	 */
+	struct drm_property *zpos_property;
+	/**
+	 * @rotation_property:
+	 * Optional rotation property for this plane. See
+	 * drm_plane_create_rotation_property().
+	 */
+	struct drm_property *rotation_property;
+	/**
+	 * @blend_mode_property:
+	 * Optional "pixel blend mode" enum property for this plane.
+	 * Blend mode property represents the alpha blending equation selection,
+	 * describing how the pixels from the current plane are composited with
+	 * the background.
+	 */
+	struct drm_property *blend_mode_property;
+
+	/**
+	 * @color_encoding_property:
+	 *
+	 * Optional "COLOR_ENCODING" enum property for specifying
+	 * color encoding for non RGB formats.
+	 * See drm_plane_create_color_properties().
+	 */
+	struct drm_property *color_encoding_property;
+	/**
+	 * @color_range_property:
+	 *
+	 * Optional "COLOR_RANGE" enum property for specifying
+	 * color range for non RGB formats.
+	 * See drm_plane_create_color_properties().
+	 */
+	struct drm_property *color_range_property;
+
+	/**
+	 * @scaling_filter_property: property to apply a particular filter while
+	 * scaling.
+	 */
+	struct drm_property *scaling_filter_property;
 };
 
+
+// drm_plane_state用于表示plane的状态
 // include/drm/drm_plane.h
+/**
+ * struct drm_plane_state - mutable plane state
+ *
+ * Please note that the destination coordinates @crtc_x, @crtc_y, @crtc_h and
+ * @crtc_w and the source coordinates @src_x, @src_y, @src_h and @src_w are the
+ * raw coordinates provided by userspace. Drivers should use
+ * drm_atomic_helper_check_plane_state() and only use the derived rectangles in
+ * @src and @dst to program the hardware.
+ */
+struct drm_plane_state {
+	/** @plane: backpointer to the plane */
+	struct drm_plane *plane;
+
+	/**
+	 * @crtc:
+	 *
+	 * Currently bound CRTC, NULL if disabled. Do not write this directly,
+	 * use drm_atomic_set_crtc_for_plane()
+	 */
+	struct drm_crtc *crtc;
+
+	/**
+	 * @fb:
+	 *
+	 * Currently bound framebuffer. Do not write this directly, use
+	 * drm_atomic_set_fb_for_plane()
+	 */
+	struct drm_framebuffer *fb;
+
+	/**
+	 * @fence:
+	 *
+	 * Optional fence to wait for before scanning out @fb. The core atomic
+	 * code will set this when userspace is using explicit fencing. Do not
+	 * write this field directly for a driver's implicit fence.
+	 *
+	 * Drivers should store any implicit fence in this from their
+	 * &drm_plane_helper_funcs.prepare_fb callback. See
+	 * drm_gem_plane_helper_prepare_fb() for a suitable helper.
+	 */
+	struct dma_fence *fence;
+
+	//* crtc_x, crtc_y, crtc_w, crtc_h指显示在crtc上的目标区域
+	/**
+	 * @crtc_x:
+	 *
+	 * Left position of visible portion of plane on crtc, signed dest
+	 * location allows it to be partially off screen.
+	 */
+
+	int32_t crtc_x;
+	/**
+	 * @crtc_y:
+	 *
+	 * Upper position of visible portion of plane on crtc, signed dest
+	 * location allows it to be partially off screen.
+	 */
+	int32_t crtc_y;
+
+	/** @crtc_w: width of visible portion of plane on crtc */
+	/** @crtc_h: height of visible portion of plane on crtc */
+	uint32_t crtc_w, crtc_h;
+
+
+	// src_x. src_y, src_h, src_w用于指定framebuffer的源区域
+	/**
+	 * @src_x: left position of visible portion of plane within plane (in
+	 * 16.16 fixed point).
+	 */
+	uint32_t src_x;
+	/**
+	 * @src_y: upper position of visible portion of plane within plane (in
+	 * 16.16 fixed point).
+	 */
+	uint32_t src_y;
+	/** @src_w: width of visible portion of plane (in 16.16) */
+	/** @src_h: height of visible portion of plane (in 16.16) */
+	uint32_t src_h, src_w;
+
+	/**
+	 * @alpha:
+	 * Opacity of the plane with 0 as completely transparent and 0xffff as
+	 * completely opaque. See drm_plane_create_alpha_property() for more
+	 * details.
+	 */
+	u16 alpha;
+
+	/**
+	 * @pixel_blend_mode:
+	 * The alpha blending equation selection, describing how the pixels from
+	 * the current plane are composited with the background. Value can be
+	 * one of DRM_MODE_BLEND_*
+	 */
+	uint16_t pixel_blend_mode;
+
+	/**
+	 * @rotation:
+	 * Rotation of the plane. See drm_plane_create_rotation_property() for
+	 * more details.
+	 */
+	unsigned int rotation;
+
+	/**
+	 * @zpos:
+	 * Priority of the given plane on crtc (optional).
+	 *
+	 * User-space may set mutable zpos properties so that multiple active
+	 * planes on the same CRTC have identical zpos values. This is a
+	 * user-space bug, but drivers can solve the conflict by comparing the
+	 * plane object IDs; the plane with a higher ID is stacked on top of a
+	 * plane with a lower ID.
+	 *
+	 * See drm_plane_create_zpos_property() and
+	 * drm_plane_create_zpos_immutable_property() for more details.
+	 */
+	unsigned int zpos;
+
+	/**
+	 * @normalized_zpos:
+	 * Normalized value of zpos: unique, range from 0 to N-1 where N is the
+	 * number of active planes for given crtc. Note that the driver must set
+	 * &drm_mode_config.normalize_zpos or call drm_atomic_normalize_zpos() to
+	 * update this before it can be trusted.
+	 */
+	unsigned int normalized_zpos;
+
+	/**
+	 * @color_encoding:
+	 *
+	 * Color encoding for non RGB formats
+	 */
+	enum drm_color_encoding color_encoding;
+
+	/**
+	 * @color_range:
+	 *
+	 * Color range for non RGB formats
+	 */
+	enum drm_color_range color_range;
+
+	/**
+	 * @fb_damage_clips:
+	 *
+	 * Blob representing damage (area in plane framebuffer that changed
+	 * since last plane update) as an array of &drm_mode_rect in framebuffer
+	 * coodinates of the attached framebuffer. Note that unlike plane src,
+	 * damage clips are not in 16.16 fixed point.
+	 *
+	 * See drm_plane_get_damage_clips() and
+	 * drm_plane_get_damage_clips_count() for accessing these.
+	 */
+	struct drm_property_blob *fb_damage_clips;
+
+	/**
+	 * @src:
+	 *
+	 * source coordinates of the plane (in 16.16).
+	 *
+	 * When using drm_atomic_helper_check_plane_state(),
+	 * the coordinates are clipped, but the driver may choose
+	 * to use unclipped coordinates instead when the hardware
+	 * performs the clipping automatically.
+	 */
+	/**
+	 * @dst:
+	 *
+	 * clipped destination coordinates of the plane.
+	 *
+	 * When using drm_atomic_helper_check_plane_state(),
+	 * the coordinates are clipped, but the driver may choose
+	 * to use unclipped coordinates instead when the hardware
+	 * performs the clipping automatically.
+	 */
+	struct drm_rect src, dst;
+
+	/**
+	 * @visible:
+	 *
+	 * Visibility of the plane. This can be false even if fb!=NULL and
+	 * crtc!=NULL, due to clipping.
+	 */
+	bool visible;
+
+	/**
+	 * @scaling_filter:
+	 *
+	 * Scaling filter to be applied
+	 */
+	enum drm_scaling_filter scaling_filter;
+
+	/**
+	 * @commit: Tracks the pending commit to prevent use-after-free conditions,
+	 * and for async plane updates.
+	 *
+	 * May be NULL.
+	 */
+	struct drm_crtc_commit *commit;
+
+	/** @state: backpointer to global drm_atomic_state */
+	struct drm_atomic_state *state;
+};
+
+// struct drm_plane_funcs用于描述plane的控制函数
+// include/drm/drm_plane.h
+/**
+ * struct drm_plane_funcs - driver plane control functions
+ */
 struct drm_plane_funcs {
-	// 为给定的CRTC和framebuffer启用并配置plane
+	/**
+	 * @update_plane:
+	 *
+	 * This is the legacy entry point to enable and configure the plane for
+	 * the given CRTC and framebuffer. It is never called to disable the
+	 * plane, i.e. the passed-in crtc and fb paramters are never NULL.
+	 *
+	 * The source rectangle in frame buffer memory coordinates is given by
+	 * the src_x, src_y, src_w and src_h parameters (as 16.16 fixed point
+	 * values). Devices that don't support subpixel plane coordinates can
+	 * ignore the fractional part.
+	 *
+	 * The destination rectangle in CRTC coordinates is given by the
+	 * crtc_x, crtc_y, crtc_w and crtc_h parameters (as integer values).
+	 * Devices scale the source rectangle to the destination rectangle. If
+	 * scaling is not supported, and the source rectangle size doesn't match
+	 * the destination rectangle size, the driver must return a
+	 * -<errorname>EINVAL</errorname> error.
+	 *
+	 * Drivers implementing atomic modeset should use
+	 * drm_atomic_helper_update_plane() to implement this hook.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success or a negative error code on failure.
+	 */
 	int (*update_plane)(struct drm_plane *plane,
-					    struct drm_crtc, struct drm_framebuffer *fb,
-						int crtc_x, int crtc_y,
-						unsigned int crtc_w, unsigned int crtc_h,
-						uint32_t src_x, uint32_t src_y,
-						uint32_t src_w, uint32_t src_w,
-						struct drm_modeset_acquire_ctx *ctx);
+			    struct drm_crtc *crtc, struct drm_framebuffer *fb,
+			    int crtc_x, int crtc_y,
+			    unsigned int crtc_w, unsigned int crtc_h,
+			    uint32_t src_x, uint32_t src_y,
+			    uint32_t src_w, uint32_t src_h,
+			    struct drm_modeset_acquire_ctx *ctx);
 
-	// 关闭plane
+	/**
+	 * @disable_plane:
+	 *
+	 * This is the legacy entry point to disable the plane. The DRM core
+	 * calls this method in response to a DRM_IOCTL_MODE_SETPLANE IOCTL call
+	 * with the frame buffer ID set to 0.  Disabled planes must not be
+	 * processed by the CRTC.
+	 *
+	 * Drivers implementing atomic modeset should use
+	 * drm_atomic_helper_disable_plane() to implement this hook.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success or a negative error code on failure.
+	 */
 	int (*disable_plane)(struct drm_plane *plane,
-						 struct drm_modeset_acquire_ctx *ctx);
+			     struct drm_modeset_acquire_ctx *ctx);
 
-	// 清除plane所有的资源
-	void (*destory)(struct drm_plane *plane);
+	/**
+	 * @destroy:
+	 *
+	 * Clean up plane resources. This is only called at driver unload time
+	 * through drm_mode_config_cleanup() since a plane cannot be hotplugged
+	 * in DRM.
+	 */
+	// 清理plane的所有资源
+	void (*destroy)(struct drm_plane *plane);
 
+	/**
+	 * @reset:
+	 *
+	 * Reset plane hardware and software state to off. This function isn't
+	 * called by the core directly, only through drm_mode_config_reset().
+	 * It's not a helper hook only for historical reasons.
+	 *
+	 * Atomic drivers can use drm_atomic_helper_plane_reset() to reset
+	 * atomic state using this hook.
+	 */
 	void (*reset)(struct drm_plane *plane);
 
+	/**
+	 * @set_property:
+	 *
+	 * This is the legacy entry point to update a property attached to the
+	 * plane.
+	 *
+	 * This callback is optional if the driver does not support any legacy
+	 * driver-private properties. For atomic drivers it is not used because
+	 * property handling is done entirely in the DRM core.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success or a negative error code on failure.
+	 */
 	int (*set_property)(struct drm_plane *plane,
-						struct drm_property *property, uint64_t val);
+			    struct drm_property *property, uint64_t val);
 
+	/**
+	 * @atomic_duplicate_state:
+	 *
+	 * Duplicate the current atomic state for this plane and return it.
+	 * The core and helpers guarantee that any atomic state duplicated with
+	 * this hook and still owned by the caller (i.e. not transferred to the
+	 * driver by calling &drm_mode_config_funcs.atomic_commit) will be
+	 * cleaned up by calling the @atomic_destroy_state hook in this
+	 * structure.
+	 *
+	 * This callback is mandatory for atomic drivers.
+	 *
+	 * Atomic drivers which don't subclass &struct drm_plane_state should use
+	 * drm_atomic_helper_plane_duplicate_state(). Drivers that subclass the
+	 * state structure to extend it with driver-private state should use
+	 * __drm_atomic_helper_plane_duplicate_state() to make sure shared state is
+	 * duplicated in a consistent fashion across drivers.
+	 *
+	 * It is an error to call this hook before &drm_plane.state has been
+	 * initialized correctly.
+	 *
+	 * NOTE:
+	 *
+	 * If the duplicate state references refcounted resources this hook must
+	 * acquire a reference for each of them. The driver must release these
+	 * references again in @atomic_destroy_state.
+	 *
+	 * RETURNS:
+	 *
+	 * Duplicated atomic state or NULL when the allocation failed.
+	 */
+	// 复制当前plane的状态并返回
 	struct drm_plane_state *(*atomic_duplicate_state)(struct drm_plane *plane);
 
-	void (*atomic_destory_state)(struct drm_plane *plane,
-								 struct drm_plane_state *state);
+	/**
+	 * @atomic_destroy_state:
+	 *
+	 * Destroy a state duplicated with @atomic_duplicate_state and release
+	 * or unreference all resources it references
+	 *
+	 * This callback is mandatory for atomic drivers.
+	 */
+	void (*atomic_destroy_state)(struct drm_plane *plane,
+				     struct drm_plane_state *state);
 
-	int (*atomic_set_proprtty)(struct drm_plane *plane,
-							   struct drm_plane_state *state,
-							   struct drm_property *property,
-							   uint64_t val);
+	/**
+	 * @atomic_set_property:
+	 *
+	 * Decode a driver-private property value and store the decoded value
+	 * into the passed-in state structure. Since the atomic core decodes all
+	 * standardized properties (even for extensions beyond the core set of
+	 * properties which might not be implemented by all drivers) this
+	 * requires drivers to subclass the state structure.
+	 *
+	 * Such driver-private properties should really only be implemented for
+	 * truly hardware/vendor specific state. Instead it is preferred to
+	 * standardize atomic extension and decode the properties used to expose
+	 * such an extension in the core.
+	 *
+	 * Do not call this function directly, use
+	 * drm_atomic_plane_set_property() instead.
+	 *
+	 * This callback is optional if the driver does not support any
+	 * driver-private atomic properties.
+	 *
+	 * NOTE:
+	 *
+	 * This function is called in the state assembly phase of atomic
+	 * modesets, which can be aborted for any reason (including on
+	 * userspace's request to just check whether a configuration would be
+	 * possible). Drivers MUST NOT touch any persistent state (hardware or
+	 * software) or data structures except the passed in @state parameter.
+	 *
+	 * Also since userspace controls in which order properties are set this
+	 * function must not do any input validation (since the state update is
+	 * incomplete and hence likely inconsistent). Instead any such input
+	 * validation must be done in the various atomic_check callbacks.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 if the property has been found, -EINVAL if the property isn't
+	 * implemented by the driver (which shouldn't ever happen, the core only
+	 * asks for properties attached to this plane). No other validation is
+	 * allowed by the driver. The core already checks that the property
+	 * value is within the range (integer, valid enum value, ...) the driver
+	 * set when registering the property.
+	 */
+	// 原子操作，用于设置plane的属性
+	int (*atomic_set_property)(struct drm_plane *plane,
+				   struct drm_plane_state *state,
+				   struct drm_property *property,
+				   uint64_t val);
 
+	/**
+	 * @atomic_get_property:
+	 *
+	 * Reads out the decoded driver-private property. This is used to
+	 * implement the GETPLANE IOCTL.
+	 *
+	 * Do not call this function directly, use
+	 * drm_atomic_plane_get_property() instead.
+	 *
+	 * This callback is optional if the driver does not support any
+	 * driver-private atomic properties.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success, -EINVAL if the property isn't implemented by the
+	 * driver (which should never happen, the core only asks for
+	 * properties attached to this plane).
+	 */
+	// 获取plane的属性
 	int (*atomic_get_property)(struct drm_plane *plane,
-							   const struct drm_plane_state *state,
-							   struct drm_property *property,
-							   uint64_t *val);
-
+				   const struct drm_plane_state *state,
+				   struct drm_property *property,
+				   uint64_t *val);
+	/**
+	 * @late_register:
+	 *
+	 * This optional hook can be used to register additional userspace
+	 * interfaces attached to the plane like debugfs interfaces.
+	 * It is called late in the driver load sequence from drm_dev_register().
+	 * Everything added from this callback should be unregistered in
+	 * the early_unregister callback.
+	 *
+	 * Returns:
+	 *
+	 * 0 on success, or a negative error code on failure.
+	 */
 	int (*late_register)(struct drm_plane *plane);
 
+	/**
+	 * @early_unregister:
+	 *
+	 * This optional hook should be used to unregister the additional
+	 * userspace interfaces attached to the plane from
+	 * @late_register. It is called from drm_dev_unregister(),
+	 * early in the driver unload sequence to disable userspace access
+	 * before data structures are torndown.
+	 */
 	void (*early_unregister)(struct drm_plane *plane);
 
+	/**
+	 * @atomic_print_state:
+	 *
+	 * If driver subclasses &struct drm_plane_state, it should implement
+	 * this optional hook for printing additional driver specific state.
+	 *
+	 * Do not call this directly, use drm_atomic_plane_print_state()
+	 * instead.
+	 */
 	void (*atomic_print_state)(struct drm_printer *p,
-							   const struct drm_plane_state *state);
+				   const struct drm_plane_state *state);
 
-	bool (*format_mod_support)(struct drm_plane *plane, uint32_t format,
-							   uint64_t modifier);
+	/**
+	 * @format_mod_supported:
+	 *
+	 * This optional hook is used for the DRM to determine if the given
+	 * format/modifier combination is valid for the plane. This allows the
+	 * DRM to generate the correct format bitmask (which formats apply to
+	 * which modifier), and to validate modifiers at atomic_check time.
+	 *
+	 * If not present, then any modifier in the plane's modifier
+	 * list is allowed with any of the plane's formats.
+	 *
+	 * Returns:
+	 *
+	 * True if the given modifier is valid for that format on the plane.
+	 * False otherwise.
+	 */
+	bool (*format_mod_supported)(struct drm_plane *plane, uint32_t format,
+				     uint64_t modifier);
 };
 
+// struct drm_plane_helper_funcs 定义了一些常用的plane操作函数
 // inlcude/drm/drm_modeset_helper_vtables.h
+/**
+ * struct drm_plane_helper_funcs - helper operations for planes
+ *
+ * These functions are used by the atomic helpers.
+ */
 struct drm_plane_helper_funcs {
+	/**
+	 * @prepare_fb:
+	 *
+	 * This hook is to prepare a framebuffer for scanout by e.g. pinning
+	 * its backing storage or relocating it into a contiguous block of
+	 * VRAM. Other possible preparatory work includes flushing caches.
+	 *
+	 * This function must not block for outstanding rendering, since it is
+	 * called in the context of the atomic IOCTL even for async commits to
+	 * be able to return any errors to userspace. Instead the recommended
+	 * way is to fill out the &drm_plane_state.fence of the passed-in
+	 * &drm_plane_state. If the driver doesn't support native fences then
+	 * equivalent functionality should be implemented through private
+	 * members in the plane structure.
+	 *
+	 * For GEM drivers who neither have a @prepare_fb nor @cleanup_fb hook
+	 * set drm_gem_plane_helper_prepare_fb() is called automatically to
+	 * implement this. Other drivers which need additional plane processing
+	 * can call drm_gem_plane_helper_prepare_fb() from their @prepare_fb
+	 * hook.
+	 *
+	 * The resources acquired in @prepare_fb persist after the end of
+	 * the atomic commit. Resources that can be release at the commit's end
+	 * should be acquired in @begin_fb_access and released in @end_fb_access.
+	 * For example, a GEM buffer's pin operation belongs into @prepare_fb to
+	 * keep the buffer pinned after the commit. But a vmap operation for
+	 * shadow-plane helpers belongs into @begin_fb_access, so that atomic
+	 * helpers remove the mapping at the end of the commit.
+	 *
+	 * The helpers will call @cleanup_fb with matching arguments for every
+	 * successful call to this hook.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is
+	 * optional. See @begin_fb_access for preparing per-commit resources.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success or one of the following negative error codes allowed by
+	 * the &drm_mode_config_funcs.atomic_commit vfunc. When using helpers
+	 * this callback is the only one which can fail an atomic commit,
+	 * everything else must complete successfully.
+	 */
 	int (*prepare_fb)(struct drm_plane *plane,
-					  struct drm_plane_state *new_state);
+			  struct drm_plane_state *new_state);
+	/**
+	 * @cleanup_fb:
+	 *
+	 * This hook is called to clean up any resources allocated for the given
+	 * framebuffer and plane configuration in @prepare_fb.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is
+	 * optional.
+	 */
+	void (*cleanup_fb)(struct drm_plane *plane,
+			   struct drm_plane_state *old_state);
 
-	void (*cleanup_fb)(struct drm_plane,
-					   struct drm_plane_state *old_state);
+	/**
+	 * @begin_fb_access:
+	 *
+	 * This hook prepares the plane for access during an atomic commit.
+	 * In contrast to @prepare_fb, resources acquired in @begin_fb_access,
+	 * are released at the end of the atomic commit in @end_fb_access.
+	 *
+	 * For example, with shadow-plane helpers, the GEM buffer's vmap
+	 * operation belongs into @begin_fb_access, so that the buffer's
+	 * memory will be unmapped at the end of the commit in @end_fb_access.
+	 * But a GEM buffer's pin operation belongs into @prepare_fb
+	 * to keep the buffer pinned after the commit.
+	 *
+	 * The callback is used by the atomic modeset helpers, but it is optional.
+	 * See @end_fb_cleanup for undoing the effects of @begin_fb_access and
+	 * @prepare_fb for acquiring resources until the next pageflip.
+	 *
+	 * Returns:
+	 * 0 on success, or a negative errno code otherwise.
+	 */
+	int (*begin_fb_access)(struct drm_plane *plane, struct drm_plane_state *new_plane_state);
 
+	/**
+	 * @end_fb_access:
+	 *
+	 * This hook cleans up resources allocated by @begin_fb_access. It it called
+	 * at the end of a commit for the new plane state.
+	 */
+	void (*end_fb_access)(struct drm_plane *plane, struct drm_plane_state *new_plane_state);
+
+	/**
+	 * @atomic_check:
+	 *
+	 * Drivers should check plane specific constraints in this hook.
+	 *
+	 * When using drm_atomic_helper_check_planes() plane's @atomic_check
+	 * hooks are called before the ones for CRTCs, which allows drivers to
+	 * request shared resources that the CRTC controls here. For more
+	 * complicated dependencies the driver can call the provided check helpers
+	 * multiple times until the computed state has a final configuration and
+	 * everything has been checked.
+	 *
+	 * This function is also allowed to inspect any other object's state and
+	 * can add more state objects to the atomic commit if needed. Care must
+	 * be taken though to ensure that state check and compute functions for
+	 * these added states are all called, and derived state in other objects
+	 * all updated. Again the recommendation is to just call check helpers
+	 * until a maximal configuration is reached.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is
+	 * optional.
+	 *
+	 * NOTE:
+	 *
+	 * This function is called in the check phase of an atomic update. The
+	 * driver is not allowed to change anything outside of the
+	 * &drm_atomic_state update tracking structure.
+	 *
+	 * RETURNS:
+	 *
+	 * 0 on success, -EINVAL if the state or the transition can't be
+	 * supported, -ENOMEM on memory allocation failure and -EDEADLK if an
+	 * attempt to obtain another state object ran into a &drm_modeset_lock
+	 * deadlock.
+	 */
 	int (*atomic_check)(struct drm_plane *plane,
-						struct drm_plane_state *state);
+			    struct drm_atomic_state *state);
 
+	/**
+	 * @atomic_update:
+	 *
+	 * Drivers should use this function to update the plane state.  This
+	 * hook is called in-between the &drm_crtc_helper_funcs.atomic_begin and
+	 * drm_crtc_helper_funcs.atomic_flush callbacks.
+	 *
+	 * Note that the power state of the display pipe when this function is
+	 * called depends upon the exact helpers and calling sequence the driver
+	 * has picked. See drm_atomic_helper_commit_planes() for a discussion of
+	 * the tradeoffs and variants of plane commit helpers.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is optional.
+	 */
 	void (*atomic_update)(struct drm_plane *plane,
-						  struct drm_plane_state *old_state);
+			      struct drm_atomic_state *state);
 
+	/**
+	 * @atomic_enable:
+	 *
+	 * Drivers should use this function to unconditionally enable a plane.
+	 * This hook is called in-between the &drm_crtc_helper_funcs.atomic_begin
+	 * and drm_crtc_helper_funcs.atomic_flush callbacks. It is called after
+	 * @atomic_update, which will be called for all enabled planes. Drivers
+	 * that use @atomic_enable should set up a plane in @atomic_update and
+	 * afterwards enable the plane in @atomic_enable. If a plane needs to be
+	 * enabled before installing the scanout buffer, drivers can still do
+	 * so in @atomic_update.
+	 *
+	 * Note that the power state of the display pipe when this function is
+	 * called depends upon the exact helpers and calling sequence the driver
+	 * has picked. See drm_atomic_helper_commit_planes() for a discussion of
+	 * the tradeoffs and variants of plane commit helpers.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is
+	 * optional. If implemented, @atomic_enable should be the inverse of
+	 * @atomic_disable. Drivers that don't want to use either can still
+	 * implement the complete plane update in @atomic_update.
+	 */
+	void (*atomic_enable)(struct drm_plane *plane,
+			      struct drm_atomic_state *state);
+
+	/**
+	 * @atomic_disable:
+	 *
+	 * Drivers should use this function to unconditionally disable a plane.
+	 * This hook is called in-between the
+	 * &drm_crtc_helper_funcs.atomic_begin and
+	 * drm_crtc_helper_funcs.atomic_flush callbacks. It is an alternative to
+	 * @atomic_update, which will be called for disabling planes, too, if
+	 * the @atomic_disable hook isn't implemented.
+	 *
+	 * This hook is also useful to disable planes in preparation of a modeset,
+	 * by calling drm_atomic_helper_disable_planes_on_crtc() from the
+	 * &drm_crtc_helper_funcs.disable hook.
+	 *
+	 * Note that the power state of the display pipe when this function is
+	 * called depends upon the exact helpers and calling sequence the driver
+	 * has picked. See drm_atomic_helper_commit_planes() for a discussion of
+	 * the tradeoffs and variants of plane commit helpers.
+	 *
+	 * This callback is used by the atomic modeset helpers, but it is
+	 * optional. It's intended to reverse the effects of @atomic_enable.
+	 */
 	void (*atomic_disable)(struct drm_plane *plane,
-						   struct drm_plane_state *old_state);
+			       struct drm_atomic_state *state);
 
+	/**
+	 * @atomic_async_check:
+	 *
+	 * Drivers should set this function pointer to check if the plane's
+	 * atomic state can be updated in a async fashion. Here async means
+	 * "not vblank synchronized".
+	 *
+	 * This hook is called by drm_atomic_async_check() to establish if a
+	 * given update can be committed asynchronously, that is, if it can
+	 * jump ahead of the state currently queued for update.
+	 *
+	 * RETURNS:
+	 *
+	 * Return 0 on success and any error returned indicates that the update
+	 * can not be applied in asynchronous manner.
+	 */
 	int (*atomic_async_check)(struct drm_plane *plane,
-							  struct drm_plane_state *state);
+				  struct drm_atomic_state *state);
 
+	/**
+	 * @atomic_async_update:
+	 *
+	 * Drivers should set this function pointer to perform asynchronous
+	 * updates of planes, that is, jump ahead of the currently queued
+	 * state and update the plane. Here async means "not vblank
+	 * synchronized".
+	 *
+	 * This hook is called by drm_atomic_helper_async_commit().
+	 *
+	 * An async update will happen on legacy cursor updates. An async
+	 * update won't happen if there is an outstanding commit modifying
+	 * the same plane.
+	 *
+	 * When doing async_update drivers shouldn't replace the
+	 * &drm_plane_state but update the current one with the new plane
+	 * configurations in the new plane_state.
+	 *
+	 * Drivers should also swap the framebuffers between current plane
+	 * state (&drm_plane.state) and new_state.
+	 * This is required since cleanup for async commits is performed on
+	 * the new state, rather than old state like for traditional commits.
+	 * Since we want to give up the reference on the current (old) fb
+	 * instead of our brand new one, swap them in the driver during the
+	 * async commit.
+	 *
+	 * FIXME:
+	 *  - It only works for single plane updates
+	 *  - Async Pageflips are not supported yet
+	 *  - Some hw might still scan out the old buffer until the next
+	 *    vblank, however we let go of the fb references as soon as
+	 *    we run this hook. For now drivers must implement their own workers
+	 *    for deferring if needed, until a common solution is created.
+	 */
 	void (*atomic_async_update)(struct drm_plane *plane,
-								struct drm_plane_state *new_state);
+				    struct drm_atomic_state *state);
 };
 ```
+
 
 #### struct drm_crtc
 ```c
@@ -589,132 +1386,716 @@ struct drm_crtc {
 ```
 
 #### struct drm_device
+linux内核使用`struct drm_device`数据结构来描述一个`drm`设备
 ```c
 // include/drm/drm_device.h
+/**
+ * struct drm_device - DRM device structure
+ *
+ * This structure represent a complete card that
+ * may contain multiple heads.
+ */
 struct drm_device {
-    struct list_head legacy_dev_list;
-    int if_version;
-    struct kref ref;
-    struct device *dev;
+	/** @if_version: Highest interface version set */
+	int if_version;
 
-    struct {
-        struct list_head resources;
-        void *final_kfree;
-        spinlock_t lock;
-    }managed;
+	/** @ref: Object ref-count */
+	/* 引用计数，使用drm_dev_get()和drm_dev_put()获取和释放引用计数 */
+	struct kref ref;
 
-    struct drm_driver *driver;
-    void *dev_private;
-    struct drm_minor *primary;
-    struct drm_minor *render;
-    bool registered;
-    struct drm_master *master;
-    u32 driver_features;
-    bool unplugged;
-    struct inode *anon_inode;
-    char *unique;
-    struct mutex struct_mutex;
-    struct mutex master_mutex;
-    atomic_t open_count;
-    struct mutex filelist_mutex;
-    struct list_head filelist;
-    struct list_head filelist_internal;
-    struct mutex clientlist_mutex;
-    struct list_head clientlist;
+	/** @dev: Device structure of bus-device */
+	/* 设备驱动模型中的device，可以将drm_device看做其子类 */
+	struct device *dev;
 
-    bool irq_enabled;
-    int irq;
+	/**
+	 * @managed:
+	 *
+	 * Managed resources linked to the lifetime of this &drm_device as
+	 * tracked by @ref.
+	 */
+	struct {
+		/** @managed.resources: managed resources list */
+		struct list_head resources;
+		/** @managed.final_kfree: pointer for final kfree() call */
+		void *final_kfree;
+		/** @managed.lock: protects @managed.resources */
+		spinlock_t lock;
+	} managed;
 
-    bool vblank_disable_immediate;
-    struct drm_vblank_crtc *vblank;
-    spinlock_t vblank_time_lock;
-    spinlock_t vbl_lock;
-    u32 max_vblank_count;
-    struct list_head vblank_event_list;
-    spinlock_t event_lock;
-    struct drm_agp_head *agp;
+	/** @driver: DRM driver managing the device */
+	/* 指向drm驱动 */
+	const struct drm_driver *driver;
 
-    struct pci_dev *pdev;
+	/**
+	 * @dev_private:
+	 *
+	 * DRM driver private data. This is deprecated and should be left set to
+	 * NULL.
+	 *
+	 * Instead of using this pointer it is recommended that drivers use
+	 * devm_drm_dev_alloc() and embed struct &drm_device in their larger
+	 * per-device structure.
+	 */
+	void *dev_private;
 
-    unsigned int num_crtcs;
-    struct drm_mode_config mode_config;
-    struct mutex object_name_lock;
-    struct idr object_name_idr;
-    struct drm_vma_offset_manager *vma_offset_manager;
-    struct drm_vram_mm *vram_mm;
-    enum switch_power_state switch_power_state;
-    struct drm_fb_helper *fb_helper;
-	...
+	/**
+	 * @primary:
+	 *
+	 * Primary node. Drivers should not interact with this
+	 * directly. debugfs interfaces can be registered with
+	 * drm_debugfs_add_file(), and sysfs should be directly added on the
+	 * hardware (and not character device node) struct device @dev.
+	 */
+	struct drm_minor *primary;
+
+	/**
+	 * @render:
+	 *
+	 * Render node. Drivers should not interact with this directly ever.
+	 * Drivers should not expose any additional interfaces in debugfs or
+	 * sysfs on this node.
+	 */
+	struct drm_minor *render;
+
+	/** @accel: Compute Acceleration node */
+	struct drm_minor *accel;
+
+	/**
+	 * @registered:
+	 *
+	 * Internally used by drm_dev_register() and drm_connector_register().
+	 */
+	/* 设备是否已注册 */
+	bool registered;
+
+	/**
+	 * @master:
+	 *
+	 * Currently active master for this device.
+	 * Protected by &master_mutex
+	 */
+	struct drm_master *master;
+
+	/**
+	 * @driver_features: per-device driver features
+	 *
+	 * Drivers can clear specific flags here to disallow
+	 * certain features on a per-device basis while still
+	 * sharing a single &struct drm_driver instance across
+	 * all devices.
+	 */
+	u32 driver_features;
+
+	/**
+	 * @unplugged:
+	 *
+	 * Flag to tell if the device has been unplugged.
+	 * See drm_dev_enter() and drm_dev_is_unplugged().
+	 */
+	bool unplugged;
+
+	/** @anon_inode: inode for private address-space */
+	struct inode *anon_inode;
+
+	/** @unique: Unique name of the device */
+	/* drm设备的名称 */
+	char *unique;
+
+	/**
+	 * @struct_mutex:
+	 *
+	 * Lock for others (not &drm_minor.master and &drm_file.is_master)
+	 *
+	 * WARNING:
+	 * Only drivers annotated with DRIVER_LEGACY should be using this.
+	 */
+	struct mutex struct_mutex;
+
+	/**
+	 * @master_mutex:
+	 *
+	 * Lock for &drm_minor.master and &drm_file.is_master
+	 */
+	struct mutex master_mutex;
+
+	/**
+	 * @open_count:
+	 *
+	 * Usage counter for outstanding files open,
+	 * protected by drm_global_mutex
+	 */
+	atomic_t open_count;
+
+	/** @filelist_mutex: Protects @filelist. */
+	struct mutex filelist_mutex;
+	/**
+	 * @filelist:
+	 *
+	 * List of userspace clients, linked through &drm_file.lhead.
+	 */
+	struct list_head filelist;
+
+	/**
+	 * @filelist_internal:
+	 *
+	 * List of open DRM files for in-kernel clients.
+	 * Protected by &filelist_mutex.
+	 */
+	struct list_head filelist_internal;
+
+	/**
+	 * @clientlist_mutex:
+	 *
+	 * Protects &clientlist access.
+	 */
+	struct mutex clientlist_mutex;
+
+	/**
+	 * @clientlist:
+	 *
+	 * List of in-kernel clients. Protected by &clientlist_mutex.
+	 */
+	struct list_head clientlist;
+
+	/**
+	 * @vblank_disable_immediate:
+	 *
+	 * If true, vblank interrupt will be disabled immediately when the
+	 * refcount drops to zero, as opposed to via the vblank disable
+	 * timer.
+	 *
+	 * This can be set to true it the hardware has a working vblank counter
+	 * with high-precision timestamping (otherwise there are races) and the
+	 * driver uses drm_crtc_vblank_on() and drm_crtc_vblank_off()
+	 * appropriately. See also @max_vblank_count and
+	 * &drm_crtc_funcs.get_vblank_counter.
+	 */
+	bool vblank_disable_immediate;
+
+	/**
+	 * @vblank:
+	 *
+	 * Array of vblank tracking structures, one per &struct drm_crtc. For
+	 * historical reasons (vblank support predates kernel modesetting) this
+	 * is free-standing and not part of &struct drm_crtc itself. It must be
+	 * initialized explicitly by calling drm_vblank_init().
+	 */
+	struct drm_vblank_crtc *vblank;
+
+	/**
+	 * @vblank_time_lock:
+	 *
+	 *  Protects vblank count and time updates during vblank enable/disable
+	 */
+	spinlock_t vblank_time_lock;
+	/**
+	 * @vbl_lock: Top-level vblank references lock, wraps the low-level
+	 * @vblank_time_lock.
+	 */
+	spinlock_t vbl_lock;
+
+	/**
+	 * @max_vblank_count:
+	 *
+	 * Maximum value of the vblank registers. This value +1 will result in a
+	 * wrap-around of the vblank register. It is used by the vblank core to
+	 * handle wrap-arounds.
+	 *
+	 * If set to zero the vblank core will try to guess the elapsed vblanks
+	 * between times when the vblank interrupt is disabled through
+	 * high-precision timestamps. That approach is suffering from small
+	 * races and imprecision over longer time periods, hence exposing a
+	 * hardware vblank counter is always recommended.
+	 *
+	 * This is the statically configured device wide maximum. The driver
+	 * can instead choose to use a runtime configurable per-crtc value
+	 * &drm_vblank_crtc.max_vblank_count, in which case @max_vblank_count
+	 * must be left at zero. See drm_crtc_set_max_vblank_count() on how
+	 * to use the per-crtc value.
+	 *
+	 * If non-zero, &drm_crtc_funcs.get_vblank_counter must be set.
+	 */
+	u32 max_vblank_count;
+
+	/** @vblank_event_list: List of vblank events */
+	struct list_head vblank_event_list;
+
+	/**
+	 * @event_lock:
+	 *
+	 * Protects @vblank_event_list and event delivery in
+	 * general. See drm_send_event() and drm_send_event_locked().
+	 */
+	spinlock_t event_lock;
+
+	/** @num_crtcs: Number of CRTCs on this device */
+	/* CRTC的数量 */
+	unsigned int num_crtcs;
+
+	/** @mode_config: Current mode config */
+	struct drm_mode_config mode_config;
+
+	/** @object_name_lock: GEM information */
+	struct mutex object_name_lock;
+
+	/** @object_name_idr: GEM information */
+	struct idr object_name_idr;
+
+	/** @vma_offset_manager: GEM information */
+	struct drm_vma_offset_manager *vma_offset_manager;
+
+	/** @vram_mm: VRAM MM memory manager */
+	struct drm_vram_mm *vram_mm;
+
+	/**
+	 * @switch_power_state:
+	 *
+	 * Power state of the client.
+	 * Used by drivers supporting the switcheroo driver.
+	 * The state is maintained in the
+	 * &vga_switcheroo_client_ops.set_gpu_state callback
+	 */
+	enum switch_power_state switch_power_state;
+
+	/**
+	 * @fb_helper:
+	 *
+	 * Pointer to the fbdev emulation structure.
+	 * Set by drm_fb_helper_init() and cleared by drm_fb_helper_fini().
+	 */
+	struct drm_fb_helper *fb_helper;
+
+	/**
+	 * @debugfs_mutex:
+	 *
+	 * Protects &debugfs_list access.
+	 */
+	struct mutex debugfs_mutex;
+
+	/**
+	 * @debugfs_list:
+	 *
+	 * List of debugfs files to be created by the DRM device. The files
+	 * must be added during drm_dev_register().
+	 */
+	/* 保存 struct drm_debugfs_entry 的链表 */
+	struct list_head debugfs_list;
+
+	/* Everything below here is for legacy driver, never use! */
+	/* private: */
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
+	/* List of devices per driver for stealth attach cleanup */
+	struct list_head legacy_dev_list;
+
+#ifdef __alpha__
+	/** @hose: PCI hose, only used on ALPHA platforms. */
+	struct pci_controller *hose;
+#endif
+
+	/* AGP data */
+	struct drm_agp_head *agp;
+
+	/* Context handle management - linked list of context handles */
+	struct list_head ctxlist;
+
+	/* Context handle management - mutex for &ctxlist */
+	struct mutex ctxlist_mutex;
+
+	/* Context handle management */
+	struct idr ctx_idr;
+
+	/* Memory management - linked list of regions */
+	struct list_head maplist;
+
+	/* Memory management - user token hash table for maps */
+	struct drm_open_hash map_hash;
+
+	/* Context handle management - list of vmas (for debugging) */
+	struct list_head vmalist;
+
+	/* Optional pointer for DMA support */
+	struct drm_device_dma *dma;
+
+	/* Context swapping flag */
+	__volatile__ long context_flag;
+
+	/* Last current context */
+	int last_context;
+
+	/* Lock for &buf_use and a few other things. */
+	spinlock_t buf_lock;
+
+	/* Usage counter for buffers in use -- cannot alloc */
+	int buf_use;
+
+	/* Buffer allocation in progress */
+	atomic_t buf_alloc;
+
+	struct {
+		int context;
+		struct drm_hw_lock *lock;
+	} sigdata;
+
+	struct drm_local_map *agp_buffer_map;
+	unsigned int agp_buffer_token;
+
+	/* Scatter gather memory */
+	struct drm_sg_mem *sg;
+
+	/* IRQs */
+	bool irq_enabled;
+	int irq;
+#endif
 };
 ```
 
 #### struct drm_mode_config
+linux内核使用`struct drm_mode_config`来描述显示模式配置信息，`drm_mode_config`的主要功能之一是提供对显示器模式的管理和配置，包括添加、删除、修改、查询显示器模式的能力，在整个驱动的初始化过程中`struct drm_mode_config`会记录crtc plane等的信息。
 ```c
+/**
+ * struct drm_mode_config - Mode configuration control structure
+ * @min_width: minimum fb pixel width on this device
+ * @min_height: minimum fb pixel height on this device
+ * @max_width: maximum fb pixel width on this device
+ * @max_height: maximum fb pixel height on this device
+ * @funcs: core driver provided mode setting functions
+ * @poll_enabled: track polling support for this device
+ * @poll_running: track polling status for this device
+ * @delayed_event: track delayed poll uevent deliver for this device
+ * @output_poll_work: delayed work for polling in process context
+ * @preferred_depth: preferred RBG pixel depth, used by fb helpers
+ * @prefer_shadow: hint to userspace to prefer shadow-fb rendering
+ * @cursor_width: hint to userspace for max cursor width
+ * @cursor_height: hint to userspace for max cursor height
+ * @helper_private: mid-layer private data
+ *
+ * Core mode resource tracking structure.  All CRTC, encoders, and connectors
+ * enumerated by the driver are added here, as are global properties.  Some
+ * global restrictions are also here, e.g. dimension restrictions.
+ *
+ * Framebuffer sizes refer to the virtual screen that can be displayed by
+ * the CRTC. This can be different from the physical resolution programmed.
+ * The minimum width and height, stored in @min_width and @min_height,
+ * describe the smallest size of the framebuffer. It correlates to the
+ * minimum programmable resolution.
+ * The maximum width, stored in @max_width, is typically limited by the
+ * maximum pitch between two adjacent scanlines. The maximum height, stored
+ * in @max_height, is usually only limited by the amount of addressable video
+ * memory. For hardware that has no real maximum, drivers should pick a
+ * reasonable default.
+ *
+ * See also @DRM_SHADOW_PLANE_MAX_WIDTH and @DRM_SHADOW_PLANE_MAX_HEIGHT.
+ */
 struct drm_mode_config {
+	/**
+	 * @mutex:
+	 *
+	 * This is the big scary modeset BKL which protects everything that
+	 * isn't protect otherwise. Scope is unclear and fuzzy, try to remove
+	 * anything from under its protection and move it into more well-scoped
+	 * locks.
+	 *
+	 * The one important thing this protects is the use of @acquire_ctx.
+	 */
 	struct mutex mutex;
+
+	/**
+	 * @connection_mutex:
+	 *
+	 * This protects connector state and the connector to encoder to CRTC
+	 * routing chain.
+	 *
+	 * For atomic drivers specifically this protects &drm_connector.state.
+	 */
 	struct drm_modeset_lock connection_mutex;
+
+	/**
+	 * @acquire_ctx:
+	 *
+	 * Global implicit acquire context used by atomic drivers for legacy
+	 * IOCTLs. Deprecated, since implicit locking contexts make it
+	 * impossible to use driver-private &struct drm_modeset_lock. Users of
+	 * this must hold @mutex.
+	 */
 	struct drm_modeset_acquire_ctx *acquire_ctx;
+
+	/**
+	 * @idr_mutex:
+	 *
+	 * Mutex for KMS ID allocation and management. Protects both @object_idr
+	 * and @tile_idr.
+	 */
 	struct mutex idr_mutex;
+
+	/**
+	 * @object_idr:
+	 *
+	 * Main KMS ID tracking object. Use this idr for all IDs, fb, crtc,
+	 * connector, modes - just makes life easier to have only one.
+	 */
 	struct idr object_idr;
+
+	/**
+	 * @tile_idr:
+	 *
+	 * Use this idr for allocating new IDs for tiled sinks like use in some
+	 * high-res DP MST screens.
+	 */
 	struct idr tile_idr;
 
+	/** @fb_lock: Mutex to protect fb the global @fb_list and @num_fb. */
 	struct mutex fb_lock;
+	/** @num_fb: Number of entries on @fb_list. */
+	/* drm_framebuffer的个数 */
 	int num_fb;
+	/** @fb_list: List of all &struct drm_framebuffer. */
+	/* 链接所有的struct drm_framebuffer */
 	struct list_head fb_list;
 
+	/**
+	 * @connector_list_lock: Protects @num_connector and
+	 * @connector_list and @connector_free_list.
+	 */
 	spinlock_t connector_list_lock;
+	/**
+	 * @num_connector: Number of connectors on this device. Protected by
+	 * @connector_list_lock.
+	 */
 	int num_connector;
+	/**
+	 * @connector_ida: ID allocator for connector indices.
+	 */
 	struct ida connector_ida;
+	/**
+	 * @connector_list:
+	 *
+	 * List of connector objects linked with &drm_connector.head. Protected
+	 * by @connector_list_lock. Only use drm_for_each_connector_iter() and
+	 * &struct drm_connector_list_iter to walk this list.
+	 */
+	/* 链接所有的drm_connector */
 	struct list_head connector_list;
-	struct list_head connector_free_list;
+	/**
+	 * @connector_free_list:
+	 *
+	 * List of connector objects linked with &drm_connector.free_head.
+	 * Protected by @connector_list_lock. Used by
+	 * drm_for_each_connector_iter() and
+	 * &struct drm_connector_list_iter to savely free connectors using
+	 * @connector_free_work.
+	 */
+	struct llist_head connector_free_list;
+	/**
+	 * @connector_free_work: Work to clean up @connector_free_list.
+	 */
 	struct work_struct connector_free_work;
 
+	/**
+	 * @num_encoder:
+	 *
+	 * Number of encoders on this device. This is invariant over the
+	 * lifetime of a device and hence doesn't need any locks.
+	 */
+	/* encoder的个数 */
 	int num_encoder;
+	/**
+	 * @encoder_list:
+	 *
+	 * List of encoder objects linked with &drm_encoder.head. This is
+	 * invariant over the lifetime of a device and hence doesn't need any
+	 * locks.
+	 */
+	/* 链接所有的drm_encoder */
 	struct list_head encoder_list;
 
-	int num_total_planel;
+	/**
+	 * @num_total_plane:
+	 *
+	 * Number of universal (i.e. with primary/curso) planes on this device.
+	 * This is invariant over the lifetime of a device and hence doesn't
+	 * need any locks.
+	 */
+	/* plane的个数 */
+	int num_total_plane;
+	/**
+	 * @plane_list:
+	 *
+	 * List of plane objects linked with &drm_plane.head. This is invariant
+	 * over the lifetime of a device and hence doesn't need any locks.
+	 */
+	/* 链接所有的drm_plane */
 	struct list_head plane_list;
 
+	/**
+	 * @num_crtc:
+	 *
+	 * Number of CRTCs on this device linked with &drm_crtc.head. This is invariant over the lifetime
+	 * of a device and hence doesn't need any locks.
+	 */
+	/* crtc的个数 */
 	int num_crtc;
+	/**
+	 * @crtc_list:
+	 *
+	 * List of CRTC objects linked with &drm_crtc.head. This is invariant
+	 * over the lifetime of a device and hence doesn't need any locks.
+	 */
+	/* 链接所有的CRTC */
 	struct list_head crtc_list;
 
+	/**
+	 * @property_list:
+	 *
+	 * List of property type objects linked with &drm_property.head. This is
+	 * invariant over the lifetime of a device and hence doesn't need any
+	 * locks.
+	 */
 	struct list_head property_list;
+
+	/**
+	 * @privobj_list:
+	 *
+	 * List of private objects linked with &drm_private_obj.head. This is
+	 * invariant over the lifetime of a device and hence doesn't need any
+	 * locks.
+	 */
 	struct list_head privobj_list;
-
-	int min_width;
-	int min_height;
-	int max_width;
-	int max_height;
+	/* 支持最小帧缓冲区的像素宽度和高度 */
+	int min_width, min_height;
+	/* 支持最大帧缓冲区的像素宽度和高度 */
+	int max_width, max_height;
 	const struct drm_mode_config_funcs *funcs;
-	resource_size_t fb_base;
 
+	/* output poll support */
 	bool poll_enabled;
 	bool poll_running;
 	bool delayed_event;
 	struct delayed_work output_poll_work;
 
+	/**
+	 * @blob_lock:
+	 *
+	 * Mutex for blob property allocation and management, protects
+	 * @property_blob_list and &drm_file.blobs.
+	 */
 	struct mutex blob_lock;
+
+	/**
+	 * @property_blob_list:
+	 *
+	 * List of all the blob property objects linked with
+	 * &drm_property_blob.head. Protected by @blob_lock.
+	 */
 	struct list_head property_blob_list;
 
+	/* pointers to standard properties */
+
+	/**
+	 * @edid_property: Default connector property to hold the EDID of the
+	 * currently connected sink, if any.
+	 */
 	struct drm_property *edid_property;
+	/**
+	 * @dpms_property: Default connector property to control the
+	 * connector's DPMS state.
+	 */
 	struct drm_property *dpms_property;
+	/**
+	 * @path_property: Default connector property to hold the DP MST path
+	 * for the port.
+	 */
 	struct drm_property *path_property;
+	/**
+	 * @tile_property: Default connector property to store the tile
+	 * position of a tiled screen, for sinks which need to be driven with
+	 * multiple CRTCs.
+	 */
 	struct drm_property *tile_property;
+	/**
+	 * @link_status_property: Default connector property for link status
+	 * of a connector
+	 */
 	struct drm_property *link_status_property;
+	/**
+	 * @plane_type_property: Default plane property to differentiate
+	 * CURSOR, PRIMARY and OVERLAY legacy uses of planes.
+	 */
 	struct drm_property *plane_type_property;
+	/**
+	 * @prop_src_x: Default atomic plane property for the plane source
+	 * position in the connected &drm_framebuffer.
+	 */
 	struct drm_property *prop_src_x;
+	/**
+	 * @prop_src_y: Default atomic plane property for the plane source
+	 * position in the connected &drm_framebuffer.
+	 */
 	struct drm_property *prop_src_y;
+	/**
+	 * @prop_src_w: Default atomic plane property for the plane source
+	 * position in the connected &drm_framebuffer.
+	 */
 	struct drm_property *prop_src_w;
+	/**
+	 * @prop_src_h: Default atomic plane property for the plane source
+	 * position in the connected &drm_framebuffer.
+	 */
 	struct drm_property *prop_src_h;
+	/**
+	 * @prop_crtc_x: Default atomic plane property for the plane destination
+	 * position in the &drm_crtc is being shown on.
+	 */
 	struct drm_property *prop_crtc_x;
+	/**
+	 * @prop_crtc_y: Default atomic plane property for the plane destination
+	 * position in the &drm_crtc is being shown on.
+	 */
 	struct drm_property *prop_crtc_y;
+	/**
+	 * @prop_crtc_w: Default atomic plane property for the plane destination
+	 * position in the &drm_crtc is being shown on.
+	 */
 	struct drm_property *prop_crtc_w;
+	/**
+	 * @prop_crtc_h: Default atomic plane property for the plane destination
+	 * position in the &drm_crtc is being shown on.
+	 */
 	struct drm_property *prop_crtc_h;
+	/**
+	 * @prop_fb_id: Default atomic plane property to specify the
+	 * &drm_framebuffer.
+	 */
 	struct drm_property *prop_fb_id;
-	struct drm_property *prop_in_fence_id;
-	struct drm_property *prop_out_fence_id;
+	/**
+	 * @prop_in_fence_fd: Sync File fd representing the incoming fences
+	 * for a Plane.
+	 */
+	struct drm_property *prop_in_fence_fd;
+	/**
+	 * @prop_out_fence_ptr: Sync File fd pointer representing the
+	 * outgoing fences for a CRTC. Userspace should provide a pointer to a
+	 * value of type s32, and then cast that pointer to u64.
+	 */
+	struct drm_property *prop_out_fence_ptr;
+	/**
+	 * @prop_crtc_id: Default atomic plane property to specify the
+	 * &drm_crtc.
+	 */
 	struct drm_property *prop_crtc_id;
+	/**
+	 * @prop_fb_damage_clips: Optional plane property to mark damaged
+	 * regions on the plane in framebuffer coordinates of the framebuffer
+	 * attached to the plane.
+	 *
+	 * The layout of blob data is simply an array of &drm_mode_rect. Unlike
+	 * plane src coordinates, damage clips are not in 16.16 fixed point.
+	 */
 	struct drm_property *prop_fb_damage_clips;
+	/**
+	 * @prop_active: Default atomic CRTC property to control the active
+	 * state, which is the simplified implementation for DPMS in atomic
+	 * drivers.
+	 */
 	struct drm_property *prop_active;
 	/**
 	 * @prop_mode_id: Default atomic CRTC property to set the mode for a
@@ -755,11 +2136,21 @@ struct drm_mode_config {
 	 * between different TV connector types.
 	 */
 	struct drm_property *tv_select_subconnector_property;
+
 	/**
-	 * @tv_mode_property: Optional TV property to select
+	 * @legacy_tv_mode_property: Optional TV property to select
 	 * the output TV mode.
+	 *
+	 * Superseded by @tv_mode_property
+	 */
+	struct drm_property *legacy_tv_mode_property;
+
+	/**
+	 * @tv_mode_property: Optional TV property to select the TV
+	 * standard output on the connector.
 	 */
 	struct drm_property *tv_mode_property;
+
 	/**
 	 * @tv_left_margin_property: Optional TV property to set the left
 	 * margin (expressed in pixels).
@@ -924,25 +2315,6 @@ struct drm_mode_config {
 	uint32_t preferred_depth, prefer_shadow;
 
 	/**
-	 * @prefer_shadow_fbdev:
-	 *
-	 * Hint to framebuffer emulation to prefer shadow-fb rendering.
-	 */
-	bool prefer_shadow_fbdev;
-
-	/**
-	 * @fbdev_use_iomem:
-	 *
-	 * Set to true if framebuffer reside in iomem.
-	 * When set to true memcpy_toio() is used when copying the framebuffer in
-	 * drm_fb_helper.drm_fb_helper_dirty_blit_real().
-	 *
-	 * FIXME: This should be replaced with a per-mapping is_iomem
-	 * flag (like ttm does), and then used everywhere in fbdev code.
-	 */
-	bool fbdev_use_iomem;
-
-	/**
 	 * @quirk_addfb_prefer_xbgr_30bpp:
 	 *
 	 * Special hack for legacy ADDFB to keep nouveau userspace happy. Should
@@ -971,11 +2343,14 @@ struct drm_mode_config {
 	bool async_page_flip;
 
 	/**
-	 * @allow_fb_modifiers:
+	 * @fb_modifiers_not_supported:
 	 *
-	 * Whether the driver supports fb modifiers in the ADDFB2.1 ioctl call.
+	 * When this flag is set, the DRM device will not expose modifier
+	 * support to userspace. This is only used by legacy drivers that infer
+	 * the buffer layout through heuristics without using modifiers. New
+	 * drivers shall not set fhis flag.
 	 */
-	bool allow_fb_modifiers;
+	bool fb_modifiers_not_supported;
 
 	/**
 	 * @normalize_zpos:
@@ -992,6 +2367,7 @@ struct drm_mode_config {
 	struct drm_property *modifiers_property;
 
 	/* cursor size */
+	/* 光标的最大宽度和高度 */
 	uint32_t cursor_width, cursor_height;
 
 	/**
@@ -1007,451 +2383,539 @@ struct drm_mode_config {
 };
 ```
 
-#### struct drm_driver
+#### struct drm_minor
+`struct drm_minor`用来描述在/dev下的drm设备节点，drm core会根据`driver_features`来决定是否为`drm_device`中的primary, render, accel注册字符设备，同时在`/dev/dri`目录下创建相应的设备节点。
 ```c
-/**
- * struct drm_driver - DRM driver structure
+// include/drm/drm_file.h
+
+/* Note that the values of this enum are ABI (it determines
+ * /dev/dri/renderD* numbers).
  *
- * This structure represent the common code for a family of cards. There will be
- * one &struct drm_device for each card present in this family. It contains lots
- * of vfunc entries, and a pile of those probably should be moved to more
- * appropriate places like &drm_mode_config_funcs or into a new operations
- * structure for GEM drivers.
+ * Setting DRM_MINOR_ACCEL to 32 gives enough space for more drm minors to
+ * be implemented before we hit any future
  */
-struct drm_driver {
+enum drm_minor_type {
+	DRM_MINOR_PRIMARY = 0,
+	DRM_MINOR_CONTROL = 1,
+	DRM_MINOR_RENDER = 2,
+	DRM_MINOR_ACCEL = 32,
+};
+
+/**
+ * struct drm_minor - DRM device minor structure
+ *
+ * This structure represents a DRM minor number for device nodes in /dev.
+ * Entirely opaque to drivers and should never be inspected directly by drivers.
+ * Drivers instead should only interact with &struct drm_file and of course
+ * &struct drm_device, which is also where driver-private data and resources can
+ * be attached to.
+ */
+struct drm_minor {
+	/* private: */
+	/* 次设备号 */
+	int index;			/* Minor device number */
+	/* drm设备类型 */
+	int type;                       /* Control or render or accel */
+	struct device *kdev;		/* Linux device */
+	struct drm_device *dev;
+	/* debugfs 目录项 */
+	struct dentry *debugfs_root;
+
+	struct list_head debugfs_list;
+	struct mutex debugfs_lock; /* Protects debugfs_list. */
+};
+```
+
+#### struct drm_vblank_crtc
+```c
+// include/drm/drm_vblank.h
+/**
+ * struct drm_vblank_crtc - vblank tracking for a CRTC
+ *
+ * This structure tracks the vblank state for one CRTC.
+ *
+ * Note that for historical reasons - the vblank handling code is still shared
+ * with legacy/non-kms drivers - this is a free-standing structure not directly
+ * connected to &struct drm_crtc. But all public interface functions are taking
+ * a &struct drm_crtc to hide this implementation detail.
+ */
+struct drm_vblank_crtc {
 	/**
-	 * @load:
-	 *
-	 * Backward-compatible driver callback to complete initialization steps
-	 * after the driver is registered.  For this reason, may suffer from
-	 * race conditions and its use is deprecated for new drivers.  It is
-	 * therefore only supported for existing drivers not yet converted to
-	 * the new scheme.  See devm_drm_dev_alloc() and drm_dev_register() for
-	 * proper and race-free way to set up a &struct drm_device.
-	 *
-	 * This is deprecated, do not use!
-	 *
-	 * Returns:
-	 *
-	 * Zero on success, non-zero value on failure.
+	 * @dev: Pointer to the &drm_device.
 	 */
-	int (*load) (struct drm_device *, unsigned long flags);
+	struct drm_device *dev;
+	/**
+	 * @queue: Wait queue for vblank waiters.
+	 */
+	wait_queue_head_t queue;
+	/**
+	 * @disable_timer: Disable timer for the delayed vblank disabling
+	 * hysteresis logic. Vblank disabling is controlled through the
+	 * drm_vblank_offdelay module option and the setting of the
+	 * &drm_device.max_vblank_count value.
+	 */
+	struct timer_list disable_timer;
+
+	/**
+	 * @seqlock: Protect vblank count and time.
+	 */
+	seqlock_t seqlock;
+
+	/**
+	 * @count:
+	 *
+	 * Current software vblank counter.
+	 *
+	 * Note that for a given vblank counter value drm_crtc_handle_vblank()
+	 * and drm_crtc_vblank_count() or drm_crtc_vblank_count_and_time()
+	 * provide a barrier: Any writes done before calling
+	 * drm_crtc_handle_vblank() will be visible to callers of the later
+	 * functions, iff the vblank count is the same or a later one.
+	 *
+	 * IMPORTANT: This guarantee requires barriers, therefor never access
+	 * this field directly. Use drm_crtc_vblank_count() instead.
+	 */
+	atomic64_t count;
+	/**
+	 * @time: Vblank timestamp corresponding to @count.
+	 */
+	ktime_t time;
+
+	/**
+	 * @refcount: Number of users/waiters of the vblank interrupt. Only when
+	 * this refcount reaches 0 can the hardware interrupt be disabled using
+	 * @disable_timer.
+	 */
+	atomic_t refcount;
+	/**
+	 * @last: Protected by &drm_device.vbl_lock, used for wraparound handling.
+	 */
+	u32 last;
+	/**
+	 * @max_vblank_count:
+	 *
+	 * Maximum value of the vblank registers for this crtc. This value +1
+	 * will result in a wrap-around of the vblank register. It is used
+	 * by the vblank core to handle wrap-arounds.
+	 *
+	 * If set to zero the vblank core will try to guess the elapsed vblanks
+	 * between times when the vblank interrupt is disabled through
+	 * high-precision timestamps. That approach is suffering from small
+	 * races and imprecision over longer time periods, hence exposing a
+	 * hardware vblank counter is always recommended.
+	 *
+	 * This is the runtime configurable per-crtc maximum set through
+	 * drm_crtc_set_max_vblank_count(). If this is used the driver
+	 * must leave the device wide &drm_device.max_vblank_count at zero.
+	 *
+	 * If non-zero, &drm_crtc_funcs.get_vblank_counter must be set.
+	 */
+	u32 max_vblank_count;
+	/**
+	 * @inmodeset: Tracks whether the vblank is disabled due to a modeset.
+	 * For legacy driver bit 2 additionally tracks whether an additional
+	 * temporary vblank reference has been acquired to paper over the
+	 * hardware counter resetting/jumping. KMS drivers should instead just
+	 * call drm_crtc_vblank_off() and drm_crtc_vblank_on(), which explicitly
+	 * save and restore the vblank count.
+	 */
+	unsigned int inmodeset;
+	/**
+	 * @pipe: drm_crtc_index() of the &drm_crtc corresponding to this
+	 * structure.
+	 */
+	unsigned int pipe;
+	/**
+	 * @framedur_ns: Frame/Field duration in ns, used by
+	 * drm_crtc_vblank_helper_get_vblank_timestamp() and computed by
+	 * drm_calc_timestamping_constants().
+	 */
+	int framedur_ns;
+	/**
+	 * @linedur_ns: Line duration in ns, used by
+	 * drm_crtc_vblank_helper_get_vblank_timestamp() and computed by
+	 * drm_calc_timestamping_constants().
+	 */
+	int linedur_ns;
+
+	/**
+	 * @hwmode:
+	 *
+	 * Cache of the current hardware display mode. Only valid when @enabled
+	 * is set. This is used by helpers like
+	 * drm_crtc_vblank_helper_get_vblank_timestamp(). We can't just access
+	 * the hardware mode by e.g. looking at &drm_crtc_state.adjusted_mode,
+	 * because that one is really hard to get from interrupt context.
+	 */
+	struct drm_display_mode hwmode;
+
+	/**
+	 * @enabled: Tracks the enabling state of the corresponding &drm_crtc to
+	 * avoid double-disabling and hence corrupting saved state. Needed by
+	 * drivers not using atomic KMS, since those might go through their CRTC
+	 * disabling functions multiple times.
+	 */
+	bool enabled;
+
+	/**
+	 * @worker: The &kthread_worker used for executing vblank works.
+	 */
+	struct kthread_worker *worker;
+
+	/**
+	 * @pending_work: A list of scheduled &drm_vblank_work items that are
+	 * waiting for a future vblank.
+	 */
+	struct list_head pending_work;
+
+	/**
+	 * @work_wait_queue: The wait queue used for signaling that a
+	 * &drm_vblank_work item has either finished executing, or was
+	 * cancelled.
+	 */
+	wait_queue_head_t work_wait_queue;
+};
+```
+
+#### struct drm_gem_object
+linux内核使用`struct drm_gem_object`表示GEM对象
+```c
+// include/drm/drm_gem.h
+/**
+ * struct drm_gem_object - GEM buffer object
+ *
+ * This structure defines the generic parts for GEM buffer objects, which are
+ * mostly around handling mmap and userspace handles.
+ *
+ * Buffer objects are often abbreviated to BO.
+ */
+struct drm_gem_object {
+	/**
+	 * @refcount:
+	 *
+	 * Reference count of this object
+	 *
+	 * Please use drm_gem_object_get() to acquire and drm_gem_object_put_locked()
+	 * or drm_gem_object_put() to release a reference to a GEM
+	 * buffer object.
+	 */
+	// 对象引用计数，用于对GEM对象生命周期管理
+	struct kref refcount;
+
+	/**
+	 * @handle_count:
+	 *
+	 * This is the GEM file_priv handle count of this object.
+	 *
+	 * Each handle also holds a reference. Note that when the handle_count
+	 * drops to 0 any global names (e.g. the id in the flink namespace) will
+	 * be cleared.
+	 *
+	 * Protected by &drm_device.object_name_lock.
+	 */
+	unsigned handle_count;
+
+	/**
+	 * @dev: DRM dev this object belongs to.
+	 */
+	// 指向DRM设备
+	struct drm_device *dev;
+
+	/**
+	 * @filp:
+	 *
+	 * SHMEM file node used as backing storage for swappable buffer objects.
+	 * GEM also supports driver private objects with driver-specific backing
+	 * storage (contiguous DMA memory, special reserved blocks). In this
+	 * case @filp is NULL.
+	 */
+	struct file *filp;
+
+	/**
+	 * @vma_node:
+	 *
+	 * Mapping info for this object to support mmap. Drivers are supposed to
+	 * allocate the mmap offset using drm_gem_create_mmap_offset(). The
+	 * offset itself can be retrieved using drm_vma_node_offset_addr().
+	 *
+	 * Memory mapping itself is handled by drm_gem_mmap(), which also checks
+	 * that userspace is allowed to access the object.
+	 */
+	struct drm_vma_offset_node vma_node;
+
+	/**
+	 * @size:
+	 *
+	 * Size of the object, in bytes.  Immutable over the object's
+	 * lifetime.
+	 */
+	// 对象的大小，字节为单位
+	size_t size;
+
+	/**
+	 * @name:
+	 *
+	 * Global name for this object, starts at 1. 0 means unnamed.
+	 * Access is covered by &drm_device.object_name_lock. This is used by
+	 * the GEM_FLINK and GEM_OPEN ioctls.
+	 */
+	// 对象
+	int name;
+
+	/**
+	 * @dma_buf:
+	 *
+	 * dma-buf associated with this GEM object.
+	 *
+	 * Pointer to the dma-buf associated with this gem object (either
+	 * through importing or exporting). We break the resulting reference
+	 * loop when the last gem handle for this object is released.
+	 *
+	 * Protected by &drm_device.object_name_lock.
+	 */
+	struct dma_buf *dma_buf;
+
+	/**
+	 * @import_attach:
+	 *
+	 * dma-buf attachment backing this object.
+	 *
+	 * Any foreign dma_buf imported as a gem object has this set to the
+	 * attachment point for the device. This is invariant over the lifetime
+	 * of a gem object.
+	 *
+	 * The &drm_gem_object_funcs.free callback is responsible for
+	 * cleaning up the dma_buf attachment and references acquired at import
+	 * time.
+	 *
+	 * Note that the drm gem/prime core does not depend upon drivers setting
+	 * this field any more. So for drivers where this doesn't make sense
+	 * (e.g. virtual devices or a displaylink behind an usb bus) they can
+	 * simply leave it as NULL.
+	 */
+	struct dma_buf_attachment *import_attach;
+
+	/**
+	 * @resv:
+	 *
+	 * Pointer to reservation object associated with the this GEM object.
+	 *
+	 * Normally (@resv == &@_resv) except for imported GEM objects.
+	 */
+	struct dma_resv *resv;
+
+	/**
+	 * @_resv:
+	 *
+	 * A reservation object for this GEM object.
+	 *
+	 * This is unused for imported GEM objects.
+	 */
+	struct dma_resv _resv;
+
+	/**
+	 * @gpuva:
+	 *
+	 * Provides the list of GPU VAs attached to this GEM object.
+	 *
+	 * Drivers should lock list accesses with the GEMs &dma_resv lock
+	 * (&drm_gem_object.resv) or a custom lock if one is provided.
+	 */
+	struct {
+		struct list_head list;
+
+#ifdef CONFIG_LOCKDEP
+		struct lockdep_map *lock_dep_map;
+#endif
+	} gpuva;
+
+	/**
+	 * @funcs:
+	 *
+	 * Optional GEM object functions. If this is set, it will be used instead of the
+	 * corresponding &drm_driver GEM callbacks.
+	 *
+	 * New drivers should use this.
+	 *
+	 */
+	const struct drm_gem_object_funcs *funcs;
+
+	/**
+	 * @lru_node:
+	 *
+	 * List node in a &drm_gem_lru.
+	 */
+	struct list_head lru_node;
+
+	/**
+	 * @lru:
+	 *
+	 * The current LRU list that the GEM object is on.
+	 */
+	struct drm_gem_lru *lru;
+};
+
+
+// struct drm_gem_object_funcs结构体
+/**
+ * struct drm_gem_object_funcs - GEM object functions
+ */
+struct drm_gem_object_funcs {
+	/**
+	 * @free:
+	 *
+	 * Deconstructor for drm_gem_objects.
+	 *
+	 * This callback is mandatory.
+	 */
+	void (*free)(struct drm_gem_object *obj);
 
 	/**
 	 * @open:
 	 *
-	 * Driver callback when a new &struct drm_file is opened. Useful for
-	 * setting up driver-private data structures like buffer allocators,
-	 * execution contexts or similar things. Such driver-private resources
-	 * must be released again in @postclose.
+	 * Called upon GEM handle creation.
 	 *
-	 * Since the display/modeset side of DRM can only be owned by exactly
-	 * one &struct drm_file (see &drm_file.is_master and &drm_device.master)
-	 * there should never be a need to set up any modeset related resources
-	 * in this callback. Doing so would be a driver design bug.
-	 *
-	 * Returns:
-	 *
-	 * 0 on success, a negative error code on failure, which will be
-	 * promoted to userspace as the result of the open() system call.
+	 * This callback is optional.
 	 */
-	int (*open) (struct drm_device *, struct drm_file *);
+	int (*open)(struct drm_gem_object *obj, struct drm_file *file);
 
 	/**
-	 * @postclose:
+	 * @close:
 	 *
-	 * One of the driver callbacks when a new &struct drm_file is closed.
-	 * Useful for tearing down driver-private data structures allocated in
-	 * @open like buffer allocators, execution contexts or similar things.
+	 * Called upon GEM handle release.
 	 *
-	 * Since the display/modeset side of DRM can only be owned by exactly
-	 * one &struct drm_file (see &drm_file.is_master and &drm_device.master)
-	 * there should never be a need to tear down any modeset related
-	 * resources in this callback. Doing so would be a driver design bug.
+	 * This callback is optional.
 	 */
-	void (*postclose) (struct drm_device *, struct drm_file *);
+	void (*close)(struct drm_gem_object *obj, struct drm_file *file);
 
 	/**
-	 * @lastclose:
+	 * @print_info:
 	 *
-	 * Called when the last &struct drm_file has been closed and there's
-	 * currently no userspace client for the &struct drm_device.
+	 * If driver subclasses struct &drm_gem_object, it can implement this
+	 * optional hook for printing additional driver specific info.
 	 *
-	 * Modern drivers should only use this to force-restore the fbdev
-	 * framebuffer using drm_fb_helper_restore_fbdev_mode_unlocked().
-	 * Anything else would indicate there's something seriously wrong.
-	 * Modern drivers can also use this to execute delayed power switching
-	 * state changes, e.g. in conjunction with the :ref:`vga_switcheroo`
-	 * infrastructure.
+	 * drm_printf_indent() should be used in the callback passing it the
+	 * indent argument.
 	 *
-	 * This is called after @postclose hook has been called.
+	 * This callback is called from drm_gem_print_info().
 	 *
-	 * NOTE:
-	 *
-	 * All legacy drivers use this callback to de-initialize the hardware.
-	 * This is purely because of the shadow-attach model, where the DRM
-	 * kernel driver does not really own the hardware. Instead ownershipe is
-	 * handled with the help of userspace through an inheritedly racy dance
-	 * to set/unset the VT into raw mode.
-	 *
-	 * Legacy drivers initialize the hardware in the @firstopen callback,
-	 * which isn't even called for modern drivers.
+	 * This callback is optional.
 	 */
-	void (*lastclose) (struct drm_device *);
+	void (*print_info)(struct drm_printer *p, unsigned int indent,
+			   const struct drm_gem_object *obj);
 
 	/**
-	 * @unload:
+	 * @export:
 	 *
-	 * Reverse the effects of the driver load callback.  Ideally,
-	 * the clean up performed by the driver should happen in the
-	 * reverse order of the initialization.  Similarly to the load
-	 * hook, this handler is deprecated and its usage should be
-	 * dropped in favor of an open-coded teardown function at the
-	 * driver layer.  See drm_dev_unregister() and drm_dev_put()
-	 * for the proper way to remove a &struct drm_device.
+	 * Export backing buffer as a &dma_buf.
+	 * If this is not set drm_gem_prime_export() is used.
 	 *
-	 * The unload() hook is called right after unregistering
-	 * the device.
-	 *
+	 * This callback is optional.
 	 */
-	void (*unload) (struct drm_device *);
+	struct dma_buf *(*export)(struct drm_gem_object *obj, int flags);
 
 	/**
-	 * @release:
+	 * @pin:
 	 *
-	 * Optional callback for destroying device data after the final
-	 * reference is released, i.e. the device is being destroyed.
+	 * Pin backing buffer in memory. Used by the drm_gem_map_attach() helper.
 	 *
-	 * This is deprecated, clean up all memory allocations associated with a
-	 * &drm_device using drmm_add_action(), drmm_kmalloc() and related
-	 * managed resources functions.
+	 * This callback is optional.
 	 */
-	void (*release) (struct drm_device *);
+	int (*pin)(struct drm_gem_object *obj);
 
 	/**
-	 * @irq_handler:
+	 * @unpin:
 	 *
-	 * Interrupt handler called when using drm_irq_install(). Not used by
-	 * drivers which implement their own interrupt handling.
+	 * Unpin backing buffer. Used by the drm_gem_map_detach() helper.
+	 *
+	 * This callback is optional.
 	 */
-	irqreturn_t(*irq_handler) (int irq, void *arg);
+	void (*unpin)(struct drm_gem_object *obj);
 
 	/**
-	 * @irq_preinstall:
+	 * @get_sg_table:
 	 *
-	 * Optional callback used by drm_irq_install() which is called before
-	 * the interrupt handler is registered. This should be used to clear out
-	 * any pending interrupts (from e.g. firmware based drives) and reset
-	 * the interrupt handling registers.
+	 * Returns a Scatter-Gather table representation of the buffer.
+	 * Used when exporting a buffer by the drm_gem_map_dma_buf() helper.
+	 * Releasing is done by calling dma_unmap_sg_attrs() and sg_free_table()
+	 * in drm_gem_unmap_buf(), therefore these helpers and this callback
+	 * here cannot be used for sg tables pointing at driver private memory
+	 * ranges.
+	 *
+	 * See also drm_prime_pages_to_sg().
 	 */
-	void (*irq_preinstall) (struct drm_device *dev);
+	struct sg_table *(*get_sg_table)(struct drm_gem_object *obj);
 
 	/**
-	 * @irq_postinstall:
+	 * @vmap:
 	 *
-	 * Optional callback used by drm_irq_install() which is called after
-	 * the interrupt handler is registered. This should be used to enable
-	 * interrupt generation in the hardware.
+	 * Returns a virtual address for the buffer. Used by the
+	 * drm_gem_dmabuf_vmap() helper.
+	 *
+	 * This callback is optional.
 	 */
-	int (*irq_postinstall) (struct drm_device *dev);
+	int (*vmap)(struct drm_gem_object *obj, struct iosys_map *map);
 
 	/**
-	 * @irq_uninstall:
+	 * @vunmap:
 	 *
-	 * Optional callback used by drm_irq_uninstall() which is called before
-	 * the interrupt handler is unregistered. This should be used to disable
-	 * interrupt generation in the hardware.
+	 * Releases the address previously returned by @vmap. Used by the
+	 * drm_gem_dmabuf_vunmap() helper.
+	 *
+	 * This callback is optional.
 	 */
-	void (*irq_uninstall) (struct drm_device *dev);
+	void (*vunmap)(struct drm_gem_object *obj, struct iosys_map *map);
 
 	/**
-	 * @master_set:
+	 * @mmap:
 	 *
-	 * Called whenever the minor master is set. Only used by vmwgfx.
-	 */
-	void (*master_set)(struct drm_device *dev, struct drm_file *file_priv,
-			   bool from_open);
-	/**
-	 * @master_drop:
+	 * Handle mmap() of the gem object, setup vma accordingly.
 	 *
-	 * Called whenever the minor master is dropped. Only used by vmwgfx.
+	 * This callback is optional.
+	 *
+	 * The callback is used by both drm_gem_mmap_obj() and
+	 * drm_gem_prime_mmap().  When @mmap is present @vm_ops is not
+	 * used, the @mmap callback must set vma->vm_ops instead.
 	 */
-	void (*master_drop)(struct drm_device *dev, struct drm_file *file_priv);
+	int (*mmap)(struct drm_gem_object *obj, struct vm_area_struct *vma);
 
 	/**
-	 * @debugfs_init:
+	 * @evict:
 	 *
-	 * Allows drivers to create driver-specific debugfs files.
+	 * Evicts gem object out from memory. Used by the drm_gem_object_evict()
+	 * helper. Returns 0 on success, -errno otherwise.
+	 *
+	 * This callback is optional.
 	 */
-	void (*debugfs_init)(struct drm_minor *minor);
+	int (*evict)(struct drm_gem_object *obj);
 
 	/**
-	 * @gem_free_object_unlocked: deconstructor for drm_gem_objects
+	 * @status:
 	 *
-	 * This is deprecated and should not be used by new drivers. Use
-	 * &drm_gem_object_funcs.free instead.
+	 * The optional status callback can return additional object state
+	 * which determines which stats the object is counted against.  The
+	 * callback is called under table_lock.  Racing against object status
+	 * change is "harmless", and the callback can expect to not race
+	 * against object destruction.
+	 *
+	 * Called by drm_show_memory_stats().
 	 */
-	void (*gem_free_object_unlocked) (struct drm_gem_object *obj);
+	enum drm_gem_object_status (*status)(struct drm_gem_object *obj);
 
 	/**
-	 * @gem_open_object:
+	 * @vm_ops:
 	 *
-	 * This callback is deprecated in favour of &drm_gem_object_funcs.open.
+	 * Virtual memory operations used with mmap.
 	 *
-	 * Driver hook called upon gem handle creation
+	 * This is optional but necessary for mmap support.
 	 */
-	int (*gem_open_object) (struct drm_gem_object *, struct drm_file *);
-
-	/**
-	 * @gem_close_object:
-	 *
-	 * This callback is deprecated in favour of &drm_gem_object_funcs.close.
-	 *
-	 * Driver hook called upon gem handle release
-	 */
-	void (*gem_close_object) (struct drm_gem_object *, struct drm_file *);
-
-	/**
-	 * @gem_create_object: constructor for gem objects
-	 *
-	 * Hook for allocating the GEM object struct, for use by the CMA and
-	 * SHMEM GEM helpers.
-	 */
-	struct drm_gem_object *(*gem_create_object)(struct drm_device *dev,
-						    size_t size);
-	/**
-	 * @prime_handle_to_fd:
-	 *
-	 * Main PRIME export function. Should be implemented with
-	 * drm_gem_prime_handle_to_fd() for GEM based drivers.
-	 *
-	 * For an in-depth discussion see :ref:`PRIME buffer sharing
-	 * documentation <prime_buffer_sharing>`.
-	 */
-	int (*prime_handle_to_fd)(struct drm_device *dev, struct drm_file *file_priv,
-				uint32_t handle, uint32_t flags, int *prime_fd);
-	/**
-	 * @prime_fd_to_handle:
-	 *
-	 * Main PRIME import function. Should be implemented with
-	 * drm_gem_prime_fd_to_handle() for GEM based drivers.
-	 *
-	 * For an in-depth discussion see :ref:`PRIME buffer sharing
-	 * documentation <prime_buffer_sharing>`.
-	 */
-	int (*prime_fd_to_handle)(struct drm_device *dev, struct drm_file *file_priv,
-				int prime_fd, uint32_t *handle);
-	/**
-	 * @gem_prime_export:
-	 *
-	 * Export hook for GEM drivers. Deprecated in favour of
-	 * &drm_gem_object_funcs.export.
-	 */
-	struct dma_buf * (*gem_prime_export)(struct drm_gem_object *obj,
-					     int flags);
-	/**
-	 * @gem_prime_import:
-	 *
-	 * Import hook for GEM drivers.
-	 *
-	 * This defaults to drm_gem_prime_import() if not set.
-	 */
-	struct drm_gem_object * (*gem_prime_import)(struct drm_device *dev,
-				struct dma_buf *dma_buf);
-
-	/**
-	 * @gem_prime_pin:
-	 *
-	 * Deprecated hook in favour of &drm_gem_object_funcs.pin.
-	 */
-	int (*gem_prime_pin)(struct drm_gem_object *obj);
-
-	/**
-	 * @gem_prime_unpin:
-	 *
-	 * Deprecated hook in favour of &drm_gem_object_funcs.unpin.
-	 */
-	void (*gem_prime_unpin)(struct drm_gem_object *obj);
-
-
-	/**
-	 * @gem_prime_get_sg_table:
-	 *
-	 * Deprecated hook in favour of &drm_gem_object_funcs.get_sg_table.
-	 */
-	struct sg_table *(*gem_prime_get_sg_table)(struct drm_gem_object *obj);
-
-	/**
-	 * @gem_prime_import_sg_table:
-	 *
-	 * Optional hook used by the PRIME helper functions
-	 * drm_gem_prime_import() respectively drm_gem_prime_import_dev().
-	 */
-	struct drm_gem_object *(*gem_prime_import_sg_table)(
-				struct drm_device *dev,
-				struct dma_buf_attachment *attach,
-				struct sg_table *sgt);
-	/**
-	 * @gem_prime_vmap:
-	 *
-	 * Deprecated vmap hook for GEM drivers. Please use
-	 * &drm_gem_object_funcs.vmap instead.
-	 */
-	void *(*gem_prime_vmap)(struct drm_gem_object *obj);
-
-	/**
-	 * @gem_prime_vunmap:
-	 *
-	 * Deprecated vunmap hook for GEM drivers. Please use
-	 * &drm_gem_object_funcs.vunmap instead.
-	 */
-	void (*gem_prime_vunmap)(struct drm_gem_object *obj, void *vaddr);
-
-	/**
-	 * @gem_prime_mmap:
-	 *
-	 * mmap hook for GEM drivers, used to implement dma-buf mmap in the
-	 * PRIME helpers.
-	 *
-	 * FIXME: There's way too much duplication going on here, and also moved
-	 * to &drm_gem_object_funcs.
-	 */
-	int (*gem_prime_mmap)(struct drm_gem_object *obj,
-				struct vm_area_struct *vma);
-
-	/**
-	 * @dumb_create:
-	 *
-	 * This creates a new dumb buffer in the driver's backing storage manager (GEM,
-	 * TTM or something else entirely) and returns the resulting buffer handle. This
-	 * handle can then be wrapped up into a framebuffer modeset object.
-	 *
-	 * Note that userspace is not allowed to use such objects for render
-	 * acceleration - drivers must create their own private ioctls for such a use
-	 * case.
-	 *
-	 * Width, height and depth are specified in the &drm_mode_create_dumb
-	 * argument. The callback needs to fill the handle, pitch and size for
-	 * the created buffer.
-	 *
-	 * Called by the user via ioctl.
-	 *
-	 * Returns:
-	 *
-	 * Zero on success, negative errno on failure.
-	 */
-	// 用于创建gem对象，并分配物理buffer
-	int (*dumb_create)(struct drm_file *file_priv,
-			   struct drm_device *dev,
-			   struct drm_mode_create_dumb *args);
-	/**
-	 * @dumb_map_offset:
-	 *
-	 * Allocate an offset in the drm device node's address space to be able to
-	 * memory map a dumb buffer.
-	 *
-	 * The default implementation is drm_gem_create_mmap_offset(). GEM based
-	 * drivers must not overwrite this.
-	 *
-	 * Called by the user via ioctl.
-	 *
-	 * Returns:
-	 *
-	 * Zero on success, negative errno on failure.
-	 */
-	int (*dumb_map_offset)(struct drm_file *file_priv,
-			       struct drm_device *dev, uint32_t handle,
-			       uint64_t *offset);
-	/**
-	 * @dumb_destroy:
-	 *
-	 * This destroys the userspace handle for the given dumb backing storage buffer.
-	 * Since buffer objects must be reference counted in the kernel a buffer object
-	 * won't be immediately freed if a framebuffer modeset object still uses it.
-	 *
-	 * Called by the user via ioctl.
-	 *
-	 * The default implementation is drm_gem_dumb_destroy(). GEM based drivers
-	 * must not overwrite this.
-	 *
-	 * Returns:
-	 *
-	 * Zero on success, negative errno on failure.
-	 */
-	int (*dumb_destroy)(struct drm_file *file_priv,
-			    struct drm_device *dev,
-			    uint32_t handle);
-
-	/**
-	 * @gem_vm_ops: Driver private ops for this object
-	 *
-	 * For GEM drivers this is deprecated in favour of
-	 * &drm_gem_object_funcs.vm_ops.
-	 */
-	const struct vm_operations_struct *gem_vm_ops;
-
-	/** @major: driver major number */
-	int major;
-	/** @minor: driver minor number */
-	int minor;
-	/** @patchlevel: driver patch level */
-	int patchlevel;
-	/** @name: driver name */
-	char *name;
-	/** @desc: driver description */
-	char *desc;
-	/** @date: driver date */
-	char *date;
-
-	/**
-	 * @driver_features:
-	 * Driver features, see &enum drm_driver_feature. Drivers can disable
-	 * some features on a per-instance basis using
-	 * &drm_device.driver_features.
-	 */
-	// 描述驱动特性
-	u32 driver_features;
-
-	/**
-	 * @ioctls:
-	 *
-	 * Array of driver-private IOCTL description entries. See the chapter on
-	 * :ref:`IOCTL support in the userland interfaces
-	 * chapter<drm_driver_ioctl>` for the full details.
-	 */
-
-	const struct drm_ioctl_desc *ioctls;
-	/** @num_ioctls: Number of entries in @ioctls. */
-	int num_ioctls;
-
-	/**
-	 * @fops:
-	 *
-	 * File operations for the DRM device node. See the discussion in
-	 * :ref:`file operations<drm_driver_fops>` for in-depth coverage and
-	 * some examples.
-	 */
-	const struct file_operations *fops;
-
-	/* Everything below here is for legacy driver, never use! */
-	/* private: */
-
-	/* List of devices hanging off this driver with stealth attach. */
-	struct list_head legacy_dev_list;
-	int (*firstopen) (struct drm_device *);
-	void (*preclose) (struct drm_device *, struct drm_file *file_priv);
-	int (*dma_ioctl) (struct drm_device *dev, void *data, struct drm_file *file_priv);
-	int (*dma_quiescent) (struct drm_device *);
-	int (*context_dtor) (struct drm_device *dev, int context);
-	u32 (*get_vblank_counter)(struct drm_device *dev, unsigned int pipe);
-	int (*enable_vblank)(struct drm_device *dev, unsigned int pipe);
-	void (*disable_vblank)(struct drm_device *dev, unsigned int pipe);
-	int dev_priv_size;
+	const struct vm_operations_struct *vm_ops;
 };
 ```
 
 ### phytium drm dc驱动
-phytium E2000 DC控制器设备树描述
+
+#### phytium E2000 DC控制器设备树描述
 ```c
 dc0: dc@32000000 {
 	compatible = "phytium,dc";
@@ -1463,7 +2927,7 @@ dc0: dc@32000000 {
 };
 ```
 
-struct phytium_display_private结构体定义
+#### struct phytium_display_private结构体定义
 ```c
 // drivers/gpu/drm/phytium/phytium_display_drv.h
 struct phytium_display_private {
@@ -1513,9 +2977,10 @@ struct phytium_display_private {
 };
 ```
 
-struct phytium_device_info结构体定义
+#### struct phytium_device_info结构体定义
 ```c
 struct phytium_device_info {
+	/* 硬件平台的标志，目前定义了X100和E2000 */
 	unsigned char platform_mask;
 	unsigned char pipe_mask;
 	unsigned char num_pipes;
@@ -1529,12 +2994,16 @@ struct phytium_device_info {
 };
 ```
 
-struct phytium_dp_device结构体定义
+#### struct phytium_dp_device结构体定义
+
+`struct phytium_dp_device`封装了`struct drm_encoder`和`struct drm_connector`
 ```c
 struct phytium_dp_device {
+	// 指向struct drm_device
 	struct drm_device *dev;
 	struct drm_encoder encoder;
 	struct drm_connector connector;
+	// 对应的显示接口
 	int port;
 	struct drm_display_mode mode;
 	bool link_trained;
@@ -1550,17 +3019,21 @@ struct phytium_dp_device {
 
 	// dp链路速率，飞腾E2000为1.62Gbps/lane 2.7Gbps/lane 5.4Gbps/lane 8.1Gbps/lane
 	int *source_rates;
+	// source和sink支持的速率
 	int num_source_rates;
 	int sink_rates[DP_MAX_SUPPORTED_RATES];
 	int num_sink_rates;
 	int common_rates[DP_MAX_SUPPORTED_RATES];
+	// source和sink共同支持的速率个数
 	int num_common_rates;
 
 	int source_max_lane_count;
 	int sink_max_lane_count;
 	int common_max_lane_count;
 
+	// 当前支持的最大速率
 	int max_link_rate;
+	// 当前匹配的lane最大数量
 	int max_link_lane_count;
 	int link_rate;
 	int link_lane_count;
@@ -1588,7 +3061,21 @@ struct phytium_dp_device {
 };
 ```
 
-phytium crtc相关结构体定义
+`struct phytium_dp_hpd_state`结构体，HDP即Hot Plug Detect
+```c
+struct phytium_dp_hpd_state {
+	// 热插拔连接或者断开事件中断状态
+	bool hpd_event_state;
+	// 热插拔 irq中断
+	bool hpd_irq_state;
+	// 控制器HPD输入端口的raw state
+	bool hpd_raw_state;
+	// 
+	bool hpd_irq_enable;
+};
+```
+
+#### phytium crtc相关结构体定义
 ```c
 // drivers/gpu/drm/phytium/phytium_crtc.h
 struct phytium_crtc {
@@ -1612,11 +3099,12 @@ struct phytium_crtc {
 };
 ```
 
-phytium_plane结构体定义
+#### phytium_plane结构体定义
 ```c
 // drivers/gpu/drm/phytium/phytium_plane.h
 struct phytium_plane {
 	struct drm_plane base;
+	/* CRTC的索引号 */
 	int phys_pipe;
 	// framebuffer数据起始地址
 	unsigned long iova[PHYTIUM_FORMAT_MAX_PLANE];
@@ -2226,6 +3714,12 @@ failed_malloc_plane:
 	return ERR_PTR(ret);
 }
 ```
+
+
+#### 检测热插拔状态流程
+DP检测热插拔状态由`phytium_dp_hw_get_hpd_state()`完成，通过读取寄存器`PHYTIUM_DP_INTERRUPT_RAW_STATUS 0x130`及`PHYTIUM_DP_SINK_HPD_STATE 0x128`来获取热插拔检测的状态，`struct phytium_dp_device`中的`struct phytium_dp_hpd_state`记录了热插拔的检测状态。
+
+
 
 #### 热插拔中断过程
 drm_driver->irq_handler()
