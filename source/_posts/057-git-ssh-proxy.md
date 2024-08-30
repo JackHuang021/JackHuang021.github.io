@@ -1,11 +1,12 @@
 ---
 title: git ssh代理设置
-date: 2023-10-07 15:30:34
 tags:
   - git
   - ssh
   - proxy
 categories: Code
+abbrlink: da6c5b0b
+date: 2023-10-07 15:30:34
 ---
 
 最近发现在开启了代理后，使用git push, git fetch时还是偶尔会等待很久，有时候急需上传和拉取代码时卡住很是头痛
