@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
-<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
@@ -14,12 +14,12 @@
 
 
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha256-AbA177XfpSnFEvgpYu1jMygiLabzPCJCRIBtR5jGc0k=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/themes/blue/pace-theme-minimal.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac","show_result":true},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="在嵌入式项目或者工控项目中经常会用到串口通讯，用到串口通讯可能就涉及到串口私有协议（类似 包头 + 帧类型 + 帧长度 + 帧数据 + 校验和 的形式）的解析。在Qt中经常用到QSerialPort类来进行串口数据收发，QSerialPort在串口数据可读时会释放readyRead()信号，接到这个信号再调用readAll()将缓冲区的数据全部读出来（串口数据量比较大，这个过程一般都是在一个独立的">
 <meta property="og:type" content="article">
@@ -52,9 +52,7 @@
 
 
 
-  <script async defer data-website-id="" src=""></script>
 
-  <script defer data-domain="" src=""></script>
 
   <noscript>
     <link rel="stylesheet" href="/css/noscript.css">
@@ -85,7 +83,7 @@
   </div>
 
   <div class="site-nav-right">
-    <div class="toggle popup-trigger">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
         <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
@@ -105,25 +103,25 @@
 
 
   <div class="search-pop-overlay">
-    <div class="popup search-popup"><div class="search-header">
-  <span class="search-icon">
-    <i class="fa fa-search"></i>
-  </span>
-  <div class="search-input-container">
-    <input autocomplete="off" autocapitalize="off" maxlength="80"
-           placeholder="搜索..." spellcheck="false"
-           type="search" class="search-input">
-  </div>
-  <span class="popup-btn-close" role="button">
-    <i class="fa fa-times-circle"></i>
-  </span>
-</div>
-<div class="search-result-container no-result">
-  <div class="search-result-icon">
-    <i class="fa fa-spinner fa-pulse fa-5x"></i>
-  </div>
-</div>
-
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -150,13 +148,13 @@
         <!--/noindex-->
 
         <div class="site-overview-wrap sidebar-panel">
-          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
     <img class="site-author-image" itemprop="image" alt="Jack"
       src="/images/favicon-32x32.png">
   <p class="site-author-name" itemprop="name">Jack</p>
   <div class="site-description" itemprop="description">build a better world</div>
 </div>
-<div class="site-state-wrap site-overview-item animated">
+<div class="site-state-wrap animated">
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
@@ -166,30 +164,30 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">30</span>
+        <span class="site-state-item-count">52</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
-  <div class="links-of-author site-overview-item animated">
+  <div class="links-of-author animated">
       <span class="links-of-author-item">
-        <a href="https://github.com/JackHuang021" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;JackHuang021" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+        <a href="https://github.com/JackHuang021" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;JackHuang021" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
       </span>
       <span class="links-of-author-item">
-        <a href="mailto:jackhuang021@gmail.com" title="E-Mail → mailto:jackhuang021@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+        <a href="mailto:jackhuang021@gmail.com" title="E-Mail → mailto:jackhuang021@gmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
-
-
 
         </div>
       </div>
     </div>
+
+    
   </aside>
 
 
@@ -285,8 +283,7 @@
     
     
     
-    <div class="post-body" itemprop="articleBody">
-        <p>在嵌入式项目或者工控项目中经常会用到串口通讯，用到串口通讯可能就涉及到串口私有协议（类似 包头 + 帧类型 + 帧长度 + 帧数据 + 校验和 的形式）的解析。在Qt中经常用到<code>QSerialPort</code>类来进行串口数据收发，<code>QSerialPort</code>在串口数据可读时会释放<code>readyRead()</code>信号，接到这个信号再调用<code>readAll()</code>将缓冲区的数据全部读出来（串口数据量比较大，这个过程一般都是在一个独立的接收线程中进行处理）。<span id="more"></span>但是这个<code>readyRead()</code>信号释放时，缓冲区的数据长度是不固定的（一般是几十个字节会释放一次读信号），不过串口私有协议各个帧的长度基本都是固定的，这就导致处理串口数据时需要对<code>readAll()</code>中读出来的数据进行链接，然后进行数据解析。<br>记录一下最近调试Qt串口通讯时用到的方法，这个方法也适用于任何系统的串口数据接收，可以达到不错的处理速度，保证不丢帧的接收。该方法的处理机制比较简单，在槽函数中接收到串口数据后，释放信号将读到的数据传递出去，接收信号方逐字节的按照协议对这些数据进行处理，这样只要<code>QSerialPort</code>将串口上的数据都完整的读出来了，应该是不会出现丢帧的情况。</p>
+    <div class="post-body" itemprop="articleBody"><p>在嵌入式项目或者工控项目中经常会用到串口通讯，用到串口通讯可能就涉及到串口私有协议（类似 包头 + 帧类型 + 帧长度 + 帧数据 + 校验和 的形式）的解析。在Qt中经常用到<code>QSerialPort</code>类来进行串口数据收发，<code>QSerialPort</code>在串口数据可读时会释放<code>readyRead()</code>信号，接到这个信号再调用<code>readAll()</code>将缓冲区的数据全部读出来（串口数据量比较大，这个过程一般都是在一个独立的接收线程中进行处理）。<span id="more"></span>但是这个<code>readyRead()</code>信号释放时，缓冲区的数据长度是不固定的（一般是几十个字节会释放一次读信号），不过串口私有协议各个帧的长度基本都是固定的，这就导致处理串口数据时需要对<code>readAll()</code>中读出来的数据进行链接，然后进行数据解析。<br>记录一下最近调试Qt串口通讯时用到的方法，这个方法也适用于任何系统的串口数据接收，可以达到不错的处理速度，保证不丢帧的接收。该方法的处理机制比较简单，在槽函数中接收到串口数据后，释放信号将读到的数据传递出去，接收信号方逐字节的按照协议对这些数据进行处理，这样只要<code>QSerialPort</code>将串口上的数据都完整的读出来了，应该是不会出现丢帧的情况。</p>
 <h4 id="串口初始化及数据接收"><a href="#串口初始化及数据接收" class="headerlink" title="串口初始化及数据接收"></a>串口初始化及数据接收</h4><ul>
 <li>串口类进行初始化后，转移到<code>thread</code>线程中进行处理，在<code>readSerialData()</code>中将数据读取后将数据传递出去。<br>  serialport.h  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SerialPort</span> :</span> <span class="keyword">public</span> QObject</span><br><span class="line">&#123;</span><br><span class="line">    Q_OBJECT</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">SerialPort</span><span class="params">(QObject *parent = <span class="literal">nullptr</span>)</span></span>;</span><br><span class="line">    ~<span class="built_in">SerialPort</span>();</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> slots:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">startThread</span><span class="params">(<span class="keyword">const</span> QString &amp;port)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">closeSerialPort</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">writeSerialData</span><span class="params">(<span class="keyword">const</span> QByteArray &amp;data)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> slots:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">openSerialPort</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">readSerialData</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">signals:</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">serialStateChanged</span><span class="params">(<span class="keyword">bool</span> state)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">dataReaded</span><span class="params">(<span class="keyword">const</span> QByteArray &amp;data)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    QString port;</span><br><span class="line">    qint32 baudrate;</span><br><span class="line">    QSerialPort *serial;</span><br><span class="line">    QThread *thread;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
   serialport.cpp  <figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#include &quot;serialport.h&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::SerialPort</span></span><br><span class="line"><span class="comment">* <span class="doctag">@param</span> parent</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line">SerialPort::SerialPort(QObject *<span class="built_in">parent</span>) : QObject(<span class="built_in">parent</span>)</span><br><span class="line">&#123;</span><br><span class="line">    serial = <span class="keyword">new</span> QSerialPort;</span><br><span class="line">    thread = <span class="keyword">new</span> QThread;</span><br><span class="line">    this-&gt;moveToThread(thread);</span><br><span class="line">    serial-&gt;moveToThread(thread);</span><br><span class="line">    connect(thread, &amp;QThread::started, this, &amp;SerialPort::openSerialPort);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::~SerialPort</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line">SerialPort::~SerialPort()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (serial-&gt;isOpen())</span><br><span class="line">    &#123;</span><br><span class="line">        serial-&gt;close();</span><br><span class="line">    &#125;</span><br><span class="line">    serial-&gt;deleteLater();</span><br><span class="line">    thread-&gt;quit();</span><br><span class="line">    thread-&gt;wait();</span><br><span class="line">    thread-&gt;deleteLater();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::startThread</span></span><br><span class="line"><span class="comment">* <span class="doctag">@param</span> port serial port name(QSerialPortInfo::name)</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">void</span> SerialPort::startThread(<span class="keyword">const</span> QString &amp;port)</span><br><span class="line">&#123;</span><br><span class="line">    this-&gt;port = port;</span><br><span class="line">    qDebug() &lt;&lt; <span class="string">&quot;current port is &quot;</span> &lt;&lt; port;</span><br><span class="line">    <span class="keyword">if</span> (!thread-&gt;isRunning())</span><br><span class="line">    &#123;</span><br><span class="line">        thread-&gt;start();</span><br><span class="line">        qDebug() &lt;&lt; <span class="string">&quot;serialport thread start: &quot;</span> &lt;&lt; QThread::currentThread();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::openSerialPort</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">void</span> SerialPort::openSerialPort()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (serial-&gt;isOpen())</span><br><span class="line">    &#123;</span><br><span class="line">        qDebug() &lt;&lt; <span class="string">&quot;serial is opened, return.&quot;</span>;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    serial-&gt;setPortName(port);</span><br><span class="line">    serial-&gt;setBaudRate(<span class="number">115200</span>);</span><br><span class="line">    serial-&gt;setDataBits(QSerialPort::Data8);</span><br><span class="line">    serial-&gt;setStopBits(QSerialPort::OneStop);</span><br><span class="line">    serial-&gt;setParity(QSerialPort::NoParity);</span><br><span class="line">    serial-&gt;setFlowControl(QSerialPort::NoFlowControl);</span><br><span class="line">    <span class="keyword">if</span> (serial-&gt;open(QIODevice::ReadWrite))</span><br><span class="line">    &#123;</span><br><span class="line">        qDebug() &lt;&lt; <span class="string">&quot;serial open success.&quot;</span> &lt;&lt; QThread::currentThread();</span><br><span class="line">        connect(serial, &amp;QSerialPort::readyRead,</span><br><span class="line">                this, &amp;SerialPort::readSerialData, Qt::QueuedConnection);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        qDebug() &lt;&lt; <span class="string">&quot;serial open failed.&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::readSerialData</span></span><br><span class="line"><span class="comment">* read 16 bytes each time</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">void</span> SerialPort::readSerialData()</span><br><span class="line">&#123;</span><br><span class="line">    QByteArray buf = serial-&gt;readAll();</span><br><span class="line">    emit dataReaded(buf);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::writeSerialData</span></span><br><span class="line"><span class="comment">* <span class="doctag">@param</span> data  buff to write</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">void</span> SerialPort::writeSerialData(<span class="keyword">const</span> QByteArray &amp;data)</span><br><span class="line">&#123;</span><br><span class="line">    serial-&gt;write(data);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* <span class="doctag">@brief</span> SerialPort::closeSerialPort</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">void</span> SerialPort::closeSerialPort()</span><br><span class="line">&#123;</span><br><span class="line">    qDebug() &lt;&lt; <span class="string">&quot;close serialport.&quot;</span>;</span><br><span class="line">    serial-&gt;clear();</span><br><span class="line">    serial-&gt;close();</span><br><span class="line">    <span class="keyword">if</span> (thread-&gt;isRunning())</span><br><span class="line">    &#123;</span><br><span class="line">        thread-&gt;quit();</span><br><span class="line">        thread-&gt;wait();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
@@ -314,7 +311,7 @@
       <a href="https://jackhuang021.github.io/archives/6e893f38.html" title="Qt中串口数据处理机制">https://jackhuang021.github.io/archives/6e893f38.html</a>
   </li>
   <li class="post-copyright-license">
-    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
   </li>
 </ul>
 </div>
@@ -328,12 +325,12 @@
           <div class="post-nav">
             <div class="post-nav-item">
                 <a href="/archives/e19e1ecc.html" rel="prev" title="Linux Input子系统按键连按驱动调试记录">
-                  <i class="fa fa-chevron-left"></i> Linux Input子系统按键连按驱动调试记录
+                  <i class="fa fa-angle-left"></i> Linux Input子系统按键连按驱动调试记录
                 </a>
             </div>
             <div class="post-nav-item">
                 <a href="/archives/67263a86.html" rel="next" title="龙芯2K1000内核源码编译">
-                  龙芯2K1000内核源码编译 <i class="fa fa-chevron-right"></i>
+                  龙芯2K1000内核源码编译 <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -352,16 +349,21 @@
   <footer class="footer">
     <div class="footer-inner">
 
-
-<div class="copyright">
-  &copy; 2021 – 
-  <span itemprop="copyrightYear">2024</span>
-  <span class="with-love">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">Jack</span>
-</div>
+  <div class="copyright">
+    &copy; 2021 – 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Jack</span>
+  </div>
 <div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">295k</span>
+  </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
@@ -394,12 +396,18 @@
   </footer>
 
   
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
   <div class="back-to-top" role="button" aria-label="返回顶部">
     <i class="fa fa-arrow-up fa-lg"></i>
     <span>0%</span>
   </div>
 
-  <a href="https://github.com/JackHuang021" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+  <a href="https://github.com/JackHuang021" class="github-corner" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
 
 <noscript>
   <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
@@ -408,7 +416,7 @@
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
-<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>
@@ -416,7 +424,9 @@
 
 
 
+
   <script src="/js/third-party/pace.js"></script>
+
 
   
   <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
