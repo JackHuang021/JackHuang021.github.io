@@ -29,7 +29,7 @@
 <meta property="og:description" content="本文记录git使用过程中用到的一些功能">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2022-11-17T08:14:27.000Z">
-<meta property="article:modified_time" content="2023-08-25T05:40:43.349Z">
+<meta property="article:modified_time" content="2023-09-20T09:34:40.622Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="git">
 <meta name="twitter:card" content="summary">
@@ -145,7 +145,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BAworktree"><span class="nav-number">1.</span> <span class="nav-text">创建worktree</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%88%E5%B9%B6%E5%85%B6%E4%BB%96%E5%88%86%E6%94%AFcommit%E5%88%B0%E5%BD%93%E5%89%8D%E5%88%86%E6%94%AF"><span class="nav-number">2.</span> <span class="nav-text">合并其他分支commit到当前分支</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E7%94%9F%E6%88%90patch"><span class="nav-number">3.</span> <span class="nav-text">git生成patch</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git-PR%E8%BF%87%E7%A8%8B"><span class="nav-number">4.</span> <span class="nav-text">git PR过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E4%BB%A3%E7%A0%81%E5%9B%9E%E6%BB%9A"><span class="nav-number">5.</span> <span class="nav-text">git代码回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E6%9A%82%E5%AD%98%E6%96%87%E4%BB%B6%E8%BD%AC%E4%B8%BAunstage"><span class="nav-number">6.</span> <span class="nav-text">git暂存文件转为unstage</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#git-ssh%E8%AE%BE%E7%BD%AE%E4%BB%A3%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">git ssh设置代理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9B%E5%BB%BAworktree"><span class="nav-number">2.</span> <span class="nav-text">创建worktree</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%88%E5%B9%B6%E5%85%B6%E4%BB%96%E5%88%86%E6%94%AFcommit%E5%88%B0%E5%BD%93%E5%89%8D%E5%88%86%E6%94%AF"><span class="nav-number">3.</span> <span class="nav-text">合并其他分支commit到当前分支</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E7%94%9F%E6%88%90patch"><span class="nav-number">4.</span> <span class="nav-text">git生成patch</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git-PR%E8%BF%87%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">git PR过程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E4%BB%A3%E7%A0%81%E5%9B%9E%E6%BB%9A"><span class="nav-number">6.</span> <span class="nav-text">git代码回滚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git%E6%9A%82%E5%AD%98%E6%96%87%E4%BB%B6%E8%BD%AC%E4%B8%BAunstage"><span class="nav-number">7.</span> <span class="nav-text">git暂存文件转为unstage</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#git-bisect%E5%AE%9A%E4%BD%8D%E9%97%AE%E9%A2%98"><span class="nav-number">8.</span> <span class="nav-text">git bisect定位问题</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -160,18 +160,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">35</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">6</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">38</span>
+        <span class="site-state-item-count">30</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -242,7 +242,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-08-25 13:40:43" itemprop="dateModified" datetime="2023-08-25T13:40:43+08:00">2023-08-25</time>
+      <time title="修改时间：2023-09-20 17:34:40" itemprop="dateModified" datetime="2023-09-20T17:34:40+08:00">2023-09-20</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -268,14 +268,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>2.1k</span>
+      <span>2.8k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>2 分钟</span>
+      <span>3 分钟</span>
     </span>
 </div>
 
@@ -289,6 +289,11 @@
         <p>本文记录git使用过程中用到的一些功能</p>
 <span id="more"></span>
 
+<h4 id="git-ssh设置代理"><a href="#git-ssh设置代理" class="headerlink" title="git ssh设置代理"></a>git ssh设置代理</h4><p>在没有设置代理的情况下，git拉取 更新偶尔无法成功，在~&#x2F;.ssh&#x2F;config加入如下的配置</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Host github.com</span><br><span class="line">	HostName github.com</span><br><span class="line">	User git</span><br><span class="line">    <span class="comment"># socks代理</span></span><br><span class="line">	ProxyCommand nc -v -x 127.0.0.1:1089 %h %p</span><br></pre></td></tr></table></figure>
+<p>测试ssh是否能连接github.com</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">jack@linux:~/Documents/<span class="built_in">source</span>/vim (master) $ ssh -T git@github.com</span><br><span class="line">Connection to github.com 22 port [tcp/ssh] succeeded!</span><br><span class="line">Hi JackHuang021! You<span class="string">&#x27;ve successfully authenticated, but GitHub does not provide shell access.</span></span><br></pre></td></tr></table></figure>
+
 <h4 id="创建worktree"><a href="#创建worktree" class="headerlink" title="创建worktree"></a>创建worktree</h4><p>在各个差异较大的分支中切换，工程需要做全局编译，导致开发效率下降，创建worktree可以在多个分支并行开发，从而实多个工程环境的缓存，达到提升开发效率的目的，特点：</p>
 <ul>
 <li>可为一个分支创建一个工作区</li>
@@ -301,7 +306,7 @@
 <li><strong>各个工作区之间的更新同步更快</strong>：<code>git clone</code>方式下，A工作区和B工作区同步更新的步骤，A工作区commit -&gt; A工作区push -&gt; B工作区pull，<code>git worktree</code>方式下，A工作区只要本地提交更新后，其他工作区就能立即收到</li>
 </ul>
 <p><strong>git worktree使用</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 进入工程目录</span></span><br><span class="line"><span class="built_in">cd</span> path/to/project</span><br><span class="line"><span class="comment"># 创建worktree</span></span><br><span class="line">git worktree add worktree test_branch</span><br><span class="line"><span class="comment"># 进入工作区worktree上进行开发</span></span><br><span class="line"><span class="built_in">cd</span> worktree</span><br><span class="line"></span><br><span class="line"><span class="comment"># 删除工作区</span></span><br><span class="line">rm -rf worktree</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清理工作区信息</span></span><br><span class="line">git worktree prune</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 进入工程目录</span></span><br><span class="line"><span class="built_in">cd</span> path/to/project</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看worktree信息</span></span><br><span class="line">git worktree list</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建worktree</span></span><br><span class="line">git worktree add worktree test_branch</span><br><span class="line"></span><br><span class="line"><span class="comment"># 进入工作区worktree上进行开发</span></span><br><span class="line"><span class="built_in">cd</span> worktree</span><br><span class="line"></span><br><span class="line"><span class="comment"># 删除工作区</span></span><br><span class="line">git worktree remove path/to/worktree</span><br></pre></td></tr></table></figure>
 
 <h4 id="合并其他分支commit到当前分支"><a href="#合并其他分支commit到当前分支" class="headerlink" title="合并其他分支commit到当前分支"></a>合并其他分支commit到当前分支</h4><p>使用<code>git cherry-pick</code>将其他分支的commit合并到另一个分支</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git cherry-pick &lt;commit-id&gt;</span><br></pre></td></tr></table></figure>
@@ -331,6 +336,7 @@
 </ul>
 <h4 id="git暂存文件转为unstage"><a href="#git暂存文件转为unstage" class="headerlink" title="git暂存文件转为unstage"></a>git暂存文件转为unstage</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 当前所有暂存文件全部转为unstage状态</span></span><br><span class="line">git restore --staged .</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将某个暂存文件转为unstage状态</span></span><br><span class="line">git restore --staged &lt;filename&gt;</span><br></pre></td></tr></table></figure>
 
+<h4 id="git-bisect定位问题"><a href="#git-bisect定位问题" class="headerlink" title="git bisect定位问题"></a>git bisect定位问题</h4><p>git bisect命令使用二分搜索算法来查找提交历史中的哪一次提交引入了错误，只需要告诉这个命令一个包含该bug的坏commit ID和一个引入该bug之前的好commit ID，这个命令会用二分法在这两个提交之间选择一个中间的commit ID，切换到那个commit ID的代码，然后询问你这是好的commit ID还是坏的commit ID，你告诉它是好还是坏，然后它会不断缩小范围，直到找到那次引入bug的commit ID</p>
 
     </div>
 
@@ -364,8 +370,8 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/2b4bdb51.html" rel="prev" title="Linux GPIO驱动框架">
-                  <i class="fa fa-chevron-left"></i> Linux GPIO驱动框架
+                <a href="/archives/d281c370.html" rel="prev" title="Linux字符设备驱动开发">
+                  <i class="fa fa-chevron-left"></i> Linux字符设备驱动开发
                 </a>
             </div>
             <div class="post-nav-item">
@@ -392,7 +398,7 @@
 
 <div class="copyright">
   &copy; 2021 – 
-  <span itemprop="copyrightYear">2023</span>
+  <span itemprop="copyrightYear">2024</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -403,7 +409,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:47</span>
+    <span title="站点阅读时长">4:28</span>
   </span>
 </div>
 <div class="busuanzi-count">

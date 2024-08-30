@@ -21,25 +21,30 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac","show_result":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="build a better world">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Jack&#39;s Home">
-<meta property="og:url" content="https://jackhuang021.github.io/tags/rootfs/index.html">
+    <meta name="description" content="最近发现在开启了代理后，使用git push, git fetch时还是偶尔会等待很久，有时候急需上传和拉取代码时卡住很是头痛">
+<meta property="og:type" content="article">
+<meta property="og:title" content="git ssh代理设置">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/da6c5b0b.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="build a better world">
+<meta property="og:description" content="最近发现在开启了代理后，使用git push, git fetch时还是偶尔会等待很久，有时候急需上传和拉取代码时卡住很是头痛">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-10-07T07:30:34.000Z">
+<meta property="article:modified_time" content="2023-10-07T07:50:43.784Z">
 <meta property="article:author" content="Jack">
+<meta property="article:tag" content="ssh">
+<meta property="article:tag" content="git">
+<meta property="article:tag" content="proxy">
 <meta name="twitter:card" content="summary">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/tags/rootfs/">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/da6c5b0b.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":false,"lang":"zh-CN","comments":"","permalink":"","path":"tags/rootfs/index.html","title":""}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/da6c5b0b.html","path":"archives/da6c5b0b.html","title":"git ssh代理设置"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>标签: rootfs | Jack's Home</title>
+<title>git ssh代理设置 | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -156,18 +161,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">35</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">6</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">38</span>
+        <span class="site-state-item-count">30</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -191,50 +196,147 @@
 
     </div>
 
-    <div class="main-inner tag posts-collapse">
+    <div class="main-inner post posts-expand">
 
 
   
+
+
+<div class="post-block">
   
   
-  <div class="post-block">
-    <div class="post-content">
-      <div class="collection-title">
-        <h1 class="collection-header">rootfs
-          <small>标签</small>
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/da6c5b0b.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/favicon-32x32.png">
+      <meta itemprop="name" content="Jack">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Jack's Home">
+      <meta itemprop="description" content="build a better world">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="git ssh代理设置 | Jack's Home">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          git ssh代理设置
         </h1>
-      </div>
 
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
       
-    <div class="collection-year">
-      <span class="collection-header">2022</span>
+
+      <time title="创建时间：2023-10-07 15:30:34 / 修改时间：15:50:43" itemprop="dateCreated datePublished" datetime="2023-10-07T15:30:34+08:00">2023-10-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Code/" itemprop="url" rel="index"><span itemprop="name">Code</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>282</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近发现在开启了代理后，使用git push, git fetch时还是偶尔会等待很久，有时候急需上传和拉取代码时卡住很是头痛</p>
+<span id="more"></span>
+
+<p>我一般使用ssh协议连接远程仓库，在ssh config（~&#x2F;.ssh&#x2F;config）中为github.com设置代理后问题解决了，记录一下</p>
+<p>在<code>~/.ssh/config</code>中增加下面的内容</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Host github.com</span><br><span class="line">	HostName github.com</span><br><span class="line">	User git</span><br><span class="line">	ProxyCommand nc -v -x 127.0.0.1:1089 %h %p</span><br><span class="line"><span class="comment"># 根据代理的端口修改127.0.0.1:1089</span></span><br></pre></td></tr></table></figure>
+
     </div>
 
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-      <div class="post-meta-container">
-        <time itemprop="dateCreated"
-              datetime="2022-10-28T22:46:39+08:00"
-              content="2022-10-28">
-          10-28
-        </time>
-      </div>
+    
+    
+    
 
-      <div class="post-title">
-          <a class="post-title-link" href="/archives/265c268b.html" itemprop="url">
-            <span itemprop="name">Linux根文件系统</span>
-          </a>
-      </div>
+    <footer class="post-footer">
+          
 
-      
-    </header>
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Jack
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://jackhuang021.github.io/archives/da6c5b0b.html" title="git ssh代理设置">https://jackhuang021.github.io/archives/da6c5b0b.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/ssh/" rel="tag"># ssh</a>
+              <a href="/tags/git/" rel="tag"># git</a>
+              <a href="/tags/proxy/" rel="tag"># proxy</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/archives/f183bd8.html" rel="prev" title="Linux睡眠唤醒调试方法">
+                  <i class="fa fa-chevron-left"></i> Linux睡眠唤醒调试方法
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
   </article>
+</div>
 
-    </div>
-  </div>
-  
-  
-  
+
+
+
+
 
 </div>
   </main>
@@ -245,7 +347,7 @@
 
 <div class="copyright">
   &copy; 2021 – 
-  <span itemprop="copyrightYear">2023</span>
+  <span itemprop="copyrightYear">2024</span>
   <span class="with-love">
     <i class="fa fa-user"></i>
   </span>
@@ -256,7 +358,7 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:47</span>
+    <span title="站点阅读时长">4:28</span>
   </span>
 </div>
 <div class="busuanzi-count">
