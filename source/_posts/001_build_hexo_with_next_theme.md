@@ -13,15 +13,15 @@ categories:
 - 博客
 ---
 
-## Hexo简介
+## 1. Hexo简介
 引用官网的介绍：A fast, simple & powerful blog framework  
 Hexo是一款基于Node.js的静态博客框架，依赖少易于安装使用，可以方便的生成静态网页托管在GitHub上，是搭建博客的首选框架。
 
-## 环境搭建
+## 2. 环境搭建
 基于Ubuntu20.04安装Hexo配置Next主题
 <!-- more -->
 
-### 安装Git
+### 2.1 安装Git
 ```
 sudo apt-get install git
 ```
@@ -31,27 +31,27 @@ git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 ```
 
-### 安装Node.js
+### 2.2 安装Node.js
 使用NVM（Node Version Manager）方式进行安装
 ```
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
 ```
 安装完成后关闭终端重新打开
 
-### 安装最新版本node
+### 2.3 安装最新版本node
 安装过程中可能会因为网络问题失败，可以尝试挂梯子,安装完成后更新自带npm
 ```
 nvm install node
 npm install npm -g
 ```
 
-### 安装Hexo
+### 2.4 安装Hexo
 安装过程中可能会因为网络问题失败，可以多重试几次或挂梯子
 ```
 npm install -g hexo-cli
 ```
 
-### 安装Next主题
+### 2.5 安装Next主题
 Next主题是Hexo比较知名的第三方主题，极简风格，有相当多的使用者，维护也做得比较好  
 不过Next新旧版本的仓库地址不一样，目前最新的GitHub地址[hexo-theme-next](https://github.com/next-theme/hexo-theme-next.git)  
 Next主题安装比较简单，直接从仓库clone然后修改Hexo配置文件
@@ -104,7 +104,7 @@ ngtcp2: 0.1.0-DEV
 nghttp3: 0.1.0-DEV
 ```
 
-### 初步运行Hexo进行验证
+### 2.6 初步运行Hexo进行验证
 ```
 hexo init blog
 cd blog
@@ -130,13 +130,13 @@ INFO  Hexo is running at http://localhost:4000 . Press Ctrl+C to stop.
 ```
 ![](https://cdn.jsdelivr.net/gh/JackHuang021/images@master/imageshexo_next_theme.png)
 
-### 部署GitHub远程服务器
+### 2.7 部署GitHub远程服务器
 
-#### 创建GitHub项目
+#### 2.7.1 创建GitHub项目
 在GitHub上注册账号，注册后上传ssh公钥，便于后续的部署操作  
 创建一个与你用户名对应的项目`username.github.io`，例如我创建的项目地址为`https://github.com/JackHuang021/JackHuang021.github.io.git`  
 
-#### 进行部署
+#### 2.7.2 进行部署
 部署需要用到`hexo deploy`上传到GitHub仓库，这里需要下载部署插件，并修改hexo配置文件`_config.yml`，
 我们很多的博客设置都可以在这个配置文件里面进行修改  
 首先安装Git部署插件
@@ -156,7 +156,7 @@ deploy:
 最后使用`hexo d`进行上传部署，现在访问`username.github.io`便可以看到博客页面了  
 后续更新博客设置或者文章的话需要再次进行上传部署`hexo g -d`
 
-### Hexo博客备份
+### 2.8 Hexo博客备份
 Hexo在进行部署时，是将页面内容解析后放在`.depoly_git`中进行上传GitHub仓库，博客内文章源文件并未进行上传，所以还需要手动将这些文件进行手动上传。目前比较常用的方法是在原GitHub仓库建立一条分支，将这些文件上传到该分支。
 ```
 cd blog 
@@ -169,7 +169,7 @@ git remote add origin git@github.com:JackHuang021/JackHuang021.github.io.git
 git push -u origin hexo
 ```
 
-### 恢复Hexo博客
+## 3. 恢复Hexo博客
 1. 按照之前的步骤搭建Hexo环境
 2. clone之前备份的hexo分支内容`git clone --recursive -b hexo git@github.com:JackHuang021/JackHuang021.github.io.git blog`
 3. 下载npm依赖模块
@@ -189,5 +189,24 @@ hexo s
 hexo d
 ```
 
-### 关于Hexo使用的思考
-我觉得Hexo最大的特点就是便捷，借助GitHub可以在多台设备中无缝切换进行博客写作，服务器的维护工作基本不需要作者进行，换设备后直接搭建hexo环境，从GitHub拉取博客内容即可。
+## 4. hexo更新
+1. 升级hexo-cli`npm install -g hexo-cli`
+2. hexo插件升级
+```bash
+npm install -g npm-check
+npm-check
+# 使用npm-check -u进行交互式的升级，选中所有hexo相关的插件
+npm-check -u
+```
+3. 更新next主题
+```bash
+cd themes/next
+git pull
+```
+4. 推送
+```bash
+hexo clean
+hexo g
+hexo d
+```
+5. 将hexo推送到远程仓库
