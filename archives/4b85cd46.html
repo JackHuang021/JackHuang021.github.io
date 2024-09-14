@@ -21,33 +21,33 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac","show_result":true},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="内核编译与烧写 内核版本4.9.37，Linux内核源码如下">
+    <meta name="description" content="GL-MT1300这款路由器目前在咸鱼上的价格还可以，有三个千兆口，颜值很高，双频wifi，不过处理器差一点，flash只有32MB。正好办公的网络环境比较复杂，买了一个来改善办公网络环境。 在编译安装ssr plus的过程中，遇到了一些问题，记录一下解决过程。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="HI3559AV100调试记录">
-<meta property="og:url" content="https://jackhuang021.github.io/archives/7803046f.html">
+<meta property="og:title" content="GL-MT1300安装ssr plus">
+<meta property="og:url" content="https://jackhuang021.github.io/archives/4b85cd46.html">
 <meta property="og:site_name" content="Jack&#39;s Home">
-<meta property="og:description" content="内核编译与烧写 内核版本4.9.37，Linux内核源码如下">
+<meta property="og:description" content="GL-MT1300这款路由器目前在咸鱼上的价格还可以，有三个千兆口，颜值很高，双频wifi，不过处理器差一点，flash只有32MB。正好办公的网络环境比较复杂，买了一个来改善办公网络环境。 在编译安装ssr plus的过程中，遇到了一些问题，记录一下解决过程。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101926.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png">
-<meta property="og:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png">
-<meta property="article:published_time" content="2022-06-09T02:02:24.000Z">
-<meta property="article:modified_time" content="2022-10-19T01:17:44.277Z">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20240914164856.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20240914170319.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20240914171824.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20240914173249.png">
+<meta property="article:published_time" content="2024-09-14T08:41:56.000Z">
+<meta property="article:modified_time" content="2024-09-14T09:37:48.586Z">
 <meta property="article:author" content="Jack">
-<meta property="article:tag" content="Hi3559AV100 Linux">
+<meta property="article:tag" content="openwrt">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/JackHuang021/images/master/20240914164856.png">
 
 
-<link rel="canonical" href="https://jackhuang021.github.io/archives/7803046f.html">
+<link rel="canonical" href="https://jackhuang021.github.io/archives/4b85cd46.html">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/7803046f.html","path":"archives/7803046f.html","title":"HI3559AV100调试记录"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/4b85cd46.html","path":"archives/4b85cd46.html","title":"GL-MT1300安装ssr plus"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>HI3559AV100调试记录 | Jack's Home</title>
+<title>GL-MT1300安装ssr plus | Jack's Home</title>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -148,7 +148,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E7%BC%96%E8%AF%91%E4%B8%8E%E7%83%A7%E5%86%99"><span class="nav-number">1.</span> <span class="nav-text">内核编译与烧写</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E8%B0%83%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">驱动调试</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%BD%BF%E7%94%A8sd%E5%8D%A1%E4%BD%9C%E4%B8%BA%E6%A0%B9%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="nav-number">1.</span> <span class="nav-text">1. 使用sd卡作为根文件系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%BC%96%E8%AF%91ssr-plus"><span class="nav-number">2.</span> <span class="nav-text">2. 编译ssr plus</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%87%86%E5%A4%87openwrt%E6%BA%90%E7%A0%81"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 准备openwrt源码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E7%BC%96%E8%AF%91openwrt"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 编译openwrt</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AE%89%E8%A3%85ssr-plus"><span class="nav-number">3.</span> <span class="nav-text">3. 安装ssr plus</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -209,7 +209,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/7803046f.html">
+    <link itemprop="mainEntityOfPage" href="https://jackhuang021.github.io/archives/4b85cd46.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/favicon-32x32.png">
@@ -222,12 +222,12 @@
     </span>
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="HI3559AV100调试记录 | Jack's Home">
+      <meta itemprop="name" content="GL-MT1300安装ssr plus | Jack's Home">
       <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          HI3559AV100调试记录
+          GL-MT1300安装ssr plus
         </h1>
 
         <div class="post-meta-container">
@@ -237,15 +237,9 @@
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
+      
 
-      <time title="创建时间：2022-06-09 10:02:24" itemprop="dateCreated datePublished" datetime="2022-06-09T10:02:24+08:00">2022-06-09</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-10-19 09:17:44" itemprop="dateModified" datetime="2022-10-19T09:17:44+08:00">2022-10-19</time>
+      <time title="创建时间：2024-09-14 16:41:56 / 修改时间：17:37:48" itemprop="dateCreated datePublished" datetime="2024-09-14T16:41:56+08:00">2024-09-14</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -253,7 +247,7 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+          <a href="/categories/daily/" itemprop="url" rel="index"><span itemprop="name">daily</span></a>
         </span>
     </span>
 
@@ -271,14 +265,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1k</span>
+      <span>3k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>3 分钟</span>
     </span>
 </div>
 
@@ -288,23 +282,43 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><h4 id="内核编译与烧写"><a href="#内核编译与烧写" class="headerlink" title="内核编译与烧写"></a>内核编译与烧写</h4><ul>
-<li>内核版本4.9.37，Linux内核源码如下<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101727.png"><span id="more"></span></li>
-<li>编译<code>make ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- uImage -j12</code>，编译完成结果如下，编译完成后会在arch&#x2F;arm64&#x2F;boot&#x2F;生成UImage<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609101926.png"></li>
-<li>arm-trusted-firmware目录中运行mk.sh生成fip.bin<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609110821.png"></li>
-<li>主机搭建tftp服务器，将fip.bin拷贝到共享目录</li>
-<li>进入uboot，配置ethact ipaddr serverip环境变量<br><img src="https://cdn.jsdelivr.net/gh/JackHuang021/images@master/images20220609111122.png"></li>
-<li>从tftp加载内核，测试内核是否能启动、  <figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">bootm</span> <span class="number">0</span>x<span class="number">42000000</span></span><br></pre></td></tr></table></figure></li>
-<li>烧写内核到emmc  <figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">tftp</span> fip.bin <span class="number">0</span>x<span class="number">42000000</span></span><br><span class="line"><span class="attribute">mmc</span> dev <span class="number">0</span> <span class="number">0</span></span><br><span class="line"><span class="attribute">mmc</span> write <span class="number">0</span> <span class="number">0</span>x<span class="number">42000000</span> <span class="number">800</span> <span class="number">4800</span></span><br></pre></td></tr></table></figure></li>
-</ul>
-<h4 id="驱动调试"><a href="#驱动调试" class="headerlink" title="驱动调试"></a>驱动调试</h4><ul>
-<li>参照正点原子教程搭建驱动调试环境，配置的<em>Makefile</em>内容如下  <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">KERNEL_DIR = /home/jack/hisi/minimum_system/linux-4.9.y_multi-core</span><br><span class="line">CURRENT_PATH = <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">obj-m := gpio-pca953x.o</span><br><span class="line"></span><br><span class="line"><span class="section">build: kernel_modules</span></span><br><span class="line"></span><br><span class="line"><span class="section">kernel_modules: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">clean: </span></span><br><span class="line"><span class="variable">$(MAKE)</span> ARCH=arm64 CROSS_COMPILE=aarch64-himix100-linux- -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURRENT_PATH)</span> clean</span><br></pre></td></tr></table></figure></li>
-<li><em>KERNEL_DIR</em>表示Linux内核源码目录，使用绝对路径</li>
-<li><em>CURRENT_PATH</em>表示当前路径，直接使用<em>pwd</em>来获取当前路径</li>
-<li><em>obj-m</em>表示将这个c文件编译为ko模块</li>
-<li><em>modules</em>表示编译模块，*-C*表示将当前的工作目录切换到指定目录中， <em>M</em>表示模块源码目录</li>
-<li><em>make modules</em>命令中加入 M&#x3D;dir 以后程序会自动到指定的 dir 目录中读取模块的源码并将其编译为.ko 文件</li>
-</ul>
+    <div class="post-body" itemprop="articleBody"><p>GL-MT1300这款路由器目前在咸鱼上的价格还可以，有三个千兆口，颜值很高，双频wifi，不过处理器差一点，flash只有32MB。正好办公的网络环境比较复杂，买了一个来改善办公网络环境。</p>
+<p>在编译安装ssr plus的过程中，遇到了一些问题，记录一下解决过程。</p>
+<span id="more"></span>
+<h2 id="1-使用sd卡作为根文件系统"><a href="#1-使用sd卡作为根文件系统" class="headerlink" title="1. 使用sd卡作为根文件系统"></a>1. 使用sd卡作为根文件系统</h2><p>MT1300默认可用的flash空间大约是15MB，由于编出来的v2ray-core的安装包就有8MB，不使用sd卡挂载来做文件系统的话，装不下完整的ssr plus插件（不使用sd卡只能装上ss，仅使用ss协议可以不需要sd卡来做文件系统）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装必要工具</span></span><br><span class="line">root@GL-MT1300:/# opkg update</span><br><span class="line">root@GL-MT1300:/# opkg install block-mount  kmod-usb-storage  kmod-fs-ext4 e2fsprogs</span><br><span class="line"><span class="comment"># 格式化SD卡，我这里SD卡的设备节点为/dev/mmcblk0p1：</span></span><br><span class="line">root@GL-MT1300:/# mkfs.ext4 /dev/mmcblk0p1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 制作根文件系统</span></span><br><span class="line">root@GL-MT1300:/# mount /dev/mmcblk0p1 /mnt</span><br><span class="line">root@GL-MT1300:/# <span class="built_in">mkdir</span> /tmp/root</span><br><span class="line">root@GL-MT1300:/# mount -o <span class="built_in">bind</span> / /tmp/root</span><br><span class="line">root@GL-MT1300:/# <span class="built_in">cp</span> /tmp/root/* /mnt -a</span><br><span class="line">root@GL-MT1300:/# umount /tmp/root</span><br><span class="line">root@GL-MT1300:/# umount /mnt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置自动挂载并重启路由器</span></span><br><span class="line">root@GL-MT1300:/# block detect &gt; /etc/config/fstab</span><br><span class="line">root@GL-MT1300:/# uci <span class="built_in">set</span> fstab.@mount[0].target=<span class="string">&#x27;/overlay&#x27;</span></span><br><span class="line">root@GL-MT1300:/# uci <span class="built_in">set</span> fstab.@mount[0].enabled=<span class="string">&#x27;1&#x27;</span></span><br><span class="line">root@GL-MT1300:/# uci commit fstab</span><br><span class="line">root@GL-MT1300:/# reboot</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>我这里使用v4.3.19的固件会出现wan口dhcp获取不到IP的情况，后来刷回到v4.3.18固件正常了</p>
+</blockquote>
+<h2 id="2-编译ssr-plus"><a href="#2-编译ssr-plus" class="headerlink" title="2. 编译ssr plus"></a>2. 编译ssr plus</h2><h3 id="2-1-准备openwrt源码"><a href="#2-1-准备openwrt源码" class="headerlink" title="2.1 准备openwrt源码"></a>2.1 准备openwrt源码</h3><ol>
+<li>先在 系统-&gt;概要 里面查看openwrt的版本是多少，后续我们需要使用对应版本的openwrt来编译插件，例如我这台的版本是openwrt 22.03.4</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20240914164856.png"></p>
+<ol start="2">
+<li><p>下载openwrt的源码，并切到对应版本的tag点</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/openwrt/openwrt</span><br><span class="line"><span class="built_in">cd</span> openwrt</span><br><span class="line">git checkout v22.03.4</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改feeds.conf.default，加入ssr plus的组件包</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">--- a/feeds.conf.default</span></span><br><span class="line"><span class="comment">+++ b/feeds.conf.default</span></span><br><span class="line"><span class="meta">@@ -1,4 +1,6 @@</span></span><br><span class="line"><span class="deletion">-src-git-full packages https://git.openwrt.org/feed/packages.git^38cb0129739bc71e0bb5a25ef1f6db70b7add04b</span></span><br><span class="line"><span class="addition">+#src-git-full packages https://git.openwrt.org/feed/packages.git^38cb0129739bc71e0bb5a25ef1f6db70b7add04b</span></span><br><span class="line"><span class="addition">+src-git packages https://github.com/coolsnowwolf/packages</span></span><br><span class="line"> src-git-full luci https://git.openwrt.org/project/luci.git^ce20b4a6e0c86313c0c6e9c89eedf8f033f5e637</span><br><span class="line"> src-git-full routing https://git.openwrt.org/feed/routing.git^1cc7676b9f32acc30ec47f15fcb70380d5d6ef01</span><br><span class="line"> src-git-full telephony https://git.openwrt.org/feed/telephony.git^5087c7ecbc4f4e3227bd16c6f4d1efb0d3edf460</span><br><span class="line"><span class="addition">+src-git helloworld https://github.com/fw876/helloworld.git</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="2-2-编译openwrt"><a href="#2-2-编译openwrt" class="headerlink" title="2.2 编译openwrt"></a>2.2 编译openwrt</h3><ol>
+<li>修改编译选项<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./scripts/feeds update -a &amp;&amp; ./scripts/feeds install -a</span><br><span class="line">make menuconfig -j12</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>选择我们需要编译的设备<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20240914170319.png"></p>
+<p>选择需要编译的插件，按照下面图片中的选上<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20240914171824.png"></p>
+<ol start="2">
+<li>开始编译<code>make V=s -j12</code>，一般都能编译通过，编译后的安装包路径为<code>bin/packages/mipsel_24kc</code>，ssr plus的安装包在<code>helloworld</code>目录中，可以把这个目录下的所有包都拷贝到路由器上进行安装，并留一个备份</li>
+</ol>
+<h2 id="3-安装ssr-plus"><a href="#3-安装ssr-plus" class="headerlink" title="3. 安装ssr plus"></a>3. 安装ssr plus</h2><ol>
+<li><p>ssr plus的安装需要其它几个依赖的软件包，我们先安装其它的包，最后再装ssr plus</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">opkg install chinadns-ng_2023.10.28-1_mipsel_24kc.ipk</span><br><span class="line">opkg install dns2socks_2.1-2_mipsel_24kc.ipk</span><br><span class="line">opkg install dns2tcp_1.1.2-1_mipsel_24kc.ipk</span><br><span class="line">opkg install lua-neturl_1.1-1-3_all.ipk</span><br><span class="line">opkg install microsocks_1.0.4-1_mipsel_24kc.ipk</span><br><span class="line">opkg install shadowsocksr-libev-ssr-check_2.5.6-11_mipsel_24kc.ipk</span><br><span class="line">opkg install shadowsocksr-libev-ssr-local_2.5.6-11_mipsel_24kc.ipk</span><br><span class="line">opkg install shadowsocksr-libev-ssr-redir_2.5.6-11_mipsel_24kc.ipk</span><br><span class="line">opkg install simple-obfs-client_0.0.5-1_mipsel_24kc.ipk</span><br><span class="line">opkg install tcping_0.3-1_mipsel_24kc.ipk</span><br><span class="line">opkg install v2ray-core_5.16.1-1_mipsel_24kc.ipk</span><br><span class="line">opkg install v2ray-plugin_5.15.1-1_mipsel_24kc.ipk</span><br><span class="line"></span><br><span class="line">opkg install luci-app-ssr-plus_188_all.ipk --force-overwrite</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装完之后可能还会遇到打不开ssr插件和订阅无法更新的问题，还需要安装下面几个包：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">opkg install luci-compat</span><br><span class="line">opkg install wget-ssl</span><br><span class="line">opkg install luci-lib-ipkg</span><br></pre></td></tr></table></figure>
+<p>安装完这些包后应该是可以正常使用了<br><img src="https://raw.githubusercontent.com/JackHuang021/images/master/20240914173249.png"></p>
+</li>
+</ol>
 
     </div>
 
@@ -318,11 +332,11 @@
 <div class="post-copyright">
 <ul>
   <li class="post-copyright-author">
-      <strong>原作者： </strong>Jack
+      <strong>本文作者： </strong>Jack
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://jackhuang021.github.io/archives/7803046f.html" title="HI3559AV100调试记录">https://jackhuang021.github.io/archives/7803046f.html</a>
+      <a href="https://jackhuang021.github.io/archives/4b85cd46.html" title="GL-MT1300安装ssr plus">https://jackhuang021.github.io/archives/4b85cd46.html</a>
   </li>
   <li class="post-copyright-license">
       <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -331,21 +345,18 @@
 </div>
 
           <div class="post-tags">
-              <a href="/tags/Hi3559AV100-Linux/" rel="tag"># Hi3559AV100 Linux</a>
+              <a href="/tags/openwrt/" rel="tag"># openwrt</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/archives/6465c2cc.html" rel="prev" title="OpenCV 图像处理基本操作">
-                  <i class="fa fa-angle-left"></i> OpenCV 图像处理基本操作
+                <a href="/archives/da6c5b0b.html" rel="prev" title="git ssh代理设置">
+                  <i class="fa fa-angle-left"></i> git ssh代理设置
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/e19e1ecc.html" rel="next" title="Linux Input子系统按键连按驱动调试记录">
-                  Linux Input子系统按键连按驱动调试记录 <i class="fa fa-angle-right"></i>
-                </a>
             </div>
           </div>
     </footer>
