@@ -17,7 +17,7 @@ date: 2023-01-29 14:37:36
 使用MMC接口规范（Multimedia Card Interface）的设备都可以称为MMC设备，MMC设备的种类：
 1. mmc type card
 2. sd type card
-3. sdio type card 
+3. sdio type card
 
 <!-- more -->
 
@@ -25,7 +25,6 @@ MMC驱动子系统包含三个部分：
 1. bus: MMC总线(mmc_bus)
 2. host: 封装在platform_device下的host设备
 3. card: 抽象具体的MMC卡，有对应的mmc driver
-
 
 core layer根据MMC/SD协议标准实现了协议，card layer与Linux的块设备子系统对接，实现块设备驱动以及完成请求，具体协议经过core layer的接口，最终通过host layer完成传输，对MMC设备进行实际的操作
 
@@ -120,6 +119,8 @@ RCA寄存器的长度为16 bits，存储了卡的通信地址，这个寄存器�
 
 
 ### 4. MMC驱动框架
+基于linux 6.6
+
 Linux内核中把mmc、sd以及sdio三者的驱动代码整合在一起，俗称MMC子系统，源码位于drivers/mmc目录下，mmc目录下有core和host两个文件夹
 + host：针对不同主机端的SDIO、MMC控制器的驱动，这部分需要由驱动工程师来完成
 + core：整个MMC的核心层，这部分实现了不通协议和规范，为HOST层和设备驱动层提供接口函数，还存放了块设备的相关驱动
@@ -769,6 +770,338 @@ root@Ubuntu:/sys/class/mmc_host# ls
 mmc0  mmc1
 ```
 
+#### 4.5 创建块设备流程
+
+mmc块设备创建相关的结构体如下：
+
+`struct mmc_blk_data`，mmc存储设备的每个分区都对应一个`mmc_blk_data`，用来存储该设备的硬盘信息、请求队列
+```c
+// drivers/mmc/core/block.c
+/*
+ * There is one mmc_blk_data per slot.
+ */
+struct mmc_blk_data {
+	struct device	*parent;
+	struct gendisk	*disk;
+	// 对应一个request_queue
+	struct mmc_queue queue;
+	struct list_head part;
+	struct list_head rpmbs;
+
+	unsigned int	flags;
+#define MMC_BLK_CMD23	(1 << 0)	/* Can do SET_BLOCK_COUNT for multiblock */
+#define MMC_BLK_REL_WR	(1 << 1)	/* MMC Reliable write support */
+
+	struct kref	kref;
+	unsigned int	read_only;
+	unsigned int	part_type;
+	unsigned int	reset_done;
+#define MMC_BLK_READ		BIT(0)
+#define MMC_BLK_WRITE		BIT(1)
+#define MMC_BLK_DISCARD		BIT(2)
+#define MMC_BLK_SECDISCARD	BIT(3)
+#define MMC_BLK_CQE_RECOVERY	BIT(4)
+#define MMC_BLK_TRIM		BIT(5)
+
+	/*
+	 * Only set in main mmc_blk_data associated
+	 * with mmc_card with dev_set_drvdata, and keeps
+	 * track of the current selected device partition.
+	 */
+	unsigned int	part_curr;
+#define MMC_BLK_PART_INVALID	UINT_MAX	/* Unknown partition active */
+	int	area_type;
+
+	/* debugfs files (only in main mmc_blk_data) */
+	struct dentry *status_dentry;
+	struct dentry *ext_csd_dentry;
+};
+```
+
+`struct mmc_queue`，封装了请求队列`struct request_queue`
+```c
+// dirvers/mmc/core/queue.h
+struct mmc_queue {
+	struct mmc_card		*card;
+	struct mmc_ctx		ctx;
+	struct blk_mq_tag_set	tag_set;
+	struct mmc_blk_data	*blkdata;
+	struct request_queue	*queue;
+	spinlock_t		lock;
+	int			in_flight[MMC_ISSUE_MAX];
+	unsigned int		cqe_busy;
+#define MMC_CQE_DCMD_BUSY	BIT(0)
+	bool			busy;
+	bool			recovery_needed;
+	bool			in_recovery;
+	bool			rw_wait;
+	bool			waiting;
+	struct work_struct	recovery_work;
+	wait_queue_head_t	wait;
+	struct request		*recovery_req;
+	struct request		*complete_req;
+	struct mutex		complete_lock;
+	struct work_struct	complete_work;
+};
+```
+
+`struct blk_mq_tag_set`包含了一个新的块设备（物理设备）向Block Layer注册时需要的所有重要信息，抽象了存储器件的I/O特征
+```c
+// include/linux/blk-mq.h
+/**
+ * struct blk_mq_tag_set - tag set that can be shared between request queues
+ * @ops:	   Pointers to functions that implement block driver behavior.
+ * @map:	   One or more ctx -> hctx mappings. One map exists for each
+ *		   hardware queue type (enum hctx_type) that the driver wishes
+ *		   to support. There are no restrictions on maps being of the
+ *		   same size, and it's perfectly legal to share maps between
+ *		   types.
+ * @nr_maps:	   Number of elements in the @map array. A number in the range
+ *		   [1, HCTX_MAX_TYPES].
+ * @nr_hw_queues:  Number of hardware queues supported by the block driver that
+ *		   owns this data structure.
+ * @queue_depth:   Number of tags per hardware queue, reserved tags included.
+ * @reserved_tags: Number of tags to set aside for BLK_MQ_REQ_RESERVED tag
+ *		   allocations.
+ * @cmd_size:	   Number of additional bytes to allocate per request. The block
+ *		   driver owns these additional bytes.
+ * @numa_node:	   NUMA node the storage adapter has been connected to.
+ * @timeout:	   Request processing timeout in jiffies.
+ * @flags:	   Zero or more BLK_MQ_F_* flags.
+ * @driver_data:   Pointer to data owned by the block driver that created this
+ *		   tag set.
+ * @tags:	   Tag sets. One tag set per hardware queue. Has @nr_hw_queues
+ *		   elements.
+ * @shared_tags:
+ *		   Shared set of tags. Has @nr_hw_queues elements. If set,
+ *		   shared by all @tags.
+ * @tag_list_lock: Serializes tag_list accesses.
+ * @tag_list:	   List of the request queues that use this tag set. See also
+ *		   request_queue.tag_set_list.
+ * @srcu:	   Use as lock when type of the request queue is blocking
+ *		   (BLK_MQ_F_BLOCKING).
+ */
+struct blk_mq_tag_set {
+	// 块设备驱动mq的操作集，用于抽象块设备驱动的行为
+	const struct blk_mq_ops	*ops;
+	// 每一个数组成员代表一种类型的硬件队列
+	// 硬件队列类型包括三种：
+	// HCTX_TYPE_DEFAULT 默认模式
+	// HCTX_TYPE_READ 只读模式
+	// HCTX_TYPE_POLL 轮询模式
+	struct blk_mq_queue_map	map[HCTX_MAX_TYPES];
+	// map中元素的数量，他的范围在[1，HCTX_MAX_TYPES]
+	unsigned int		nr_maps;
+	// 块设备的硬件队列数量
+	unsigned int		nr_hw_queues;
+	// 每个硬件队列的深度
+	unsigned int		queue_depth;
+	// 每个硬件队列预留的元素个数
+	unsigned int		reserved_tags;
+	unsigned int		cmd_size;
+	// 块设备连接的NUMA节点
+	int			numa_node;
+	// 请求处理的超时时间
+	unsigned int		timeout;
+	unsigned int		flags;
+	// 块设备驱动私有数据
+	void			*driver_data;
+	// 每个硬件队列都有一个blk_mq_tags结构体，一共具有nr_hw_queues个元素
+	struct blk_mq_tags	**tags;
+
+	struct blk_mq_tags	*shared_tags;
+
+	struct mutex		tag_list_lock;
+	// 用来构建一个blk_mq_tag_set类型的双向链表
+	struct list_head	tag_list;
+	struct srcu_struct	*srcu;
+};
+```
+
+`struct blk_mq_queue_map`用于描述软硬件队列之间的映射关系
+```c
+/**
+ * struct blk_mq_queue_map - Map software queues to hardware queues
+ * @mq_map:       CPU ID to hardware queue index map. This is an array
+ *	with nr_cpu_ids elements. Each element has a value in the range
+ *	[@queue_offset, @queue_offset + @nr_queues).
+ * @nr_queues:    Number of hardware queues to map CPU IDs onto.
+ * @queue_offset: First hardware queue to map onto. Used by the PCIe NVMe
+ *	driver to map each hardware queue type (enum hctx_type) onto a distinct
+ *	set of hardware queues.
+ */
+struct blk_mq_queue_map {
+	// 对应所有CPU上软件队列到硬件队列的映射
+	unsigned int *mq_map;
+	// 硬件队列数量
+	unsigned int nr_queues;
+	unsigned int queue_offset;
+};
+```
+
+`struct blk_mq_tags`blk_mq_tags主要是管理struct request的分配， blk_mq_tags与硬件队列blk_mq_hw_ctx一一对应。tag是用来为request打标签的，只有request被分配了一个tag，这个request才能进行真正的I/O传输，一个硬件队列的深度为`nr_tags`，也就是该硬件队列最多包含`nr_tags`个request，这些request事先都是分配好的，并且保存在`static_rqs`数组中。
+```c
+/*
+ * Tag address space map.
+ */
+struct blk_mq_tags {
+	// 每个硬件队列的深度
+	unsigned int nr_tags;
+	// 每个硬件队列预留的tag个数
+	unsigned int nr_reserved_tags;
+	// 活跃的队列数量
+	unsigned int active_queues;
+	// tag的位图；每个bit代表一个tag标记，用于标示硬件队列中的request；1位已分配，0为为分配
+	struct sbitmap_queue bitmap_tags;
+	struct sbitmap_queue breserved_tags;
+	// rqs初始化后的数组长度为nr_tags
+	struct request **rqs;
+	// 初始化后数组长度为static_rqs
+	struct request **static_rqs;
+	// 用于链接分配出来的page
+	struct list_head page_list;
+
+	/*
+	 * used to clear request reference in rqs[] before freeing one
+	 * request pool
+	 */
+	spinlock_t lock;
+};
+```
+每当一个`bio`被提交，如果被转换成request的话，需要进行如下步骤：
+1. 首先从`bitmap_tags`或者`breserved_tags`分配一个tag
+2. 然后根据tag索引，获取`static_rqs[tag]`作为当前的request，并初始化该request
+3. 设置rqs[tag] = static_rqs[tag]
+
+
+`mmc_driver`的定义
+```c
+// drivers/mmc/core/block.c
+static struct mmc_driver mmc_driver = {
+	.drv		= {
+		.name	= "mmcblk",
+		.pm	= &mmc_blk_pm_ops,
+	},
+	.probe		= mmc_blk_probe,
+	.remove		= mmc_blk_remove,
+	.shutdown	= mmc_blk_shutdown,
+};
+```
+
+`mmc_driver`的注册
+```c
+// drivers/mmc/core/block.c
+static int __init mmc_blk_init(void)
+{
+	int res;
+	// rpmb即Replay Protected Memory Block
+	res  = bus_register(&mmc_rpmb_bus_type);
+	if (res < 0) {
+		pr_err("mmcblk: could not register RPMB bus type\n");
+		return res;
+	}
+	res = alloc_chrdev_region(&mmc_rpmb_devt, 0, MAX_DEVICES, "rpmb");
+	if (res < 0) {
+		pr_err("mmcblk: failed to allocate rpmb chrdev region\n");
+		goto out_bus_unreg;
+	}
+
+	if (perdev_minors != CONFIG_MMC_BLOCK_MINORS)
+		pr_info("mmcblk: using %d minors per device\n", perdev_minors);
+
+	max_devices = min(MAX_DEVICES, (1 << MINORBITS) / perdev_minors);
+
+	res = register_blkdev(MMC_BLOCK_MAJOR, "mmc");
+	if (res)
+		goto out_chrdev_unreg;
+	// 注册mmc块设备驱动，当有mmc_card注册到mmc_bus上时
+	// mmc_bus_probe()就会被调用，紧接着调用mmc_blk_probe()
+	res = mmc_register_driver(&mmc_driver);
+	if (res)
+		goto out_blkdev_unreg;
+
+	return 0;
+
+out_blkdev_unreg:
+	unregister_blkdev(MMC_BLOCK_MAJOR, "mmc");
+out_chrdev_unreg:
+	unregister_chrdev_region(mmc_rpmb_devt, MAX_DEVICES);
+out_bus_unreg:
+	bus_unregister(&mmc_rpmb_bus_type);
+	return res;
+}
+```
+
+`mmc_blk_probe()`函数解析，当有`mmc_card`注册到`mmc_bus`上时`mmc_bus_probe()`就会被调用，紧接着调用`mmc_blk_probe()`
+```c
+// drivers/mmc/core/bus.c
+// 首先会调用bus->probe()
+static int mmc_bus_probe(struct device *dev)
+{
+	struct mmc_driver *drv = to_mmc_driver(dev->driver);
+	struct mmc_card *card = mmc_dev_to_card(dev);
+
+	return drv->probe(card);
+}
+
+
+// drivers/mmc/core/block.c
+static int mmc_blk_probe(struct mmc_card *card)
+{
+	struct mmc_blk_data *md;
+	int ret = 0;
+
+	/*
+	 * Check that the card supports the command class(es) we need.
+	 */
+	if (!(card->csd.cmdclass & CCC_BLOCK_READ))
+		return -ENODEV;
+
+	mmc_fixup_device(card, mmc_blk_fixups);
+
+	card->complete_wq = alloc_workqueue("mmc_complete",
+					WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
+	if (!card->complete_wq) {
+		pr_err("Failed to create mmc completion workqueue");
+		return -ENOMEM;
+	}
+
+	md = mmc_blk_alloc(card);
+	if (IS_ERR(md)) {
+		ret = PTR_ERR(md);
+		goto out_free;
+	}
+
+	ret = mmc_blk_alloc_parts(card, md);
+	if (ret)
+		goto out;
+
+	/* Add two debugfs entries */
+	mmc_blk_add_debugfs(card, md);
+
+	pm_runtime_set_autosuspend_delay(&card->dev, 3000);
+	pm_runtime_use_autosuspend(&card->dev);
+
+	/*
+	 * Don't enable runtime PM for SD-combo cards here. Leave that
+	 * decision to be taken during the SDIO init sequence instead.
+	 */
+	if (!mmc_card_sd_combo(card)) {
+		pm_runtime_set_active(&card->dev);
+		pm_runtime_enable(&card->dev);
+	}
+
+	return 0;
+
+out:
+	mmc_blk_remove_parts(card, md);
+	mmc_blk_remove_req(md);
+out_free:
+	destroy_workqueue(card->complete_wq);
+	return ret;
+}
+```
+
 ### 5. phytium mmc host驱动
 
 #### 5.1 E2000Q demo 板设备树描述
@@ -806,6 +1139,8 @@ mmc@28001000 {
 		phandle = <0x0000001c>;
 };
 ```
+
+具体的驱动初始化流程[思维导图链接](http://naotu.baidu.com/file/afff4dc44c9a5c4400d5235a7e7d0c1a?token=72dd6770ba866ed6)
 
 ### 6. SD卡测试
 
@@ -992,6 +1327,11 @@ Disk stats (read/write):
   mmcblk0: ios=146/3191, merge=0/0, ticks=39355/1808944, in_queue=1848299, util=100.00%
 ```
 
+
+### 7. 参考链接
+1. [Linux MMC子系统](https://blog.csdn.net/u013836909/category_11430485.html)
+2. [linux块设备驱动blk-mq
+](https://www.cnblogs.com/zyly/p/16690841.html#_label0_0)
 
 
 
