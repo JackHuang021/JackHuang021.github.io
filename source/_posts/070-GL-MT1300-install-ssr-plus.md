@@ -1,10 +1,11 @@
 ---
 title: GL-MT1300安装ssr plus
-date: 2024-09-14 16:41:56
 tags:
- - openwrt
+  - openwrt
 categories:
- - daily
+  - daily
+abbrlink: 4b85cd46
+date: 2024-09-14 16:41:56
 ---
 
 GL-MT1300这款路由器目前在咸鱼上的价格还可以，有三个千兆口，颜值很高，双频wifi，不过处理器差一点，flash只有32MB。正好办公的网络环境比较复杂，买了一个来改善办公网络环境。
