@@ -7,7 +7,8 @@ tags:
 categories: Linux
 ---
 
-### CPPC概述
+## CPPC概述
+
 CPPC(Collaborative Processor Performance Control)协同处理器性能控制，在ACPI规范中描述了CPPC，它是一种操作系统在逻辑处理器的性能范围内管理处理器性能的机制，CPPC使用一组寄存器来描述处理器的性能等级、设置处理器的性能等级、测量处理器的实际性能。
 
 > CPPC在ACPI中的描述位于《ACPI Specification》8.4.6章节  
@@ -15,17 +16,13 @@ CPPC(Collaborative Processor Performance Control)协同处理器性能控制，�
 
 OSPM(Operating System-driected Power Management)操作系统定向电源管理，操作系统扮演核心角色，利用操作系统的信息进行电源管理来优化任务的执行。
 
-
-
 在CPPC的机制中，platform固件负责创建和维护处理器的性能等级，同时他也可以自主地根据当前的工作负载来控制处理器的性能等级，操作系统OSPM也会向platform固件传递性能一个性能等级目标值来指导platform来进行性能等级的调整，最终调整到哪个性能等级是由platform固件决定的
-
-
 
 _CPC(Continuous Performance Control)对象抽象了控制和监控处理器性能的机制，寄存器是由Platform Communication Channel(PCC)接口实现的，下图是CPC定义的给platform固件的指令，这个指令是通过PCC通信机制传递到paltform固件的，这里的指令是对所有核心生效的
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230927144858.png)
 
-
 S5000C的一个CPC表示例，其中Access Size为Subspace Id，对应到PCCT的子空间，用来和paltform固件通信
+
 ```c
 Name (CPC6, Package (0x17)
 {
@@ -243,7 +240,8 @@ Name (CPC6, Package (0x17)
 })
 ```
 
-### CPPC性能控制接口
+## CPPC性能控制接口
+
 _CPC performance control package如下：
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230921093658.png)
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230921093803.png)
@@ -255,7 +253,7 @@ _CPC performance control package如下：
 + Guaranteed Performance Register: 表示在当前的外部环境下（电源、温度等），处理器所能维持的最大性能等级，它的值在Lowest Performance和Nominal Performance之间
 + Lowest Frequency and Nominal Frequency: 这两个值由platform提供，表示最低的、标定的CPU频率值，单位MHz，这两个值对应lowest performance和nominal performance，这两个值只是为了确定CPU performance level和频率之间的关系，当操作系统需要上报CPU频率时，这两个值可以用来做推算当前频率
 
-### CPPC的性能控制方法
+## CPPC的性能控制方法
 
 > 这里所描述到的性能控制方法实际是platform平台固件来执行的，对于OSPM而言，它只向platform固件来传递一个范围在[min performance, max performance]之间的一个连续性能等级给platform固件
 
@@ -268,8 +266,6 @@ OSPM会有一些性能设置选项来影响platform的性能等级设定，OSPM�
 
 OSPM的一些性能设置寄存器
 + Minimum/Maximum Performance Register: 这两个寄存器主要用来控制OSPM的性能等级范围
-
-
 + Desired Performance Register: OSPM会传递该寄存器的性能等级到platform，取值范围在[min performance, max performance]的任意值
 + Performance Reduction Tolerance Register: OSPM表示可允许的与期望性能之间的偏差，platform在控制性能等级时不应该超过该偏差
 + Time Window Register: platform到达期望性能等级的时间窗口，platform在控制性能等级时不应该超过该时间
@@ -280,13 +276,15 @@ OSPM的一些性能设置寄存器
 可以利用Reference Performance Counter、Delivered Performance Counter、Refrence Performance这三个参数来计算当前的实际频率，计算公式如下，代码逻辑在`cppc_cpufreq.c`中的`cppc_cpufreq_get_rate()`中
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230921145254.png)
 
-### PCC通信机制
+## PCC通信机制
+
 PCC(Platform Communication Channel)用于OSPM和platform之间的双向通信的标准机制，CPC就是使用PCC和platform进行双向通信的
 > PCC的更多描述可以参考《ACPI Specification》14章节  
 
 每个PCC子空间就是一个mailbox通道，PCC实例先在他们自己的表中获取到PCC子空间ID，然后传递给PCC获取mailbox通道来进行通信，具体逻辑在`pcc_mbox_request_channel()`里面。
 
 S5000C中PCCT表中一个子空间的描述
+
 ```c
 [030h 0048   1]                Subtable Type : 01 [HW-Reduced Comm Subspace]
 [031h 0049   1]                       Length : 3E
@@ -333,8 +331,8 @@ OSPM通过PCC子空间向platform固件发送消息的步骤：
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230926145830.png)
 
-
 ### PSD（P-State Dependency）
+
 这是一个可选的对象，为CPPC性能控制或逻辑处理器的P-State提供一些依赖性的信息，_PSD对象表示一组逻辑处理器之间的性能控制相关属性，PSD在CPPC中实际就是表示CPU的power domain，S5000C 16核处理器是每8个核属于一个power domain
 > PSD详细描述可以参考《ACPI Specification》8.4.5.5章节
 
@@ -345,6 +343,7 @@ P-state Coordination Types，《ACPI Specification》8.3章节
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230927100932.png)
 
 S5000C的PSD表示例
+
 ```c
 Name (PSD0, Package (0x01)
 {
@@ -360,6 +359,7 @@ Name (PSD0, Package (0x01)
 ```
 
 S5000C的一个CPU节点示例，可以看到该CPU对应PSD0和CPC0
+
 ```c
 Device (CL00)
 {
@@ -398,7 +398,9 @@ Device (CL00)
 ```
 
 ### 代码实现
+
 #### 相关结构体
+
 cppc的实现代码主要位于`drivers/acpi/cppc_acpi.c` `include/acpi/cppc_acpi.h` `drivers/cpufreq/cppc_cpufreq.c`，内核代码基于linux 5.15.125
 
 `struct cppc_cpudata`结构体，policy->driver_data保存的就是该结构体指针
@@ -481,6 +483,7 @@ struct cppc_pcc_data {
 ```
 
 #### PCC mailbox channel注册过程
+
 ```c
 // drivers/acpi/cppc_acpi.c
 static struct cppc_pcc_data *pcc_data[MAX_PCC_SUBSPACES];
@@ -736,7 +739,9 @@ static struct mbox_chan *get_pcc_channel(int id)
 ```
 
 #### CPPC初始化过程
+
 ACPI _CPC表解析，初始化cpc_desc结构体
+
 ```c
 // drivers/acpi/processor_driver.c
 static struct device_driver acpi_processor_driver = {
@@ -1311,6 +1316,7 @@ EXPORT_SYMBOL_GPL(cppc_get_perf_caps);
 ```
 
 #### CPPC频率调整接口
+
 `cppc_set_perf()`解析，这里是将desired perf发送到platform固件，走的是门铃协议
 
 ```c
@@ -1446,7 +1452,9 @@ EXPORT_SYMBOL_GPL(cppc_set_perf);
 ```
 
 #### CPPC频率获取接口
+
 CPPC的频率获取是要根据Reference Performance Counter Register和Delivered Performance Counter Register来计算的，
+
 ```c
 static unsigned int cppc_cpufreq_get_rate(unsigned int cpu)
 {
@@ -1496,12 +1504,9 @@ analyzing CPU 0:
   current CPU frequency is 500 MHz (asserted by call to hardware).
 ```
 
-
-
 > 参考
 > 1. https://www.cnblogs.com/lvzh/p/17061923.html
 > 2. https://blog.csdn.net/tiantao2012/article/details/87917968
 > 3. [linux kernel documents cppc_sysfs.txt](https://docs.kernel.org/admin-guide/acpi/cppc_sysfs.html)
 > 4. https://blog.csdn.net/qq_21186033/article/details/117015605
 > 5. https://blog.csdn.net/qq_21186033/article/details/117015409
-

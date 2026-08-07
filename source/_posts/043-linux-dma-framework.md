@@ -8,47 +8,55 @@ abbrlink: 1990ed3c
 date: 2023-05-09 16:14:27
 ---
 
-#### 相关概念
+## 1.相关概念
+
 DMA是Direct Memory Access的缩写，就是绕开CPU进行内存的访问，DMA控制器就是用来协助CPU在memory和memory或者memory和设备之间搬运数据
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230526141809.png)
+
 <!-- more -->
-##### DMA channels
+
+### 1.1 DMA channels
+
 一个DMA可以“同时”进行DMA传输的个数是有限的，这称作DMA channels，这里的channel只是一个逻辑上的概念
 > 鉴于总线访问的冲突，以及内存一致性的考量，从物理的角度看，不大可能会同时进行两个（及以上）的DMA传输。因而DMA channel不太可能是物理上独立的通道；
-> 
+>
 > 很多时候，DMA channels是DMA controller为了方便，抽象出来的概念，让consumer以为独占了一个channel，实际上所有channel的DMA传输请求都会在DMA controller中进行仲裁，进而串行传输；
-> 
+>
 > 因此，软件也可以基于controller提供的channel（我们称为“物理”channel），自行抽象更多的“逻辑”channel，软件会管理这些逻辑channel上的传输请求。实际上很多平台都这样做了，在DMA Engine framework中，不会区分这两种channel（本质上没区别）。
 
-##### DMA request line
+### 1.2 DMA request line
+
 DMA传输是由CPU发起的，CPU会告诉DMA控制器，把xxx地方的数据搬运到xxx地方，而DMA控制器，除了负责怎么搬之外还要决定一件非常重要的事情：何时开始搬运？
 
 因为，CPU发起DMA传输的时候，并不知道当前是否具备传输条件，例如source设备是否有数据、dest设备的FIFO是否空闲等等。那谁知道是否可以传输呢？设备！因此，需要DMA传输的设备和DMA控制器之间，会有几条物理的连接线（称作DMA request，DRQ），用于通知DMA控制器可以开始传输了。
 
 通常来说，每一个数据收发的节点（称作endpoint），和DMA controller之间，就有一条DMA request line。
 
+### 1.3 传输参数
 
-##### 传输参数
-**transfer size:** 在每一个时钟周期，DMA controller将1 byte的数据从一个buffer搬到另一个buffer，直到搬完transfer size个byte即可停止
++ **transfer size:** 在每一个时钟周期，DMA controller将1 byte的数据从一个buffer搬到另一个buffer，直到搬完transfer size个byte即可停止
 
-**transfer width:** 传输的数据宽度，在一个时钟周期中，传输指定的bit的数据，DDMA固定为4字节
++ **transfer width:** 传输的数据宽度，在一个时钟周期中，传输指定的bit的数据，DDMA固定为4字节
 
-**buffer size:** DMA控制器内部可缓存的数据量大小
++ **buffer size:** DMA控制器内部可缓存的数据量大小
 
-**scatter-gather:** DMA传输一般情况下只能处理物理上连续的buffer，在某些场景下将一些非连续的buffer拷贝到一个连续的buffer中，这样的操作称为scatter-gather，对于这种非连续的传输，大多时候都是通过软件，将传输分成多个连续的小块（chunk）,例如在dmaengine中的scatterlist
++ **scatter-gather:** DMA传输一般情况下只能处理物理上连续的buffer，在某些场景下将一些非连续的buffer拷贝到一个连续的buffer中，这样的操作称为scatter-gather，对于这种非连续的传输，大多时候都是通过软件，将传输分成多个连续的小块（chunk）,例如在dmaengine中的scatterlist
 
-**burst size:** DMA控制器内部可缓存的数据量大小，按照DDMA的手册描述应该是固定为64字节，一次搬64字节
++ **burst size:** DMA控制器内部可缓存的数据量大小，按照DDMA的手册描述应该是固定为64字节，一次搬64字节
 
-#### Linux dmaengine
+## 2. Linux dmaengine
+
 从方向上来说：DMA传输可以分为4类，memory到memory，memory到device，device到memory以及device到device，从linux kernel的角度，外设都是slave，因此这些有device参与的传输（MEM2DEV, DEV2MEM, DEV2DEV）为Slave-DMA传输，另一种memory到memory的传输，被称为Async TX
 
 因为Linux为了方便基于DMA的memcpy、memset等操作，在dma engine之上，封装了一层更为简洁的API，这种API就是Async TX API（以async_开头，例如async_memcpy、async_memset、async_xor等）。因为memory到memory的DMA传输有了比较简洁的API，没必要直接使用dma engine提供的API，最后就导致dma engine所提供的API就特指为Slave-DMA API
 
 Slave-DMA中的slave指的是参与DMA传输的设备，对应的master就是指DMA controller自身
 
-##### 重要数据结构
-`struct dma_device`，用于抽象dma controller
+### 2.1 重要数据结构
+
++ `struct dma_device`，用于抽象dma controller
+
 ```c
 /* include/linux/dmaengine.h */
 struct dma_device {
@@ -117,7 +125,8 @@ struct dma_device {
 };
 ```
 
-`struct dma_chan`用于抽象物理dma channel
++ `struct dma_chan`用于抽象物理dma channel
+
 ```c
 /* include/linux/dmaengine.h */
 struct dma_chan {
@@ -151,7 +160,8 @@ struct dma_chan {
 };
 ```
 
-`struct virt_dma_chan`用于抽象一个虚拟的dma_channel，多个虚拟channel可以共用一个物理channel，并由软件调度多个传输请求，将多个虚拟channel的传输串行地在物理channel上完成
++ `struct virt_dma_chan`用于抽象一个虚拟的dma_channel，多个虚拟channel可以共用一个物理channel，并由软件调度多个传输请求，将多个虚拟channel的传输串行地在物理channel上完成
+
 ```c
 /* drivers/dma/virt_dma.h */
 
@@ -185,7 +195,8 @@ struct virt_dma_chan {
 };
 ```
 
-`struct dma_slave_config`，DMA client对DMA channel的配置结构体
++ `struct dma_slave_config`，DMA client对DMA channel的配置结构体
+
 ```c
 struct dma_slave_config {
 	/* 传输方向 DMA_MEM_TO_DEV DMA_DEV_TO_MEM */
@@ -207,7 +218,8 @@ struct dma_slave_config {
 };
 ```
 
-`struct dma_async_tx_descriptor`，用于描述一次DMA传输，类似一个文件句柄，controller driver返回给client driver一个描述符
++ `struct dma_async_tx_descriptor`，用于描述一次DMA传输，类似一个文件句柄，controller driver返回给client driver一个描述符
+
 ```c
 struct dma_async_tx_descriptor {
 	/* 用于追踪本次传输 */
@@ -235,8 +247,10 @@ struct dma_async_tx_descriptor {
 };
 ```
 
-#### DMA API使用
-##### 从CPU角度看到的地址和从DMA控制器看到的地址
+## 3. DMA API使用
+
+### 3.1 从CPU角度看到的地址和从DMA控制器看到的地址
+
 在DMA API中涉及到好几个地址的概念（物理地址、虚拟地址、总线地址）
 
 内核通常使用的地址是虚拟地址，我们调用`kmalloc()`、`vmalloc()`或者类似的接口返回的地址都是虚拟地址
@@ -252,27 +266,33 @@ DMA使用的内存地址：在驱动中可以通过`kmalloc`或者其他类似�
 
 驱动在调用`dma_map_single()`这样的接口函数的时候会传递一个虚拟地址X，在这个函数中会设定IOMMU的页表，将地址X映射到Z，并且将返回Z这个总线地址，驱动可以把Z这个总线地址设定到设备上的DMA相关的寄存器中，这样当设备发起对地址Z开始的DMA操作的时候，IOMMU可以进行地址映射，并将DMA操作定位到Y地址开始的DMA buffer
 
-##### DMA内存映射
+### 3.2 DMA内存映射
+
 一致性映射（coherent DMA mappings）是使用专门的接口分配一块DMA缓冲区，这块DMA缓冲区是关闭了cache机制的。也就是数据直接写入内存，这样就不存在一致性问题。
 
 一致性dma映射接口：
+
 ```c
 void *dma_alloc_coherent(struct device *dev, size_t size,dma_addr_t *dma_handle, gfp_t flag)
 
 dma_addr_t dma_handle;
 cpu_addr = dma_alloc_coherent(dev, size, &dma_handle, gfp);
 ```
-dma_alloc_coherent函数返回两个值，一个是从CPU角度访问DMA buffer的虚拟地址，另外一个是从设备（DMA controller）角度看到的bus address：dma_handle，驱动可以将这个bus address传递给DMA控制器。
 
-##### 设备驱动使用dmaengine
+`dma_alloc_coherent()`函数返回两个值，一个是从CPU角度访问DMA buffer的虚拟地址，另外一个是从设备（DMA controller）角度看到的bus address：dma_handle，驱动可以将这个bus address传递给DMA控制器。
+
+### 3.3 设备驱动使用dmaengine
+
 对于设备驱动，要基于dmaengine提供的Slave-DMA API进行DMA传输的话，需要如下的操作步骤
+
 1. 申请一个DMA channel
 2. 根据设备的特性，配置dma channel的参数
 3. 要进行DMA传输的时候，获取一个用于识别本次传输的描述符（descriptor）
 4. 将本次传输提交给dma engine并启动传输
 5. 等待传输结束
 
-##### 传输描述符
+### 3.4 传输描述符
+
 DMA属于异步传输，在启动传输之前，slave driver需要将此次传输的一些信息（src dst的地址，传输的方向）提交给dmaengine，dma controller驱动确认后会返回一个描述符（由`struct dma_async_tx_escriptor`抽象），slave driver就以该描述符为单位，控制并跟踪此次传输
 
 ```c
@@ -289,32 +309,32 @@ struct dma_async_tx_descriptor *(*device_prep_slave_sg)(struct dma_chan *chan,
 			unsigned long flags, void *context);
 ```
 
-#### Phytium DDMA驱动
-##### 设备树描述
-+ dma controller设备树描述
+## 4. Phytium DDMA驱动
+
+### 4.1 设备树描述
+
+dma controller设备树描述
+
 ```c
-ddma0: ddma@28003000 {
+ddma0: dma-controller@28003000 {
 	compatible = "phytium,ddma";
 	reg = <0x0 0x28003000 0x0 0x1000>;
 	interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
-	#dma-cells = <2>;			// 用来表示dma client设备树dmas中属性的个数
-	dma-channels = <8>;			// dma 通道个数
-	clocks = <&sysclk_50mhz>;
-	clock-names = "core_clk";
+	#dma-cells = <2>;
+	dma-channels = <8>;
 };
 
-ddma1: ddma@28004000 {
+ddma1: dma-controller@28004000 {
 	compatible = "phytium,ddma";
 	reg = <0x0 0x28004000 0x0 0x1000>;
 	interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>;
 	#dma-cells = <2>;
 	dma-channels = <8>;
-	clocks = <&sysclk_50mhz>;
-	clock-names = "core_clk";
 };
 ```
 
-+ dma client设备树描述
+dma client设备树描述
+
 ```bash
 spi2: spi@2803c000 {
 	compatible = "phytium,spi";
@@ -331,8 +351,10 @@ spi2: spi@2803c000 {
 };
 ```
 
-##### ddma驱动相关结构体
-`struct phytium_ddma_device`用于描述ddma控制器
+### 4.2 ddma驱动相关结构体
+
++ `struct phytium_ddma_device`用于描述ddma控制器
+
 ```c
 /**
  * struct phytium_ddma_device - the struct holding info describing DDMA device
@@ -354,7 +376,8 @@ struct phytium_ddma_device {
 };
 ```
 
-`phytium_ddma_chan`用于描述一个ddma 物理通道
++ `phytium_ddma_chan`用于描述一个ddma 物理通道
+
 ```c
 /**
  * struct phytium_ddma_chan - the struct holding info describing dma channel
@@ -382,7 +405,8 @@ struct phytium_ddma_chan {
 };
 ```
 
-`struct phytium_ddma_desc`dma传输时使用的描述符，里面记录了本次传输的数据
++ `struct phytium_ddma_desc`dma传输时使用的描述符，里面记录了本次传输的数据
+
 ```c
 /**
  * struct phytium_ddma_desc - the struct holding info describing ddma request
@@ -398,7 +422,8 @@ struct phytium_ddma_desc {
 };
 ```
 
-`struct phytium_ddma_sg_req`用于记录当前传输的scatter-gather信息，源数据地址、设备数据寄存器地址、传输长度等
++ `struct phytium_ddma_sg_req`用于记录当前传输的scatter-gather信息，源数据地址、设备数据寄存器地址、传输长度等
+
 ```c
 /**
  * struct phytium_ddma_sg_req - scatter-gatter list data info
@@ -415,16 +440,125 @@ struct phytium_ddma_sg_req {
 };
 ```
 
-#### pl011 DMA device驱动
-##### pl011 uart rx逻辑
+## 5. GDMA 用户层驱动 DMA Proxy
+
+### 驱动设计
+
+`DMA Proxy`由一个内核驱动程序和用户空间应用程序组成。
+
+代码仓库地址（包含内核驱动和测试应用程序）：[https://gitlab.phytium.com.cn/huangjie1663/dma-proxy](https://gitlab.phytium.com.cn/huangjie1663/dma-proxy)
+
+**内核驱动实现细节：**
+
++ 内核驱动`DMA Proxy Driver`通过解析设备树参数，创建 DMA Proxy 通道，为每个通道创建字符设备，驱动支持多DMA通道
++ 驱动可以通过设备树或者内核参数修改通道的缓冲区个数以及缓冲区大小
++ 驱动为每个通道分配若干个一致性非缓存的DMA内存缓冲区，提供`mmap()`接口将内存映射到用户空间
++ 通过`Linux DMA Engine`的接口控制 Phytium DMA 控制器进行内存拷贝的操作。
++ 向用户空间提供了`ioctl()`接口，允许应用程序将内核内存映射到用户空间并启动 DMA 传输。
++ 每个通道对应多个DMA内存缓冲区，用户层应用程序可以利用不同的缓冲区进行同步提交DMA传输，并等到完成
++ 驱动程序内部包含测试功能，用于测试DMA传输是否正常，可以通过驱动参数`internal_test`来打开该功能
+
+**用户空间应用程序：**
+
++ 用户空间应用程序通过 DMA Proxy 字符设备访问内核驱动程序，将通道对应的内存缓冲区映射到用户空间
++ 应用程序通过`ioctl()`接口获取通道缓冲区的配置参数
++ 应用程序通过`ioctl()`，使用 DMA Proxy 通道的其中一个缓冲区索引作为参数传入，提交DMA传输，使用`XFER` ioctl操作进行阻塞等待DMA传输完成，使用`START_XFER`提交DMA传输，不阻塞等待传输完成，使用`FINISH_XFER`等待DMA传输完成
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/dma_proxy.drawio.png)
+
+### DMA Proxy 设备树描述
+
+```c
+// 单DMA通道
+dma_proxy {
+	compatible ="phytium,dma_proxy";
+	dmas = <&gdma 0>;
+	dma-names = "dma_proxy";
+	per-buf-size = <0x1000>;
+	buffer-count = <32>;
+	dma-coherent;
+};
+
+// 多DMA通道
+dma_proxy {
+	compatible ="phytium,dma_proxy";
+	dmas = <&gdma 0>, <&gdma 1>;
+	dma-names = "dma_proxy_0", "dma_proxy_1";
+	per-buf-size = <0x1000>;
+	buffer-count = <32>;
+	dma-coherent;
+};
+```
+
+### 内核驱动加载
+
+使用DMA Proxy需要选上`CONFIG_PHYTIUM_GDMA`和`CONFIG_DMA_PROXY`
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20250228104724.png)
+
+内核驱动加载log
+
+```bash
+[81461.134410] dma_proxy_driver dma_proxy: Creating channel dma_proxy
+[81461.134451] phytium-gdma 32b34000.gdma: alloc channel 0
+[81461.137249] dma_proxy_driver dma_proxy: Allocating memory, virtual address: ffff00007809a000, buf physical address: 00000000f809a000, size: 8192
+[81461.137280] dma_proxy_driver dma_proxy: dma_proxy module initialized
+[81461.137285] dma_proxy_driver dma_proxy: channel num: 1, buffer num: 1, per buffer size: 4096
+```
+
+### 模块参数及设备数参数
+
+DMA proxy 驱动使用了驱动模块参数或者设备数参数来配置通道缓冲区的参数，具体的参数如下：
+
++ `per_buf_size`： 通道中单个缓冲区的大小，单位为字节，对应设备树的参数为`per-buffer-size`
++ `buffer_count`：通道中缓冲区的个数，对应设备树的参数为`buffer-count`
++ `internal_test`：打开驱动内部测试程序，驱动加载时会进行内部测试
+
+### ioctl()接口
+
+驱动一共实现了4个ioctl()命令，分别是：
++ `DMA_PROXY_IOCTL_GET_CONFIG`： 获取通道缓冲区配置参数
++ `DMA_PROXY_IOCTL_FINISH_XFER`：等待当前缓冲区上的DMA传输完成
++ `DMA_PROXY_IOCTL_START_XFER`：在当前缓冲区上发起一个DMA传输，提交后即返回
++ `DMA_PROXY_IOCTL_XFER_SYNC`：在当前缓冲区上发起一个DMA传输，并等待传输完成
+
+### 用户层测试应用程序
+
+用户层测试应用使用3个参数，分别是测试次数、单次测试传输长度（单位KB）、是否对传输进行校验，注意测试长度不能超过驱动分配的内存缓冲区大小
+
+用户层应用程序执行结果：
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20250228105915.png)
+
+## 5. pl011 DMA device驱动
+
+### 5.1 pl011 uart rx逻辑
+
 pl011 串口RX逻辑主要借助pl011的串口接收超时中断来进行数据接收，如pl011的手册描述，当rx fifo中不为空且连续32个bit的时间内没收到任何数据则产生接收超时中断，在超时中断中先对dma rx通道进行暂停，并检查dma实际传输了多少长度的数据，将实际传输的数据存入tty缓冲区，再把fifo中剩下的数据读出来，也存入tty缓冲区，这样完成了一次接收，具体代码位于`pl011_dma_rx_irq()`
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230615143556.png)
 
-##### pl011 uart tx逻辑
+### 5.2 pl011 uart tx逻辑
+
 当串口发送中断触发时（发送fifo中的数据低于设定的触发值）就会进入发送逻辑，dma模式下uart有数据需要发送时会调用`pl011_dma_tx_irq()`走dma的一套数据发送流程进行发送，位于`pl011_dma_tx_refill()`中
 
-#### SPI功能测试
+## u-dma-buf 驱动
+
+仓库地址：[https://github.com/ikwzm/udmabuf](https://github.com/ikwzm/udmabuf)（非linux内核上游udmabuf驱动）
+
+u-dma-buf 是一个 Linux 设备驱动程序，它将内核空间中的连续内存块分配为 DMA 缓冲区，并使其在用户空间可用。当用户应用程序使用 UIO（用户空间 I/O）在用户空间中实现设备驱动程序时，这些内存块将用作 DMA 缓冲区。
+
+通过打开设备文件（例如 `/dev/udmabuf0`）并映射到用户内存空间，或使用 `read（）/write（）` 函数，可以从用户空间访问由 u-dma-buf 分配的 DMA 缓冲区。
+
+在打开设备文件时，可以通过设置 `O_SYNC` 标志来禁用已分配 DMA 缓冲区的 CPU 缓存。还可以在保持 CPU 缓存启用状态的同时刷新 CPU 缓存或使 CPU 缓存失效。
+
+u-dma-buf 分配的 DMA 缓冲区的物理地址可以通过读取 `/sys/class/u-dma-buf/udmabuf0/phys_addr` 来获取。
+
+u-dma-buf 架构图
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20250312145951.png)
+
+## 6 SPI DMA传输功能测试
+
 使用spidev-test进行spi硬件回环测试
+
 ```bash
 root@Ubuntu:~# spidev_test -D /dev/spidev0.0 -v
 spi mode: 0x0
@@ -434,9 +568,12 @@ TX | FF FF FF FF FF FF 40 00 00 00 00 95 FF FF FF FF FF FF FF FF FF FF FF FF FF 
 RX | FF FF FF FF FF FF 40 00 00 00 00 95 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF F0 0D  |......@.........................|
 ```
 
-##### spidev_test测试
+### 6.1 spidev_test测试
+
 测试命令：`spidev_test -s <speed> -D /dev/spidev0.0 -S <length> -I <iterations>`
+
 + E2000D demo板测试数据
+  
 	| 单次传输字节长度 | DMA传输速度 | 中断传输速度 |
 	| :-: | :-: | :-: |
 	| 64KB | 15.8Mbps | 10.6Mbps |
@@ -446,13 +583,16 @@ RX | FF FF FF FF FF FF 40 00 00 00 00 95 FF FF FF FF FF FF FF FF FF FF FF FF FF 
 	| 8B | 3.1Mbps | 3.5Mbps |
 
 + 树莓派4测试数据
+  
 	| 测试用例 | DMA传输速度 | 中断传输速度 |
 	| :-: | :-: | :-: |
 	| 25MHz 单次64KB | 24.6Mbps | 22.6Mbps |
 	| 250MHz 单次64KB | 90.2Mbps | 29.1Mbps |
 
-##### 外接flash mtd_speedtest速度测试
-+ spi中断传输模式
+### 6.2 外接flash mtd_speedtest速度测试
+
+spi中断传输模式
+
 ```bash
 root@Ubuntu:~# echo 7 > /proc/sys/kernel/printk
 root@Ubuntu:~# modprobe mtd_speedtest dev=0 count=100
@@ -491,9 +631,11 @@ root@Ubuntu:~# modprobe mtd_speedtest dev=0 count=100
 [ 1526.332216] =================================================
 ```
 
-##### 外接flash dd读写测试
-+ spi中断传输模式
-```
+### 6.3 外接flash dd读写测试
+
+spi中断传输模式
+
+```bash
 # 写入测试
 root@Ubuntu:~# time dd if=/dev/zero of=/dev/mtd0 bs=1024k count=10
 10+0 records in
@@ -515,8 +657,10 @@ user    0m0.004s
 sys     0m0.011s
 ```
 
-#### 串口功能测试
-测试工具： 
+## 7. 串口功能测试
+
+测试工具：
+
 + [tinyserial v1.4](https://github.com/carloscn/tinyserial.git)
 + [linux-serial-test](https://github.com/cbrake/linux-serial-test.git)
 
@@ -526,6 +670,7 @@ sys     0m0.011s
 4Mbps发送单个字节（0x55）波形
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/002.BMP)
 
-#### 引用
-> http://www.wowotech.net/tag/dma
-> https://www.jianshu.com/p/e1b622234d13
+## 8. 引用
+
+> [http://www.wowotech.net/tag/dma](http://www.wowotech.net/tag/dma)
+> [https://www.jianshu.com/p/e1b622234d13](https://www.jianshu.com/p/e1b622234d13)

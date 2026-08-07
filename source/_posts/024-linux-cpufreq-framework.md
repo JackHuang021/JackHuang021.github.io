@@ -8,8 +8,10 @@ abbrlink: fbf46cf3
 date: 2022-11-24 10:23:01
 ---
 
-### cpufreq动态调频
-#### cpufreq概述
+## cpufreq动态调频
+
+### cpufreq概述
+
 Linux Kernel主要通过三类机制来实现SMP（Symmetric Multiprocessing，对称多核）系统CPU core的电源管理：
 + cpu hotplug: 根据应用场景来up/down CPU
 + cpuidle framework: 当cpu上没有可执行任务时，就会进入空闲状态
@@ -54,7 +56,8 @@ sysfs用户层接口，目录位于`/sys/devices/system/cpu/cpufreq/policy`
 | scaling_governor | 当前使用的governor |
 | scaling_setspeed | 在userspace模式下才能使用，手动设置频率 |
 
-#### cpufreq软件架构
+### cpufreq软件架构
+
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103092146.png)
 cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑和接口代码抽象出来
 
@@ -66,6 +69,7 @@ cpufreq core（可以理解为对policy的操作）：把一些公共的逻辑�
 kernel使用`struct cpufreq_policy`用来抽象cpufreq，它代表了一个CPU簇的cpufreq的属性
 
 `cpufreq_policy`结构体
+
 ```c
 struct cpufreq_cpuinfo {
 	unsigned int		max_freq;			// cpu最大频率
@@ -139,22 +143,26 @@ struct cpufreq_policy {
 ```
 
 `driver/cpufreq/cpufreq.c`中定义了一个全局的percpu变量
+
 ```c
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 ```
+
 这里对应E2000 sysfs中3个policy文件夹，两个小核使用1个policy，另外两个大核分别对应1个policy  
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103094857.png)
 
-#### cpufreq初始化
-##### 内核配置
+## cpufreq初始化
+
+### 内核配置
 
 在kconfig中(CPU Power Management -> CPU Frequency scaling)可以对cpufreq进行配置，可以配置支持的governor及系统默认的governor，以及cpufreq调频driver，例如Phytium E2000 5.10内核的配置如下，默认使用schedutil governor，根据调度器所提供的CPU利用率信息进行电压/频率调节，EAS能源感知依赖该governor工作：
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105110139.png)
 
-##### OPP表初始化
+### OPP表初始化
+
 OPP表的定义：域中每个设备支持的电压和频率的离散元组的集合称为Operating Performance Points（OPP）,内核设备树opp文档`Documentation/devicetree/bindings/opp/opp.txt`  
 
-假设一个CPU设备支持如下的电压和频率关系：  
+假设一个CPU支持如下的电压和频率关系：  
 {300MHz at minimum voltage of 1V}  
 {800MHz at minimum voltage of 1.2V}  
 {1GHz at minimum voltage of 1.3V}  
@@ -165,8 +173,8 @@ OPP表的定义：域中每个设备支持的电压和频率的离散元组的�
 
 Linux内核使用opp layer库来管理opp table，具体的结构如下：
 
-
 Linux内核使用`struct dev_pm_opp`结构表示设备的一OPP
+
 ```c
 // drivers/opp/opp.h
 struct dev_pm_opp {
@@ -200,9 +208,8 @@ struct dev_pm_opp {
 Linux内核opp layer库的结构如下
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230307162438.png)
 
-
-
 这里初始化的就是各个性能域（即不同cluster）的OPP表，在E2000平台中是通过SCMI的Performace domain management protocol协议获取PERFORMANCE_DESCRIBE_LEVELS这个参数表，具体的协议实现源码在`drivers/firmware/arm_scmi/perf.c`里面，`perf.c`实现了SCMI的Performance domain managment protocol，scmi cpufreq_drvier也是通过`perf_ops`函数集进行调频
+
 ```c
 // include/linux/scmi_protocol.h
 // 抽象描述scmi协议的结构体，相应的ops操作集对应scmi的一个协议
@@ -370,9 +377,11 @@ static int scmi_perf_protocol_init(struct scmi_handle *handle)
 	return 0;
 }
 ```
+
 在初始化阶段，`scmi_perf_protocol_init`只会将固件里面的perf domains信息保存到handle->perf_priv里面，此时还并没有将opp表注册到cpu设备上
 
 接下来在scmi调频驱动初始化的过程中，会调用scmi的device_opps_add()接口初始化，即调用`scmi_dvfs_device_opps_add()`，在这个里面才会生成cpu的opp_table
+
 ```c
 static int scmi_dvfs_device_opps_add(const struct scmi_handle *handle,
 				     struct device *dev)
@@ -410,6 +419,7 @@ static int scmi_dvfs_device_opps_add(const struct scmi_handle *handle,
 ```
 
 详细看一下`dev_pm_opp_add()`的过程
+
 ```c
 // drviers/opp/opp.h
 // opp_table结构体的定义
@@ -557,7 +567,8 @@ int dev_pm_opp_add(struct device *dev, unsigned long freq, unsigned long u_volt)
 最终获取得到的OPP表如下
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230222105334.png)
 
-##### cpufreq初始化过程
+### cpufreq初始化过程
+
 cpufreq被注册cpu_subsys总线上
 
 cpufreq的初始化从cpufreq_drvier注册开始，`cpufreq_register_driver()`函数为cpufreq驱动注册的入口，驱动程序通过调用该函数进行初始化，传入相关的`struct cpufreq_driver`，`cpufreq_register_driver()`会调用`subsys_interface_register()`最终执行回调函数`cpufreq_add_dev`，然后调用`cpufreq_online()`走初始化流程
@@ -668,6 +679,7 @@ cpufreq_register_driver(&scmi_cpufreq_driver);
 ```
 
 来看一下`subsys_interface_register()`
+
 ```c
 // drivers/base/bus.c
 int subsys_interface_register(struct subsystem_interface *sif)
@@ -706,6 +718,7 @@ int subsys_interface_register(struct subsystem_interface *sif)
 ```
 
 再来看看cpufreq_online()
+
 ```c
 static int cpufreq_online(unsigned int cpu)
 {
@@ -925,8 +938,10 @@ out_free_policy:
 }
 ```
 
-##### cpufreq drviver初始化
+#### cpufreq drviver初始化
+
 在cpufreq_online()中调用全局变量cpufreq_driver->init(policy)进行调频驱动的初始化，下面是scmi调频驱动的初始化过程
+
 ```c
 static int scmi_cpufreq_init(struct cpufreq_policy *policy)
 {
@@ -1014,8 +1029,8 @@ out_free_opp:
 }
 ```
 
-
 频率表初始化过程
+
 ```c
 struct cpufreq_frequency_table {
 	unsigned int flags;
@@ -1070,9 +1085,10 @@ out:
 }
 ```
 
+#### governor初始化过程
 
-##### governor初始化过程
 cpufreq governor的初始化过程，在cpufreq_init_policy(policy)中进行，这里以ondemand为例进行分析
+
 ```c
 // include/linux/cpufreq.h
 // 内核governor描述结构体，形成链表
@@ -1206,6 +1222,7 @@ cpufreq_init_policy(policy);
 					cpufreq_add_update_util_hook(cpu, &cdbs->updata_util,
 									dbs_update_util_handler);
 ```
+
 启动governor中比较重要的是设置调频回调函数,该函数是真正调频时计算合适频率的函数
 
 #### ondemand调节器
@@ -1571,8 +1588,8 @@ unsigned int dbs_update(struct cpufreq_policy *policy)
 }
 ```
 
-
 #### schedutil调节器
+
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230103174117.png)
 sugov（schedutil governor）作为一种内核调频策略模块，它主要是根据当前CPU的利用率进行调频。因此，sugov会注册一个callback函数（sugov_update_shared/sugov_update_single)到调度器负载跟踪模块，当CPU util发生变化的时候就会调用该callback函数，检查一下当前CPU频率是否和当前的CPU util匹配，如果不匹配，那么就进行升频或者降频。
 
@@ -1588,6 +1605,7 @@ struct sugov_tunables {
 ```
 
 `sugov_policy`结构体，sugov为每个cluster构建了该数据结构，记录每个cluster的调频数据信息
+
 ```c
 // sugov_policy结构体，为每个簇构建了该数据结构，记录每个簇的调频数据信息
 struct sugov_policy {
@@ -1652,6 +1670,7 @@ sugov初始化过程和ondemand初始化过程相似，当内核设定默认gove
 调度事件的发生还是非常密集的，特别是在重载的情况下，很多任务可能执行若干个us就切换出去了。如果每次都计算CPU util看看是否需要调整频率，那么本身sugov就给系统带来较重的负荷，因此并非每次调频时机都会真正执行调频检查，sugov设置了一个最小调频间隔，小于这个间隔的调频请求会被过滤掉。
 
 ##### schedutil频率计算过程
+
 ```c
 // sugov_start会遍历该sugov policy（cluster）中的所有cpu
 // 调用cpufreq_add_update_util_hook为sugov cpu注册调频回调函数，代码逻辑如下：
@@ -1773,9 +1792,10 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 }
 ```
 
-### EAS能源感知调度
+## EAS能源感知调度
 
-#### EAS整体框架
+### EAS整体框架
+
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20221216104706.png)
 
 完全公平调度（Completely Fair Scheduler CFS）实现了面向吞吐量的的任务调度策略，EAS为这个调度器添加了一个基于能耗的调度策略，在优化CPU算力冗余的同时实现了节能，EAS在系统中、低度负载情况下工作，CFS在系统满负载情况下工作。
@@ -1784,18 +1804,19 @@ EAS在CPU调度领域，在为任务选核是起作用，目的是保证性能�
 
 EAS全局控制开关`/proc/sys/kernel/sched_energy_aware`
 
-#### CPU算力归一化过程
+### CPU算力归一化过程
 
 当前，Linux无法凭自身算出CPU算力，因此必须要有把这个信息传递给Linux的方式，它是从`capacity-dmips-mhz` CPU 设备树binding中衍生计算出来的
 
-归一化CPU capacity，`topology_normalize_cpu_scale()`定义在`drivers/base/arch_topology()`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
+归一化CPU capacity，`topology_normalize_cpu_scale()`定义在`drivers/base/arch_topology.c`，这个capacity在schedutil调度中被`sugov_get_util()`函数读取
 
 `topology_normalize_cpu_scale()`在CPU初始化`parse_dt_topology()`中被调用，capacity归一化的前提条件是需要在设备树中CPU节点设置`capacity-dmips-mhz`属性，该属性表示不同CPU的计算能力，内核读取该属性设置CPU的`raw_capacity`为`capacity-dmips-mhz`，参考内核文档`Documentation/devicetree/bindings/arm/cpu-capacity.txt`
 
 > ARM推荐的测试CPU的性能工具：Dhrystone 2.1以上版本，可以通过单核跑分成绩作为`capacity-dmips-mhz`属性的参考，DMIPS： Dhrystone Million Instructions executed Per Second，表示了在Dhrystone这样一种测试方法下的MIPS，Dhrystone是一种整数运算测试程序。MIPS/MHz，就是说每MHz频率能产生多大的MIPS，CPU性能通常由每秒百万指令（Millions of Instructions Per Second，MIPS）表示，设备树里表示为dmips/mhz
 
 CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到capacity，CPU的频率也参与到了计算中
-` capacity = (own(capacity-dmips-mhz) * own(max_freq)) / (max(capacity-dmips-mhz) * max(max_freq)) * 1024`
+
+`capacity = (own(capacity-dmips-mhz) * own(max_freq)) / (max(capacity-dmips-mhz) * max(max_freq)) * 1024`
 
 根据测试部测试的E2000QCPU单核性能数据，E2000Q的`capacity-dmips-mhz`属性值可以设置为如下，放大1000倍：
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20230105152415.png)
@@ -1814,11 +1835,400 @@ CPU算力归一化公式，并不是简单的将capacity-dmips-mhz归一化到ca
 		...
 	};
 ```
+
 实际经过CPU算力归一化到1024之后，对应的小核CPU算力为386，大核为1024
 
-#### EAS代码相关结构体
+#### CPPC 调频驱动下的CPU算力归一化
+
+在`topology_init_cpu_capacity_cppc()`中取得原始的CPU capacity数据，即 highest_perf，这个值是由固件描述的，之后还需要归一化到1024
+
+```c
+// arch/arm64/include/asm/topology.h
+#ifdef CONFIG_ACPI_CPPC_LIB
+#define arch_init_invariance_cppc topology_init_cpu_capacity_cppc
+#endif
+
+// drivers/acpi/cppc_acpi.c
+__acpi_processor_start()
+	acpi_cppc_processor_probe();
+		arch_init_invariance_cppc(); -> topology_init_cpu_capacity_cppc();
+			cppc_get_perf_caps(cpu, &perf_caps);
+
+void topology_init_cpu_capacity_cppc(void)
+{
+	struct cppc_perf_caps perf_caps;
+	int cpu;
+
+	if (likely(!acpi_cpc_valid()))
+		return;
+
+	raw_capacity = kcalloc(num_possible_cpus(), sizeof(*raw_capacity),
+			       GFP_KERNEL);
+	if (!raw_capacity)
+		return;
+
+	for_each_possible_cpu(cpu) {
+		if (!cppc_get_perf_caps(cpu, &perf_caps) &&
+		    (perf_caps.highest_perf >= perf_caps.nominal_perf) &&
+		    (perf_caps.highest_perf >= perf_caps.lowest_perf)) {
+			raw_capacity[cpu] = perf_caps.highest_perf;
+			pr_debug("cpu_capacity: CPU%d cpu_capacity=%u (raw).\n",
+				 cpu, raw_capacity[cpu]);
+			continue;
+		}
+
+		pr_err("cpu_capacity: CPU%d missing/invalid highest performance.\n", cpu);
+		pr_err("cpu_capacity: partial information: fallback to 1024 for all CPUs\n");
+		goto exit;
+	}
+
+	topology_normalize_cpu_scale();
+	schedule_work(&update_topology_flags_work);
+	pr_debug("cpu_capacity: cpu_capacity initialization done\n");
+
+exit:
+	free_raw_capacity();
+}
+```
+
+查看 D3000M 的 highest_perf 值，可以看到固件那边并未设置为实际的 CPU 算力：
+
+```bash
+root@Ubuntu:/sys/devices/system/cpu/cpu7/acpi_cppc# cat highest_perf 
+2800
+```
+
+#### CPPC 调频驱动下的 perf domian 建立过程
+
+perf domain 的 debug fs 路径： `/sys/kernel/debug/energy_model/`
+
+D3000M perf domain 打印
+
+```bash
+[    6.635761] freq: 400000, power: 7, cost: 7
+[    6.635775] freq: 432000, power: 8, cost: 8
+[    6.635790] freq: 486000, power: 9, cost: 9
+[    6.635802] freq: 540000, power: 10, cost: 10
+[    6.635819] freq: 594000, power: 11, cost: 11
+[    6.635830] freq: 648000, power: 12, cost: 12
+[    6.635841] freq: 702000, power: 13, cost: 13
+[    6.635853] freq: 756000, power: 14, cost: 14
+[    6.635864] freq: 810000, power: 15, cost: 15
+[    6.635880] freq: 864000, power: 16, cost: 16
+[    6.635892] freq: 918000, power: 17, cost: 17
+[    6.635902] freq: 972000, power: 18, cost: 18
+[    6.635913] freq: 1026000, power: 19, cost: 19
+[    6.635924] freq: 1080000, power: 20, cost: 20
+[    6.635941] freq: 1134000, power: 21, cost: 21
+[    6.635951] freq: 1188000, power: 22, cost: 22
+[    6.635962] freq: 1242000, power: 23, cost: 23
+[    6.635973] freq: 1296000, power: 24, cost: 24
+[    6.635984] freq: 1350000, power: 25, cost: 25
+[    6.635997] freq: 1404000, power: 26, cost: 26
+[    6.636008] freq: 1458000, power: 27, cost: 27
+[    6.636019] freq: 1512000, power: 28, cost: 28
+[    6.636030] freq: 1566000, power: 29, cost: 29
+[    6.636041] freq: 1620000, power: 30, cost: 30
+[    6.636051] freq: 1674000, power: 31, cost: 31
+[    6.636066] freq: 1728000, power: 32, cost: 32
+[    6.636076] freq: 1782000, power: 33, cost: 33
+[    6.636087] freq: 1836000, power: 34, cost: 34
+[    6.636098] freq: 1890000, power: 35, cost: 35
+[    6.636108] freq: 1944000, power: 36, cost: 36
+[    6.636122] freq: 1998000, power: 37, cost: 37
+[    6.636133] freq: 2052000, power: 38, cost: 38
+[    6.636143] freq: 2106000, power: 39, cost: 39
+[    6.636153] freq: 2200000, power: 40, cost: 40
+[    6.636156] processor cpu0: EM: created perf domain
+[    6.637040] build_perf_domains
+[    6.642544] ACPI CPPC: highest_perf: 2200, lowest_perf: 400
+[    6.644473] freq: 400000, power: 7, cost: 7
+[    6.644486] freq: 432000, power: 8, cost: 8
+[    6.644497] freq: 486000, power: 9, cost: 9
+[    6.644508] freq: 540000, power: 10, cost: 10
+[    6.644523] freq: 594000, power: 11, cost: 11
+[    6.644534] freq: 648000, power: 12, cost: 12
+[    6.644545] freq: 702000, power: 13, cost: 13
+[    6.644558] freq: 756000, power: 14, cost: 14
+[    6.644569] freq: 810000, power: 15, cost: 15
+[    6.644583] freq: 864000, power: 16, cost: 16
+[    6.644595] freq: 918000, power: 17, cost: 17
+[    6.644605] freq: 972000, power: 18, cost: 18
+[    6.644616] freq: 1026000, power: 19, cost: 19
+[    6.644627] freq: 1080000, power: 20, cost: 20
+[    6.644638] freq: 1134000, power: 21, cost: 21
+[    6.644652] freq: 1188000, power: 22, cost: 22
+[    6.644663] freq: 1242000, power: 23, cost: 23
+[    6.644674] freq: 1296000, power: 24, cost: 24
+[    6.644685] freq: 1350000, power: 25, cost: 25
+[    6.644696] freq: 1404000, power: 26, cost: 26
+[    6.644709] freq: 1458000, power: 27, cost: 27
+[    6.644720] freq: 1512000, power: 28, cost: 28
+[    6.644733] freq: 1566000, power: 29, cost: 29
+[    6.644744] freq: 1620000, power: 30, cost: 30
+[    6.644754] freq: 1674000, power: 31, cost: 31
+[    6.644768] freq: 1728000, power: 32, cost: 32
+[    6.644779] freq: 1782000, power: 33, cost: 33
+[    6.644791] freq: 1836000, power: 34, cost: 34
+[    6.644801] freq: 1890000, power: 35, cost: 35
+[    6.644812] freq: 1944000, power: 36, cost: 36
+[    6.644827] freq: 1998000, power: 37, cost: 37
+[    6.644837] freq: 2052000, power: 38, cost: 38
+[    6.644848] freq: 2106000, power: 39, cost: 39
+[    6.644859] freq: 2200000, power: 40, cost: 40
+[    6.644862] processor cpu1: EM: created perf domain
+[    6.644953] build_perf_domains
+[    6.650568] ACPI CPPC: highest_perf: 2200, lowest_perf: 400
+[    6.651553] freq: 400000, power: 7, cost: 7
+[    6.651565] freq: 432000, power: 8, cost: 8
+[    6.651572] freq: 486000, power: 9, cost: 9
+[    6.651578] freq: 540000, power: 10, cost: 10
+[    6.651585] freq: 594000, power: 11, cost: 11
+[    6.651591] freq: 648000, power: 12, cost: 12
+[    6.651597] freq: 702000, power: 13, cost: 13
+[    6.651606] freq: 756000, power: 14, cost: 14
+[    6.651613] freq: 810000, power: 15, cost: 15
+[    6.651619] freq: 864000, power: 16, cost: 16
+[    6.651625] freq: 918000, power: 17, cost: 17
+[    6.651631] freq: 972000, power: 18, cost: 18
+[    6.651639] freq: 1026000, power: 19, cost: 19
+[    6.651645] freq: 1080000, power: 20, cost: 20
+[    6.651653] freq: 1134000, power: 21, cost: 21
+[    6.651659] freq: 1188000, power: 22, cost: 22
+[    6.651665] freq: 1242000, power: 23, cost: 23
+[    6.651673] freq: 1296000, power: 24, cost: 24
+[    6.651679] freq: 1350000, power: 25, cost: 25
+[    6.651685] freq: 1404000, power: 26, cost: 26
+[    6.651691] freq: 1458000, power: 27, cost: 27
+[    6.651697] freq: 1512000, power: 28, cost: 28
+[    6.651706] freq: 1566000, power: 29, cost: 29
+[    6.651712] freq: 1620000, power: 30, cost: 30
+[    6.651718] freq: 1674000, power: 31, cost: 31
+[    6.651724] freq: 1728000, power: 32, cost: 32
+[    6.651730] freq: 1782000, power: 33, cost: 33
+[    6.651739] freq: 1836000, power: 34, cost: 34
+[    6.651745] freq: 1890000, power: 35, cost: 35
+[    6.651750] freq: 1944000, power: 36, cost: 36
+[    6.651756] freq: 1998000, power: 37, cost: 37
+[    6.651762] freq: 2052000, power: 38, cost: 38
+[    6.651768] freq: 2106000, power: 39, cost: 39
+[    6.651776] freq: 2200000, power: 40, cost: 40
+[    6.651778] processor cpu2: EM: created perf domain
+[    6.651845] build_perf_domains
+[    6.652531] phytium-qspi PHYT0011:00: capacity register(0x00) is the latest design
+[    6.656115] ACPI CPPC: highest_perf: 2800, lowest_perf: 400
+[    6.657948] freq: 400000, power: 211, cost: 211
+[    6.657960] freq: 432000, power: 212, cost: 212
+[    6.657967] freq: 486000, power: 213, cost: 213
+[    6.657974] freq: 540000, power: 214, cost: 214
+[    6.657981] freq: 594000, power: 215, cost: 215
+[    6.657988] freq: 648000, power: 216, cost: 216
+[    6.657998] freq: 702000, power: 217, cost: 217
+[    6.658005] freq: 756000, power: 218, cost: 218
+[    6.658012] freq: 810000, power: 219, cost: 219
+[    6.658019] freq: 864000, power: 220, cost: 220
+[    6.658025] freq: 918000, power: 221, cost: 221
+[    6.658035] freq: 972000, power: 222, cost: 222
+[    6.658043] freq: 1026000, power: 223, cost: 223
+[    6.658050] freq: 1080000, power: 224, cost: 224
+[    6.658057] freq: 1134000, power: 225, cost: 225
+[    6.658064] freq: 1188000, power: 226, cost: 226
+[    6.658075] freq: 1242000, power: 227, cost: 227
+[    6.658081] freq: 1296000, power: 228, cost: 228
+[    6.658088] freq: 1350000, power: 229, cost: 229
+[    6.658095] freq: 1404000, power: 230, cost: 230
+[    6.658102] freq: 1458000, power: 231, cost: 231
+[    6.658109] freq: 1512000, power: 232, cost: 232
+[    6.658119] freq: 1566000, power: 233, cost: 233
+[    6.658126] freq: 1620000, power: 234, cost: 234
+[    6.658133] freq: 1674000, power: 235, cost: 235
+[    6.658140] freq: 1728000, power: 236, cost: 236
+[    6.658147] freq: 1782000, power: 237, cost: 237
+[    6.658156] freq: 1836000, power: 238, cost: 238
+[    6.658163] freq: 1890000, power: 239, cost: 239
+[    6.658170] freq: 1944000, power: 240, cost: 240
+[    6.658176] freq: 1998000, power: 241, cost: 241
+[    6.658185] freq: 2052000, power: 242, cost: 242
+[    6.658195] freq: 2106000, power: 243, cost: 243
+[    6.658202] freq: 2160000, power: 244, cost: 244
+[    6.658209] freq: 2214000, power: 245, cost: 245
+[    6.658216] freq: 2268000, power: 246, cost: 246
+[    6.658222] freq: 2322000, power: 247, cost: 247
+[    6.658232] freq: 2376000, power: 248, cost: 248
+[    6.658240] freq: 2430000, power: 249, cost: 249
+[    6.658247] freq: 2484000, power: 250, cost: 250
+[    6.658255] freq: 2538000, power: 251, cost: 251
+[    6.658261] freq: 2592000, power: 252, cost: 252
+[    6.658272] freq: 2646000, power: 253, cost: 253
+[    6.658280] freq: 2700000, power: 254, cost: 254
+[    6.658286] freq: 2800000, power: 255, cost: 255
+[    6.658288] processor cpu3: EM: created perf domain
+[    6.658378] build_perf_domains
+[    6.660667] ACPI CPPC: highest_perf: 2200, lowest_perf: 400
+[    6.661397] freq: 400000, power: 415, cost: 415
+[    6.661406] freq: 432000, power: 416, cost: 416
+[    6.661414] freq: 486000, power: 417, cost: 417
+[    6.661422] freq: 540000, power: 418, cost: 418
+[    6.661429] freq: 594000, power: 419, cost: 419
+[    6.661437] freq: 648000, power: 420, cost: 420
+[    6.661444] freq: 702000, power: 421, cost: 421
+[    6.661450] freq: 756000, power: 422, cost: 422
+[    6.661458] freq: 810000, power: 423, cost: 423
+[    6.661466] freq: 864000, power: 424, cost: 424
+[    6.661474] freq: 918000, power: 425, cost: 425
+[    6.661481] freq: 972000, power: 426, cost: 426
+[    6.661493] freq: 1026000, power: 427, cost: 427
+[    6.661500] freq: 1080000, power: 428, cost: 428
+[    6.661507] freq: 1134000, power: 429, cost: 429
+[    6.661513] freq: 1188000, power: 430, cost: 430
+[    6.661520] freq: 1242000, power: 431, cost: 431
+[    6.661529] freq: 1296000, power: 432, cost: 432
+[    6.661536] freq: 1350000, power: 433, cost: 433
+[    6.661542] freq: 1404000, power: 434, cost: 434
+[    6.661549] freq: 1458000, power: 435, cost: 435
+[    6.661555] freq: 1512000, power: 436, cost: 436
+[    6.661564] freq: 1566000, power: 437, cost: 437
+[    6.661570] freq: 1620000, power: 438, cost: 438
+[    6.661576] freq: 1674000, power: 439, cost: 439
+[    6.661584] freq: 1728000, power: 440, cost: 440
+[    6.661590] freq: 1782000, power: 441, cost: 441
+[    6.661596] freq: 1836000, power: 442, cost: 442
+[    6.661605] freq: 1890000, power: 443, cost: 443
+[    6.661612] freq: 1944000, power: 444, cost: 444
+[    6.661618] freq: 1998000, power: 445, cost: 445
+[    6.661625] freq: 2052000, power: 446, cost: 446
+[    6.661632] freq: 2106000, power: 447, cost: 447
+[    6.661640] freq: 2200000, power: 448, cost: 448
+[    6.661642] processor cpu4: EM: created perf domain
+[    6.661744] build_perf_domains
+[    6.665962] ACPI CPPC: highest_perf: 2200, lowest_perf: 400
+[    6.668778] freq: 400000, power: 415, cost: 415
+[    6.668787] freq: 432000, power: 416, cost: 416
+[    6.668796] freq: 486000, power: 417, cost: 417
+[    6.668807] freq: 540000, power: 418, cost: 418
+[    6.668814] freq: 594000, power: 419, cost: 419
+[    6.668821] freq: 648000, power: 420, cost: 420
+[    6.668827] freq: 702000, power: 421, cost: 421
+[    6.668834] freq: 756000, power: 422, cost: 422
+[    6.668843] freq: 810000, power: 423, cost: 423
+[    6.668850] freq: 864000, power: 424, cost: 424
+[    6.668857] freq: 918000, power: 425, cost: 425
+[    6.668864] freq: 972000, power: 426, cost: 426
+[    6.668871] freq: 1026000, power: 427, cost: 427
+[    6.668878] freq: 1080000, power: 428, cost: 428
+[    6.668887] freq: 1134000, power: 429, cost: 429
+[    6.668893] freq: 1188000, power: 430, cost: 430
+[    6.668900] freq: 1242000, power: 431, cost: 431
+[    6.668906] freq: 1296000, power: 432, cost: 432
+[    6.668913] freq: 1350000, power: 433, cost: 433
+[    6.668923] freq: 1404000, power: 434, cost: 434
+[    6.668929] freq: 1458000, power: 435, cost: 435
+[    6.668936] freq: 1512000, power: 436, cost: 436
+[    6.668943] freq: 1566000, power: 437, cost: 437
+[    6.668950] freq: 1620000, power: 438, cost: 438
+[    6.668959] freq: 1674000, power: 439, cost: 439
+[    6.668966] freq: 1728000, power: 440, cost: 440
+[    6.668973] freq: 1782000, power: 441, cost: 441
+[    6.668980] freq: 1836000, power: 442, cost: 442
+[    6.668986] freq: 1890000, power: 443, cost: 443
+[    6.668995] freq: 1944000, power: 444, cost: 444
+[    6.669003] freq: 1998000, power: 445, cost: 445
+[    6.669010] freq: 2052000, power: 446, cost: 446
+[    6.669016] freq: 2106000, power: 447, cost: 447
+[    6.669023] freq: 2200000, power: 448, cost: 448
+[    6.669025] processor cpu5: EM: created perf domain
+[    6.669894] build_perf_domains
+[    6.671484] ACPI CPPC: highest_perf: 2200, lowest_perf: 400
+[    6.672099] freq: 400000, power: 415, cost: 415
+[    6.672109] freq: 432000, power: 416, cost: 416
+[    6.672116] freq: 486000, power: 417, cost: 417
+[    6.672124] freq: 540000, power: 418, cost: 418
+[    6.672134] freq: 594000, power: 419, cost: 419
+[    6.672141] freq: 648000, power: 420, cost: 420
+[    6.672148] freq: 702000, power: 421, cost: 421
+[    6.672155] freq: 756000, power: 422, cost: 422
+[    6.672162] freq: 810000, power: 423, cost: 423
+[    6.672171] freq: 864000, power: 424, cost: 424
+[    6.672178] freq: 918000, power: 425, cost: 425
+[    6.672184] freq: 972000, power: 426, cost: 426
+[    6.672191] freq: 1026000, power: 427, cost: 427
+[    6.672199] freq: 1080000, power: 428, cost: 428
+[    6.672206] freq: 1134000, power: 429, cost: 429
+[    6.672215] freq: 1188000, power: 430, cost: 430
+[    6.672222] freq: 1242000, power: 431, cost: 431
+[    6.672229] freq: 1296000, power: 432, cost: 432
+[    6.672237] freq: 1350000, power: 433, cost: 433
+[    6.672244] freq: 1404000, power: 434, cost: 434
+[    6.672253] freq: 1458000, power: 435, cost: 435
+[    6.672260] freq: 1512000, power: 436, cost: 436
+[    6.672267] freq: 1566000, power: 437, cost: 437
+[    6.672274] freq: 1620000, power: 438, cost: 438
+[    6.672281] freq: 1674000, power: 439, cost: 439
+[    6.672293] freq: 1728000, power: 440, cost: 440
+[    6.672300] freq: 1782000, power: 441, cost: 441
+[    6.672307] freq: 1836000, power: 442, cost: 442
+[    6.672314] freq: 1890000, power: 443, cost: 443
+[    6.672321] freq: 1944000, power: 444, cost: 444
+[    6.672330] freq: 1998000, power: 445, cost: 445
+[    6.672337] freq: 2052000, power: 446, cost: 446
+[    6.672344] freq: 2106000, power: 447, cost: 447
+[    6.672350] freq: 2200000, power: 448, cost: 448
+[    6.672352] processor cpu6: EM: created perf domain
+[    6.672434] build_perf_domains
+[    6.674139] ACPI CPPC: highest_perf: 2800, lowest_perf: 400
+[    6.676465] freq: 400000, power: 619, cost: 619
+[    6.676477] freq: 432000, power: 620, cost: 620
+[    6.676484] freq: 486000, power: 621, cost: 621
+[    6.676491] freq: 540000, power: 622, cost: 622
+[    6.676499] freq: 594000, power: 623, cost: 623
+[    6.676506] freq: 648000, power: 624, cost: 624
+[    6.676515] freq: 702000, power: 625, cost: 625
+[    6.676524] freq: 756000, power: 626, cost: 626
+[    6.676530] freq: 810000, power: 627, cost: 627
+[    6.676537] freq: 864000, power: 628, cost: 628
+[    6.676545] freq: 918000, power: 629, cost: 629
+[    6.676554] freq: 972000, power: 630, cost: 630
+[    6.676561] freq: 1026000, power: 631, cost: 631
+[    6.676568] freq: 1080000, power: 632, cost: 632
+[    6.676574] freq: 1134000, power: 633, cost: 633
+[    6.676580] freq: 1188000, power: 634, cost: 634
+[    6.676589] freq: 1242000, power: 635, cost: 635
+[    6.676596] freq: 1296000, power: 636, cost: 636
+[    6.676603] freq: 1350000, power: 637, cost: 637
+[    6.676609] freq: 1404000, power: 638, cost: 638
+[    6.676616] freq: 1458000, power: 639, cost: 639
+[    6.676624] freq: 1512000, power: 640, cost: 640
+[    6.676634] freq: 1566000, power: 641, cost: 641
+[    6.676641] freq: 1620000, power: 642, cost: 642
+[    6.676648] freq: 1674000, power: 643, cost: 643
+[    6.676655] freq: 1728000, power: 644, cost: 644
+[    6.676662] freq: 1782000, power: 645, cost: 645
+[    6.676671] freq: 1836000, power: 646, cost: 646
+[    6.676678] freq: 1890000, power: 647, cost: 647
+[    6.676686] freq: 1944000, power: 648, cost: 648
+[    6.676692] freq: 1998000, power: 649, cost: 649
+[    6.676699] freq: 2052000, power: 650, cost: 650
+[    6.676708] freq: 2106000, power: 651, cost: 651
+[    6.676715] freq: 2160000, power: 652, cost: 652
+[    6.676721] freq: 2214000, power: 653, cost: 653
+[    6.676728] freq: 2268000, power: 654, cost: 654
+[    6.676734] freq: 2322000, power: 655, cost: 655
+[    6.676743] freq: 2376000, power: 656, cost: 656
+[    6.676750] freq: 2430000, power: 657, cost: 657
+[    6.676756] freq: 2484000, power: 658, cost: 658
+[    6.676763] freq: 2538000, power: 659, cost: 659
+[    6.676770] freq: 2592000, power: 660, cost: 660
+[    6.676780] freq: 2646000, power: 661, cost: 661
+[    6.676786] freq: 2700000, power: 662, cost: 662
+[    6.676793] freq: 2800000, power: 663, cost: 663
+[    6.676795] processor cpu7: EM: created perf domain
+
+```
+
+### EAS代码相关结构体
 
 perf_domain结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的，性能域之间形成链，链表头存放在root_domain中
+
 ```c
 // kernel/sched/sched.h
 // perf_comain 结构表示一个CPU性能域，perf_domain和cpufreq_policy是一一对应的
@@ -1933,8 +2343,10 @@ struct em_perf_domain {
 };
 ```
 
-#### perf_domain初始化
+### perf_domain初始化
+
 start_kernel() -> sched_init() -> init_defrootdomain()
+
 ```c
 // kernel/sched/core.c
 void __init sched_init(void)
@@ -2039,6 +2451,7 @@ free:
 ```
 
 E2000Q 5.10内核，perf_domain_debug 打印信息
+
 ```bash
 [    2.574534] root_domain 0-3: pd3:{ cpus=3 nr_pstate=4 }
 [    2.574540] freq: 250000, power: 79, cost: 632
@@ -2063,7 +2476,7 @@ root_domain的overload和overutilized说明：
 + 对于 root domain，overload 表示至少有一个 cpu 处于 overload 状态。overutilized 表示至少有一个 cpu 处于 overutilized 状态
 + overutilized 状态非常重要，它决定了调度器是否启用EAS，只有在系统没有 overutilized 的情况下EAS才会生效。overload和newidle balance的频次控制相关，当系统在overload的情况下，newidle balance才会启动进行均衡。
 
-#### EAS能量计算方法
+### EAS能量计算方法
 
 CPU在某个performance state(ps)下的计算能力：  
 ps->cap = ps->freq * scale_cpu / cpu_max_freq	（1）
@@ -2071,17 +2484,18 @@ ps->cap = ps->freq * scale_cpu / cpu_max_freq	（1）
 CPU在该频点performace state(ps)下的能量消耗：  
 cpu_nrg = ps->power * cpu_util / ps->cap  （2）
 
-结合(1) (2)可以得出CPU在该ps下的能量消耗
-	cpu_nrg = ps->power * cpu_max_freq * cpu_util / ps->freq * scale_cpu (3)
+结合(1) (2)可以得出CPU在该ps下的能量消耗  
+cpu_nrg = ps->power * cpu_max_freq * cpu_util / ps->freq * scale_cpu (3)
 
 其中 ps->power * cpu_max_freq / ps->freq 是一个固定数据存放在频点表的cost成员中
 
 一个pd内的CPU，拥有相同的cost，所以一个pd内所有CPU的能量消耗可以表示为  
 pd_nrg = ps->cost * sum(cpu_util) / scale_cpu
 
-#### EAS的调度过程
+### EAS的调度过程
 
 在任务被重新唤醒或者fork新建时，会通过`select_task_rq_fair()`将任务进行balance，达到充分利用CPU的目的。在`select_task_rq_fair()`，若任务是被重新唤醒就会调用`find_energy_efficient_cpu()`进行选核执行
+
 ```c
 /*
  * Predicts what cpu_util(@cpu) would return if @p was migrated (and enqueued)
@@ -2384,4 +2798,54 @@ fail:
 ```
 
 ### EAS Mainline
-https://git.gitlab.arm.com/linux-arm/linux-power.git
+
+[https://git.gitlab.arm.com/linux-arm/linux-power.git](https://git.gitlab.arm.com/linux-arm/linux-power.git)
+
+### 计算 capacity-dmips-mhz
+
+In order to calculate the right capacity-dmips-mhz, the following
+test was performed:
+1. CPUFREQ governor was set to 'performance' on both clusters
+2. Ran dhrystone with 500000000 iterations for 10 times on each cluster
+3. Calculated the mean result for each cluster
+4. Calculated DMIPS/MHz: dmips_mhz = dmips_per_second / cpu_mhz
+5. Scaled results to 1024:
+   result_c0 = dmips_mhz_c0 / dmips_mhz_c1 * 1024
+
++ CPU调频策略设置为 Performance
++ 
+
+## D3000M EAS初次测试
+
+### 测试环境
+
++ 开发板：D3000M TestA 板
++ 固件版本：BL31: v2.3(release):D3000M-v0.70-p1-8-gaf62092
++ 内核版本：linux v6.6
+
+### 测试场景
+
+1. 空闲场景（idle）：即待机场景
+2. 压力测试场景（stress）：`stress-ng --cpu <cpu_num>` ，使所有CPU占用为100%
+3. 模拟CPU占用场景（load）：`lookbusy -c xx`，模拟所有CPU占用xx百分比
+
+### 测试方法
+
+测试分为了三组，分别在上面的测试场景中测量处理器核心平均功耗：
++ no eas: 未开启 EAS 功能
++ eas: 开启 EAS 功能
++ eas modify：将两组cluster中的大小核的 Efficiency Class 设置成一样，小核的Efficiency Class参数为1，大核的Efficiency Class参数为2，开启EAS
+
+> 通过 `/proc/sys/kernel/sched_energy_aware` 参数来开启和关闭 EAS 功能进行对比测试。
+
+在对应的测试场景下，使用另一块开发板每隔50ms，通过检流模块分别测量 VDD_BIG1（第二组大核供电）、VDD_BIG0（第一组大核供电）、VDD_M0（第一组小核供电）、VDD_M1（第二组小核供电）的电流，并计算核心瞬时总功耗（并不代表处理器的总功耗，处理器还有其它几路电压，比如VDD_GPU, VDD_DMU未进行测量），每个测试场景测量 10 分钟，将数据进行保存，计算平均功耗。
+
+### 测试结果
+
+![](https://raw.githubusercontent.com/JackHuang021/images/master/20250508165317.png)
+
++ 可能是功耗模型不准确，导致开启 EAS 后的功耗，在各个测试场景下会略高于未开启EAS的功耗
++ 修改两组大小核的Efficiency Class为一致后，可以看到功耗会略微提高，印证了之前OS黄少波的说法
+
+测试数据
+测试代码

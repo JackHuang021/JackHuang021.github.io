@@ -1327,6 +1327,79 @@ Disk stats (read/write):
   mmcblk0: ios=146/3191, merge=0/0, ticks=39355/1808944, in_queue=1848299, util=100.00%
 ```
 
+### E2000 SD卡测试
+
+#### 设备树不加`sd_uhs_25`：
+
+闪迪 32GB：
+
+```bash
+root@Ubuntu:~# cat /sys/kernel/debug/mmc1/ios
+clock:		50000000 Hz
+vdd:		21 (3.3 ~ 3.4 V)
+bus mode:	2 (push-pull)
+chip select:	0 (don't care)
+power mode:	2 (on)
+bus width:	2 (4 bits)
+timing spec:	2 (sd high-speed)
+signal voltage:	0 (3.30 V)
+driver type:	0 (driver type B)
+
+
+root@Ubuntu:~# dmesg | grep mmc1
+[    2.361525] mmc1: new high speed SDHC card at address 5048
+[    2.368600] mmcblk1: mmc1:5048 SD32G 29.7 GiB
+```
+
+索尼 16GB：
+
+```bash
+[  841.612403] mmc1: error -110 whilst initialising SD card
+```
+
+#### 设备树加`sd_uhs_sdr25`
+
+闪迪 32GB：
+
+```bash
+root@Ubuntu:~# cat /sys/kernel/debug/mmc1/ios
+clock:		50000000 Hz
+vdd:		21 (3.3 ~ 3.4 V)
+bus mode:	2 (push-pull)
+chip select:	0 (don't care)
+power mode:	2 (on)
+bus width:	2 (4 bits)
+timing spec:	4 (sd uhs SDR25)
+signal voltage:	1 (1.80 V)
+driver type:	0 (driver type B)
+
+
+root@Ubuntu:~# dmesg | grep mmc1
+[  146.098787] mmc1: new ultra high speed SDR25 SDHC card at address 5048
+[  146.099495] mmcblk1: mmc1:5048 SD32G 29.7 GiB
+```
+
+索尼16GB：
+
+```bash
+root@Ubuntu:~# dmesg | grep mmc1
+[    2.310975] mmc1: new ultra high speed SDR25 SDHC card at address 59b4
+[    2.311345] mmcblk1: mmc1:59b4 USD00 15.1 GiB
+
+root@Ubuntu:~# cat /sys/kernel/debug/mmc1/ios
+clock:          50000000 Hz
+vdd:            21 (3.3 ~ 3.4 V)
+bus mode:       2 (push-pull)
+chip select:    0 (don't care)
+power mode:     2 (on)
+bus width:      2 (4 bits)
+timing spec:    4 (sd uhs SDR25)
+signal voltage: 1 (1.80 V)
+driver type:    0 (driver type B)
+```
+
+可以看到加了UHS SDR25模式后，SD卡可以跑在SDR25模式，电压
+
 
 ### 7. 参考链接
 1. [Linux MMC子系统](https://blog.csdn.net/u013836909/category_11430485.html)

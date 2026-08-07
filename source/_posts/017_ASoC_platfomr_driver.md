@@ -9,7 +9,8 @@ abbrlink: 131a876a
 date: 2022-10-26 13:42:24
 ---
 
-### 概述
+## 概述
+
 ALSA是Advanced Linux Sound Architecture的缩写，[ALSA官网地址](https://www.alsa-project.org/)
 <!-- more -->
 
@@ -26,8 +27,8 @@ ALSA作为Linux现在主流的音频体系架构，提供了内核的驱动框�
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20240124105117.png)
 
+## ASoC驱动框架
 
-### ASoC驱动框架
 ASoC（ALSA system on chip）是建立在标准ALSA驱动层上，对底层的ALSA框架封装了一层，为了更好的支持嵌入式CPU和音频编解码设备的一套软件体系，ASoC驱动主要由platform驱动、codec驱动、machine驱动组成。
 
 machine驱动：充当描述和绑定其他组件驱动程序以形成ALSA声卡的粘合剂，machine可以理解为对声卡的抽象，它把cpu_dai，codec_dai通过dai_link链接起来，然后注册snd_soc_card。该驱动实现`struct snd_soc_card`的定义和注册，并通过指定`struct snd_soc_dai_link`中的`codec_name`, `platform_name`, `codec_dai_name`, `platform_dai_name`从而实现与其他各个驱动组件的绑定
@@ -60,27 +61,32 @@ Path：path相当于电路中的一条跳线，它把一个widget的输出端和
 
 Route：route用来描述一条完整的路径，它包括 起始端widget -> path的输入 -> path的输出 -> 目标端widget，DAPM使用`struct snd_soc_dapm_route`结构来描述这样一个完整路径
 
-### Control设备和kcontrol
+## Control设备和kcontrol
 
-#### Control设备
+### Control设备
+
 Control是音频驱动中用来表示用户可操作的音频参数或功能的抽象设备，它可以是音量控制、Mixer（混音控制）、Mux（开关控制）等，Control提供了一个统一的接口，用于能够通过音频设备驱动程序来管理和调整音频参数，ALSA core层已经实现了Control中间层，在`include\sound\control.h`中定义了所有的Control API
 
-##### Control设备的创建
+#### Control设备的创建
+
 Control设备和PCM设备一样，都属于声卡下的逻辑设备。用户空间的应用程序通过alsa-lib访问该Control设备，读取或控制控件的控制状态，从而达到控制音频Codec进行各种Mixer等控制操作。
 
 在声卡的初始化过程中会调用到`snd_ctrl_create()`来初始化Control设备，具体的流程如下：
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20240410140458.png)
 
-#### kcontrol
+### kcontrol
+
 kcontrol是一种控件，也可以理解为switch，主要实现控制声卡的音量、混音等一系列控制
 
 kcontrol对应的数据结构是`struct snd_kcontrol_new`和`struct kcontrol`，kcontol的创建步骤如下：
 + 在codec驱动中定义`struct snd_kcontrol_new`数组
 + 在声卡初始化的阶段，通过`snd_soc_component_controls()`创建并添加多个kcontrol到`struct snd_card`的controls链表中
 
-##### kcontrol相关的数据结构
-`struct snd_kcontrol_new`结构体
+### kcontrol相关的数据结构
+
+#### `struct snd_kcontrol_new`
+
 ```c
 // include/sound/control.h
 struct snd_kcontrol_new {
@@ -109,9 +115,10 @@ struct snd_kcontrol_new {
 
 通常可以分成3部分来定义控件的名字：源——方向——功能，kernel文档中关于kcontrol命名[https://www.kernel.org/doc/html/v6.3/sound/designs/control-names.html](https://www.kernel.org/doc/html/v6.3/sound/designs/control-names.html)
 
+#### kcontrol的辅助宏
 
-##### kcontrol的辅助宏
 `SOC_SINGLE`宏，这种控件只一个控制量，比如一个开关
+
 ```c
 // include/sound/soc.h
 /*
@@ -152,6 +159,7 @@ struct soc_mixer_control {
 ```
 
 `SOC_SINGLE_TLV`宏，主要定义那些有增益控制的控件，例如音量控制器，EQ均衡器等
+
 ```c
 #define SOC_SINGLE_TLV(xname, reg, shift, max, invert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
@@ -165,12 +173,14 @@ struct soc_mixer_control {
 
 `SOC_DOUBLE`宏，可以在同一个寄存器中控制两个相似的变量，最常用的就是用于一些立体声的控件，我们需要同时对左右声道进行控制，因为多了一个声道，参数也就相应地多了一个shift偏移
 
-##### kcontrol创建过程
+#### kcontrol创建过程
+
 codec驱动在在进行kcontrol的定义后，会对`struct snd_soc_component_driver`的`controls`和`num_controls`成员进行填充。在声卡的初始化过程中，会调用`soc_probe_link_components()`对dai_link上的所有component进行初始化设置，其中包括了kcontrol的创建`snd_soc_add_component_controls()`，其创建过程如下：
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20240409143156.png)
 
-##### es8336 kcontrol定义示例
+#### es8336 kcontrol定义示例
+
 ```c
 // sound/soc/codec/es8336.c
 static const struct snd_kcontrol_new es8336_snd_controls[] = {
@@ -219,8 +229,10 @@ static const struct snd_soc_component_driver soc_component_dev_es8336 = {
 };
 ```
 
-##### 应用层访问Control设备
+#### 应用层访问Control设备
+
 Control设备的文件操作集，`struct file_operations snd_ctl_f_ops`
+
 ```c
 // sound/core/control.c
 static const struct file_operations snd_ctl_f_ops =
@@ -237,11 +249,14 @@ static const struct file_operations snd_ctl_f_ops =
 };
 ```
 
-### PCM设备
+## PCM设备
+
 PCM设备是挂载`struct snd_card`的devices链表下的一个snd device，一个pcm实例由一个playback stream和一个capture stream组成，这两个stream又分别有一个或多个substream组成，在嵌入式系统中，通常不会有这么复杂，大多数情况下是一个声卡，一个pcm实例，pcm下面有一个playback stream和capture stream，playback和capture下面各自有一个substream
 
-#### ALSA中pcm相关的数据结构
+### ALSA中pcm相关的数据结构
+
 `struct snd_pcm`，pcm使用`struct snd_pcm`数据结构来描述，一个pcm实例由一个playback stream和一个capture stream组成，这两个stream又分别有一个或者多个substream组成
+
 ```c
 // include/sound/pcm.h
 struct snd_pcm {
@@ -271,6 +286,7 @@ struct snd_pcm {
 ```
 
 `struct snd_pcm_str`，用于表示pcm stream，snd_pcm_str的主要作用就是指向`snd_pcm_substream`
+
 ```c
 struct snd_pcm_str {
 	/* 
@@ -304,6 +320,7 @@ struct snd_pcm_str {
 ```
 
 `struct snd_pcm_substream`，用于表pcm substream
+
 ```c
 struct snd_pcm_substream {
 	/* 指向对应的snd_pcm和snd_pcm_str */
@@ -353,6 +370,7 @@ struct snd_pcm_substream {
 ```
 
 `struct snd_pcm_hw_params`结构体，用于配置音频硬件参数的结构体，比如通道数、采样率、数据格式等
+
 ```c
 // includ/uapi/sound/asound.h
 struct snd_pcm_hw_params {
@@ -375,9 +393,10 @@ struct snd_pcm_hw_params {
 };
 ```
 
-#### ASoC中pcm相关的数据结构
+### ASoC中pcm相关的数据结构
 
 `struct snd_soc_pcm_stream`，用于描述SoC pcm stream的信息
+
 ```c
 // include/sound/soc.h
 /* SoC PCM stream information */
@@ -398,6 +417,7 @@ struct snd_soc_pcm_stream {
 ```
 
 `struct snd_soc_pcm_runtime`，在注册声卡时会调用`soc_new_pcm_runtime()`为每一个`dai_link`分配一个`snd_soc_pcm_runtime`
+
 ```c
 // include/sound/soc.h
 /* SoC machine DAI configuration, glues a codec and cpu DAI together */
@@ -462,19 +482,22 @@ struct snd_soc_pcm_runtime {
 };
 ```
 
-#### PCM设备创建过程
+### PCM设备创建过程
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20240410153336.png)
 
+## DAPM相关
 
-### DAPM相关
 DAPM是Dynamic Audio Power Management的缩写，即动态音频电源管理，是独立于内核其他PM的一套音频电源管理系统，DAPM对所有用户应用程序来说是完全透明的，电源切换的过程都在ASoC核心内完成，DAPM根据当前激活的音频流对声卡中的Mixer等进行配置，来决定音频控件的电源打开和关闭，达到省电的目的
 
-#### Widget介绍
+### Widget介绍
+
 Widget是具备路径和电源管理的kcontrol，可以理解为kcontrol的进一步升级和封装，ASoC把系统划分为多个dapm域，每个widget属于某个dapm域，比如同一个codec中的widgets通常位于同一个dapm域，而platform上的widget可能又会位于另一个dapm域中
 
-##### 相关数据结构
-`struct snd_soc_dapm_widget`，用来描述Widget
+### 相关数据结构
+
+#### `struct snd_soc_dapm_widget`
+
 ```c
 // include/sound/soc_dapm.h
 /* dapm widget */
@@ -545,7 +568,8 @@ struct snd_soc_dapm_widget {
 };
 ```
 
-`struct snd_soc_dapm_context`，描述dapm域
+#### `struct snd_soc_dapm_context`，描述dapm域
+
 ```c
 // include/sound/soc_dapm.h
 /* DAPM context */
@@ -575,10 +599,12 @@ struct snd_soc_dapm_context {
 };
 ```
 
-##### 辅助宏定义widget
+### 辅助宏定义widget
+
 DAPM系统提供的一些辅助宏定义来定义各种类型的widget和它所用到的dapm kcontrol（这些由DAPM系统提供的辅助宏定义的kcontrol我们统一称为dapm kcontrol，以便和普通的kcontrol进行区分），这些宏定义在`include/sound/soc_dapm.h`中，分类为了4个不同域的widget辅助定义宏
 
 platform域widget，一般是一些需要物理连接的输入、输出接口，这些widget是没有寄存器控制位来控制widget的电源状态的，因此reg字段被设置为SND_SOC_NOPM
+
 ```c
 // include/sound/soc_dapm.h
 /* platform domain */
@@ -623,6 +649,7 @@ platform域widget，一般是一些需要物理连接的输入、输出接口，
 path域widget，一般指codec内部的Mixer、Mux、Switch、Demux等控制音频路径的widget，这些widget是有相应的寄存器控制的，DAPM框架在扫描和更新音频路径时，会利用这些寄存器来控制widget的电源状态
 
 es8336的示例，通过es8336的datasheet可知，Left Hp Mixer通过ES8336_HPMIX_PDN_REG15的bit4来控制Left Hp Mixer的电源状态，而es8336_out_left_mixer是通过ES8336_HPMIX_SWITCH_REG14寄存器的bit7来控制Left DAC的开关
+
 ```c
 /* Output mixer  */
 SND_SOC_DAPM_MIXER("Left Hp mixer", ES8336_HPMIX_PDN_REG15,
@@ -639,6 +666,7 @@ static const struct snd_kcontrol_new es8336_out_left_mix[] = {
 ```
 
 stream域widget，指那些需要处理音频数据流的widget，例如ADC、DAC、AIF IN、AIF OUT等
+
 ```c
 // include/sound/soc-dapm.h
 /* stream domain */
@@ -681,10 +709,12 @@ stream域widget，指那些需要处理音频数据流的widget，例如ADC、DA
 	.event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD }
 ```
 
-##### 辅助宏定义dapm kcontrol
+#### 辅助宏定义dapm kcontrol
+
 对于音频路径上的Mixer或Mux类型的widget，他们包含了若干个kcontrol，dapm利用这些kcontrol完成音频的控制
 
 es8336驱动中的示例，用来控制Left DAC的开关
+
 ```c
 /* headphone Output Mixer */
 static const struct snd_kcontrol_new es8336_out_left_mix[] = {
@@ -694,10 +724,12 @@ static const struct snd_kcontrol_new es8336_out_left_mix[] = {
 			7, 1, 0),
 ```
 
-#### Path介绍
+### Path介绍
+
 DAPM提出了path的概念，path将一个widget的输出端和另一个widget的输入端连接在一起
 
 path使用`struct snd_soc_dapm_path`来描述，当widget之间发生连接关系时，snd_soc_dapm_path作为连接者，它的source字段会指向路径起始端widget，sink字段会指向路径目标端的widget
+
 ```c
 // include/sound/soc_dapm.h
 /* dapm audio path between two widgets */
@@ -741,9 +773,9 @@ struct snd_soc_dapm_path {
 };
 ```
 
-##### complete path
-complete path: 一条完整的音频路径必须要有起点和终点，我们把这些起点和终点widget称之为端点widget
+#### complete path
 
+complete path: 一条完整的音频路径必须要有起点和终点，我们把这些起点和终点widget称之为端点widget
 
 下面这些类型的widget可以称为端点widget
 
@@ -760,11 +792,12 @@ complete path: 一条完整的音频路径必须要有起点和终点，我们�
 
 DAPM要给一个widget上电的其中一个条件是：这个widget位于一条完整路径上，即向前、向后查找连接的widget均能找到一个端点widget，并且路径上的widget、path都是处于连接状态的
 
+### Route介绍
 
-#### Route介绍
 一个路径包括：起始端widget -> path的输入端 -> path的输出 -> 目标端widget，DAPM使用`struct snd_soc_dapm_route`结构来描述这样一个完整路径route
 
 `struct snd_soc_dapm_route`结构体，用来描述一个路径
+
 ```c
 /*
  * DAPM audio route definition.
@@ -790,8 +823,8 @@ struct snd_soc_dapm_route {
 
 这里直接使用名称来描述连接关系，所有定义好的route，最后都要注册到dapm系统中，dapm会根据这些名字找出相应的widget，并动态地生成所需要的snd_soc_dapm_path结构，正确地处理各个链表和指针的关系，实现两个widget之间的连接。
 
+## machine驱动 以Phytium DP音频为例
 
-### machine驱动 以Phytium DP音频为例
 这里通过飞腾dp音频驱动来看一下DP声卡注册的过程
 
 `struct snd_soc_card`结构体定义
@@ -810,7 +843,9 @@ static struct snd_soc_card pmdk = {
 	.num_dapm_routes = ARRAY_SIZE(pmdk_dp_audio_map),
 };
 ```
+
 `struct snd_soc_dai_link`的定义，这里用到了`SND_SOC_DAILINK_DEFS`及`SND_SOC_DAILINK_REG`
+
 ```c
 SND_SOC_DAILINK_DEFS(pmdk_dp0_dai,
 	DAILINK_COMP_ARRAY(COMP_CPU("phytium-i2s-dp0")),
@@ -852,6 +887,7 @@ static struct snd_soc_dai_link pmdk_dai_local[] = {
 ```
 
 展开其中一个dai_link为
+
 ```c
 static struct snc_soc_dai_link_component pmdk_dp0_dai_cpus[] = {
     .dai_name = "phytium_i2s_dp0",
@@ -899,14 +935,17 @@ static struct snd_soc_dai_link pmdk_dai_local[] = {
 }
 ```
 
-### machine驱动 以asoc-simple-card为例
+## machine驱动 以asoc-simple-card为例
+
 ASoC声卡的注册从machine驱动开始，machine驱动相关的主要数据结构如下：
 + `struct snd_soc_card`: ASoC中的核心数据结构，对ASoC声卡进行抽象
 + `struct snd_soc_dai_link`: 用来描述音频数据链路，在snd_soc_dai_link中，指定了platform, codec, codec_dai, cpu_dai的名字
 + `struct snd_soc_dai_link_components`: 保存components的名称和设备树节点，用于后续查找component
 
-#### 数据结构
+### 数据结构
+
 `struct snd_soc_card`结构体，对ASoC声卡的抽象，machine驱动需要对其实现
+
 ```c
 // include/sound/soc.h
 /* SoC card */
@@ -1035,6 +1074,7 @@ struct snd_soc_card {
 ```
 
 `struct snd_soc_dai_link`结构体，描述音频数据链路
+
 ```c
 // include/sound/soc.h
 struct snd_soc_dai_link {
@@ -1152,6 +1192,7 @@ struct snd_soc_dai_link {
 ```
 
 `aso_simple_priv`结构体，asoc-simple-card驱动中集成的数据结构体
+
 ```c
 // include/sound/simple_card_util.h
 struct asoc_simple_priv {
@@ -1184,6 +1225,7 @@ struct asoc_simple_priv {
 ```
 
 `struct link_info`用于保存dai_link信息
+
 ```c
 struct link_info {
 	/* 表示音频数据链路的数量 */
@@ -1202,8 +1244,10 @@ struct prop_nums {
 };
 ```
 
-#### asoc-simple-card设备树节点描述
+### asoc-simple-card设备树节点描述
+
 E2000Q设备树sound-card节点描述
+
 ```c
 sound_card: sound {
 	compatible = "simple-audio-card";
@@ -1229,21 +1273,21 @@ simple-audio-card的各个属性设置[simple-card.yaml](https://www.kernel.org/
 5. `simple-audio-card,cpu`：指定cpu接入音频编码的dai
 6. `simple-audio-card,codec`：指定codec接入cpu的dai
 
-
 asoc-simple-card machine驱动probe的流程
 
-
 总结来说，machine驱动的工作内容如下
+
 + 构造一个`struct snd_soc_dai_link`，将cpu和codec关联起来
 + 负责创建`struct snd_soc_card`即asoc-sound-card这个结构体，走`devm_snd_soc_register_card()`将其注册到asoc中
 
+## plarform驱动 以phytium i2s驱动为例
 
-### plarform驱动 以phytium i2s驱动为例
 以phytium phytium-i2s.c platform驱动为例进行分析
 
-#### 相关结构体
+### 相关结构体
 
 `struct i2s_bus`
+
 ```c
 // sound/soc/phytium/local.h
 struct i2s_bus {
@@ -1255,6 +1299,7 @@ struct i2s_bus {
 ```
 
 `struct i2s_phytium`用于驱动集中管理
+
 ```c
 // sound/soc/phytium/local.h
 struct i2s_phytium {
@@ -1302,6 +1347,7 @@ struct i2s_phytium {
 ```
 
 `struct azx`结构体
+
 ```c
 struct azx {
 	struct i2s_bus bus;
@@ -1337,6 +1383,7 @@ struct azx {
 ```
 
 `struct azx_dev`结构体
+
 ```c
 struct azx_dev {
 	struct i2s_stream core;
@@ -1345,6 +1392,7 @@ struct azx_dev {
 ```
 
 `struct i2sc_bus`结构体
+
 ```c
 struct i2s_io_ops {
 	int (*dma_alloc_pages)(struct i2sc_bus *bus, int type, size_t size,
@@ -1392,6 +1440,7 @@ struct i2sc_bus {
 ```
 
 `struct i2s_stream`结构体
+
 ```c
 struct i2s_stream {
 	struct i2sc_bus *bus;
@@ -1435,8 +1484,10 @@ struct i2s_stream {
 };
 ```
 
-#### platform driver注册过程
+### platform driver注册过程
+
 phytium i2s的设备树描述
+
 ```c
 i2s0: i2s@28009000 {
 	compatible = "phytium,i2s";
@@ -1449,9 +1500,8 @@ i2s0: i2s@28009000 {
 };
 ```
 
-
-
 `struct snd_soc_component_driver phyitum_i2s_component`的定义
+
 ```c
 // sound/soc/phytium/phytium_i2s.c
 static const struct snd_soc_component_driver phytium_i2s_component = {
@@ -1471,6 +1521,7 @@ static const struct snd_soc_component_driver phytium_i2s_component = {
 ```
 
 `struct snd_soc_dai_driver phytium_i2s_dai`的定义
+
 ```c
 static const struct snd_soc_dai_ops phytium_i2s_dai_ops = {
 	.hw_params	= phytium_i2s_hw_params,
@@ -1507,7 +1558,193 @@ static struct snd_soc_dai_driver phytium_i2s_dai = {
 };
 ```
 
-### codec驱动 以es8336为例
+## Phytium I2S V2驱动
+
+### IOP介绍
+
+IOP驱动主要负责封装硬件寄存器，提供虚拟硬件接口给操作系统驱动，达成硬件外设更换后软件驱动不需要修改的目的，减少主核对低速设备的操作，降低低速设备对核的占有率。
+
+IOP设计的功能需求：
++ 支持每个控制器硬件直传，对于需要立即响应的访问，不经过Risc-V（RV）核，由硬件直接转换成对控制器的访问
++ 支持模糊直传，即AP对一段空间区域的访问，由硬件直接转换成对控制器一段空间区域的访问
++ 控制器中断报给AP或者Risc-V可选（gmac中断只报给AP）
++ WDT用于监控Risc-V核程序是否异常
++ TIMER用于Risc-V系统计数
+
+#### Share Memory 模块
+
+用于 AP 和 RV 交互的存储空间，内部由 sram 实现，sram 大小为 64KB
+
+D3000M i2s 驱动中的消息结构体，用于 AP 与 RV 通信，可以看到实际的消息数据是有针对不同命令区分成了 4 类。
+
+```c
+// sound/soc/phytium/phytium-i2s-v2.h
+struct phyti2s_cmd {
+	uint16_t id;
+	uint8_t cmd_id;
+	uint8_t cmd_subid;
+	uint16_t len;
+	uint16_t complete;
+	union {
+		uint8_t para[56];
+		struct set_mode_data set_mode_data;
+		struct trigger_i2s_data trigger_i2s_data;
+		struct gpio_i2s_data gpio_i2s_data;
+	} cmd_para;
+};
+```
+
+#### 中断通知
+
+为了性能的提升，数据传输不能单靠CPU轮询方式，查询shmem中的数据或者命令状态。双向通信都要支持中断触发方式，在 regfile 中写触发对端中断的寄存器。
+
+双向通信在中断模式下，AP写 regfile 寄存器触发的中断被定义为 TX 请求，IOP 写 regfile 寄存器触发的中断被定义为 RX 请求。
+
+中断流程：
+1. AP 主动发起通信，填入 shmem 参数，写 regfile 寄存器触发中断，RV 收到 regfile 中断，解析数据
+2. 当外设控制器有中断状态或者异常状态被 IOP 获取，则 IOP 写 regfile 寄存器触发中断主动上报错标和寄存器
+
+#### Regfile 模块
+
+Regfile模块说明：每个控制器对应一个regfile模块，地址范围为4KB，为了减少接口数量，将uart0-2 合并成一个regfile模块，spi0-1合并，dpi2s0-2合并，i2c0-3合并。lsd-i2s的4K空间被分为两个2K大小，低2K用于I2S，高2K用于i2s_codec的控制。regfile 模块相当于是飞腾自定义了一套通用
+
+每个regfile模块内部主要包含三部分内容：
+1. 存放用于管理 shared_memory 中每个指令类型的头尾指针计数寄存器
+2. 中断寄存器，每位表示一种指令类型的中断
+3. 硬件直通寄存器，针对有性能要求的寄存器访问
+
+D3000M I2S驱动中的 regfile 如下，头尾指针并未使用到，仅使用了 1 个通信中断；1 个硬件直通寄存器，用于耳机检测口GPIO中断清除；1 个自定义寄存器，用于调试使用
+
+```c
+// sound/soc/phytium/phytium-i2s-v2.h
+/*********************register ***************************/
+/* regfile */
+#define PHYTIUM_REGFILE_TX_HEAD	0x00
+	#define TX_HEAD_INTR		(1 << 16)
+#define PHYTIUM_REGFILE_TX_TAIL	0X04
+
+#define PHYTIUM_REGFILE_AP2RV_INT_MASK	0x20
+#define PHYTIUM_REGFILE_AP2RV_INT_STATE	0x24
+	#define SEND_INTR		(1 << 4)
+#define PHYTIUM_REGFILE_GPIO_PORTA_EOI		0x30
+#define PHYTIUM_REGFILE_DEBUG			0x58
+	#define DEBUG_ENABLE	(1 << 0)
+	#define HEART_ENABLE	(1 << 1)
+	#define HEARTBEAT		(1 << 2)
+```
+
+### i2s v2驱动 设备树描述
+
+```c
+i2s_v2: i2s@27010000 {
+	compatible = "phytium,i2s-2.0";
+	reg = <0x0 0x27010000 0x0 0x800>,	// regfile_base
+			<0x0 0x26fe3000 0x0 0x100>,	// sharemem_base
+			<0x0 0x18000000 0x0 0x1000>;	// dma_reg_base
+	interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>, // DMA控制器中断
+				 <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;	// IOP模式下表示I2S_regfile中断信号3，对应的是耳机检测脚中断
+	clocks = <&sysclk_1200mhz>;
+	clock-names = "i2s_clk";
+};
+```
+
+### 结构体
+
+```c
+// sound/soc/phytium/phytium-i2s-v2.h
+struct phytium_i2s {
+	// regfile 基地址
+	void __iomem *regfile_base;
+	// shmem 基地址
+	void __iomem *sharemem_base;
+	// dma 控制器基地址，DMA控制器没有走IOP
+	void __iomem *dma_reg_base;
+	struct device *dev;
+	struct device *parent;
+
+	struct snd_pcm_substream *substream_playback;
+	struct snd_pcm_substream *substream_capture;
+	u32 clk_base;
+	struct phytium_pcm_config pcm_config[2];
+	struct delayed_work i2s_playback_stop_work;
+	struct delayed_work i2s_capture_stop_work;
+	struct delayed_work phyt_i2s_gpio_work;
+	struct phyti2s_cmd *msg;
+	int interrupt;
+	int running;
+	struct timer_list timer;
+	bool heart_enable;
+	uint32_t chan_nr;
+	uint32_t data_width;
+	uint32_t sample_rate;
+	int insert;
+	struct mutex sharemem_mutex;
+};
+```
+
+### IOP 通信代码分析
+
+`phyt_i2s_msg_set_cmd()` 是 AP 向 RV 进行通信的接口，AP 端写入 shmem 消息数据后，在 regfile 写入中断标志，RV 侧收到中断，从 shmem 读取数据进行处理，AP 端再轮询 shmem 中的状态字段
+
+```c
+// sound/soc/phytium/phytium-i2s-v2.c
+int phyt_i2s_msg_set_cmd(struct phytium_i2s *priv, struct phyti2s_cmd *msg)
+{
+	struct phyti2s_cmd *ans_msg;
+	int timeout = 40, ret = 0;
+
+	mutex_lock(&priv->sharemem_mutex);
+	memcpy(priv->sharemem_base, msg, sizeof(struct phyti2s_cmd));
+
+	phyt_writel_reg(priv->regfile_base, PHYTIUM_REGFILE_AP2RV_INT_STATE, SEND_INTR);
+
+	ans_msg = priv->sharemem_base;
+
+	while ((ans_msg->complete == PHYTI2S_COMPLETE_NONE
+			|| ans_msg->complete == PHYTI2S_COMPLETE_GOING)
+			&& timeout) {
+		if (preempt_count() != 0)
+			udelay(500);
+		else
+			usleep_range(500, 1000);
+		timeout--;
+	}
+
+	if (timeout == 0) {
+		dev_err(priv->dev, "wait cmd reply timeout\n");
+		ret = -EBUSY;
+	}
+
+	if (ans_msg->complete == PHYTI2S_COMPLETE_ERROR) {
+		dev_err(priv->dev, "handle cmd failed\n");
+		ret = -EINVAL;
+	}
+
+	if (ans_msg->complete == PHYTI2S_COMPLETE_ID_NOT_SUPPORTED) {
+		dev_err(priv->dev, "cmd not support!\n");
+		ret = -EINVAL;
+	}
+
+	if (ans_msg->complete == PHYTI2S_COMPLETE_SUBID_NOT_SUPPORTED) {
+		dev_err(priv->dev, "cmd subid not support!\n");
+		ret = -EINVAL;
+	}
+
+	if (ans_msg->complete == PHYTI2S_COMPLETE_INVALID_PARAMETERS) {
+		dev_err(priv->dev, "cmd params not support!\n");
+		ret = -EINVAL;
+	}
+	mutex_unlock(&priv->sharemem_mutex);
+	return ret;
+}
+```
+
+### 与原 Phytium I2S驱动的变化
+
+对主机I2S的操作走了IOP方式进行，DMA控制器仍采用直接读写寄存器的方式，整个platform驱动结构没有大变化
+
+## codec驱动 以es8336为例
+
 codec driver不应包含任何特定于目标平台或者设备的代码，
 
 描述codec的最主要的几个数据结构分别是：
@@ -1516,8 +1753,10 @@ codec driver不应包含任何特定于目标平台或者设备的代码，
 + `struct snd_soc_component`: ASoC使用统一的数据结构来描述codec设备和platform设备，一个component对应一个模块
 + `struct snd_soc_component_driver`: 描述component的驱动
 
-#### 数据结构
+### 数据结构
+
 `struct snd_soc_component`
+
 ```c
 struct snd_soc_component {
 	/* 
@@ -1583,6 +1822,7 @@ struct snd_soc_component {
 ```
 
 `struct snd_soc_component_driver`，用于component的driver，例如phytium i2s的platform驱动中定义的`phytium_i2s_component`实例
+
 ```c
 // include/sound/soc-component.h
 struct snd_soc_component_driver {
@@ -1706,6 +1946,7 @@ struct snd_soc_component_driver {
 ```
 
 `struct snd_soc_dai`，用来描述dai
+
 ```c
 // include/sound/soc_dai.h
 /*
@@ -1760,6 +2001,7 @@ struct snd_soc_dai {
 ```
 
 `struct snd_soc_dai_driver`，描述dai驱动
+
 ```c
 // include/sound/soc_dai.h
 /*
@@ -1808,6 +2050,7 @@ struct snd_soc_dai_driver {
 ```
 
 `struct snd_soc_dai_ops`，dai的控制和参数配置操作集结构体
+
 ```c
 // include/sound/soc_dai.h
 struct snd_soc_dai_ops {
@@ -1902,13 +2145,24 @@ struct snd_soc_dai_ops {
 };
 ```
 
+### component注册过程
 
-#### component注册过程
 一般在codec和platform驱动中会调用`devm_snd_soc_register_component()`来注册component和dai，`devm_snd_soc_register_component`是带有资源管理的component注册函数，该函数会动态申请一个component，并将其添加到全局链表component_list中，同时会为每个dai driver动态分配一个dai，并建立dai与component、dai与dai driver的关系。
 
 在Machine驱动中匹配codec，实际上就是根据音频数据链路snd_soc_dai_link codec指定的name去遍历component_list找到匹配的component，然后再根据dai_name从component->dai_list中获取到匹配的codec dai。
 
 ![](https://raw.githubusercontent.com/JackHuang021/images/master/20240410171031.png)
 
+## D3000M 音频调试
 
++ 监测DP音频插拔事件
 
+```bash
+^Cuser@phytium-Ubuntu:/usr/share/alsa/ucm2/Phytium/PMDK-I2S$ alsactl monitor
+node hw:0, #1 (0,0,0,HDMI/DP,pcm=0 Jack,0) VALUE
+node hw:0, #1 (0,0,0,HDMI/DP,pcm=0 Jack,0) VALUE
+```
+
++ 重启pulseaudio `pulseaudio -k`
+
++ 重启pipewire `systemctl --user restart pipewire pipewire-pulse`

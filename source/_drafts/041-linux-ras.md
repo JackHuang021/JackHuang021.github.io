@@ -357,7 +357,10 @@ trace_aer_event();
 trace_memory_failure_event();
 ```
 
+## D2000V edac 驱动调试
 
+需要手动配置 INT_EN_CTL 寄存器，配置错误处理中断上报方式，需要配置成 01 spi中断上报
 
+G
 
 
