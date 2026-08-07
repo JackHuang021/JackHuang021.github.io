@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
-<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
@@ -14,12 +14,12 @@
 
 
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/themes/blue/pace-theme-minimal.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pace/1.2.4/pace.min.js" integrity="sha256-gqd7YTjg/BtfqWSwsJOvndl0Bxc8gFImLEkXQT8+qj0=" crossorigin="anonymous" defer></script>
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"mac","show_result":true},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"jackhuang021.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.29.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"github","dark":"rainbow"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"mac","show_result":true},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="Linux中的挂起、休眠，一般是指以下四种状态：  STI(suspend to idle)：是一种通用的、纯软件、轻量级系统睡眠状态 Standby(power-on suspend)：是一种适度的功耗节省状态，同时系统也可以比较快的唤醒 STR(suspend to ram)：提供了比较显著的功耗节省，系统中除了内存之外的部件都进入了低功耗状态 STD(suspend to disk)：提供最">
 <meta property="og:type" content="article">
@@ -29,7 +29,7 @@
 <meta property="og:description" content="Linux中的挂起、休眠，一般是指以下四种状态：  STI(suspend to idle)：是一种通用的、纯软件、轻量级系统睡眠状态 Standby(power-on suspend)：是一种适度的功耗节省状态，同时系统也可以比较快的唤醒 STR(suspend to ram)：提供了比较显著的功耗节省，系统中除了内存之外的部件都进入了低功耗状态 STD(suspend to disk)：提供最">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-09-18T08:17:10.000Z">
-<meta property="article:modified_time" content="2023-09-20T01:18:15.307Z">
+<meta property="article:modified_time" content="2023-09-20T01:18:16.000Z">
 <meta property="article:author" content="Jack">
 <meta property="article:tag" content="Linux">
 <meta property="article:tag" content="suspend">
@@ -39,17 +39,36 @@
 <link rel="canonical" href="https://jackhuang021.github.io/archives/f183bd8.html">
 
 
-
 <script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://jackhuang021.github.io/archives/f183bd8.html","path":"archives/f183bd8.html","title":"Linux睡眠唤醒调试方法"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>Linux睡眠唤醒调试方法 | Jack's Home</title>
   
 
-  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script src="/js/third-party/analytics/baidu-analytics.js" defer></script>
   <script async src="https://hm.baidu.com/hm.js?cf1cdec429059a964c53024129e34116"></script>
 
 
+
+
+
+
+
+  
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+  <script src="/js/third-party/pace.js" defer></script>
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
 
 
@@ -165,12 +184,12 @@
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-count">7</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-count">31</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -241,7 +260,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2023-09-20 09:18:15" itemprop="dateModified" datetime="2023-09-20T09:18:15+08:00">2023-09-20</time>
+      <time title="修改时间：2023-09-20 09:18:16" itemprop="dateModified" datetime="2023-09-20T09:18:16+08:00">2023-09-20</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -267,14 +286,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>6.3k</span>
+      <span>5.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>6 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -289,8 +308,10 @@
 <li>STI(suspend to idle)：是一种通用的、纯软件、轻量级系统睡眠状态</li>
 <li>Standby(power-on suspend)：是一种适度的功耗节省状态，同时系统也可以比较快的唤醒</li>
 <li>STR(suspend to ram)：提供了比较显著的功耗节省，系统中除了内存之外的部件都进入了低功耗状态</li>
-<li>STD(suspend to disk)：提供最大程度的功耗节省<span id="more"></span></li>
+<li>STD(suspend to disk)：提供最大程度的功耗节省</li>
 </ol>
+<span id="more"></span>
+
 <table>
 <thead>
 <tr>
@@ -324,14 +345,17 @@
 <p>具体的状态描述可以参考内核文档<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/power/states.txt">Documentation&#x2F;power&#x2F;states.txt</a></p>
 </blockquote>
 <h3 id="基础调试方法"><a href="#基础调试方法" class="headerlink" title="基础调试方法"></a>基础调试方法</h3><ol>
-<li><p>关闭串口睡眠：在启动参数中增加<code>no_console_suspend ignore_loglevel</code>，S3调试日志如下</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~<span class="comment"># echo mem &gt; /sys/power/state</span></span><br><span class="line">[   74.403728] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[   74.411597] Filesystems sync: 0.004 seconds</span><br><span class="line">[   74.576746] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[   74.586948] OOM killer disabled.</span><br><span class="line">[   74.590196] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[   74.604967] pcieport 0000:00:04.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 71912 msec ago)</span><br><span class="line">[   74.605025] pcieport 0000:00:05.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 71884 msec ago)</span><br><span class="line">[   74.617628] macb 3200c000.ethernet eth0: Link is Down</span><br><span class="line">[   74.629279] macb 3200c000.ethernet: gem-ptp-timer ptp clock unregistered.</span><br><span class="line">[   74.752892] pcieport 0000:00:01.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 72084 msec ago)</span><br><span class="line">[   76.636865] pcieport 0000:00:04.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2020 msec ago)</span><br><span class="line">[   76.644855] pcieport 0000:00:05.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2024 msec ago)</span><br><span class="line">[   76.784854] pcieport 0000:00:01.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2024 msec ago)</span><br><span class="line">[   76.917236] Disabling non-boot CPUs ...</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在启动参数中加入<code>initcall_debug</code>，打印init函数的进入和返回log，可以定位哪个init函数运行失败或运行时间过长，S3调试日志如下</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~<span class="comment"># echo mem &gt; /sys/power/state</span></span><br><span class="line">[  409.072355] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[  409.087412] Filesystems sync: 0.011 seconds</span><br><span class="line">[  409.260860] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[  409.271298] OOM killer disabled.</span><br><span class="line">[  409.274561] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[  409.284345] rtc rtc0: calling rtc_suspend+0x0/0x138 @ 840, parent: 0-0068</span><br><span class="line">[  409.291569] rtc rtc0: rtc_suspend+0x0/0x138 returned 0 after 317 usecs</span><br><span class="line">[  409.298209] mtd mtd1ro: calling mtd_cls_suspend+0x0/0x78 @ 840, parent: 10000000.lbc_nor</span><br><span class="line">[  409.306323] mtd mtd1ro: mtd_cls_suspend+0x0/0x78 returned 0 after 1 usecs</span><br><span class="line">[  409.313140] mtd mtd1: calling mtd_cls_suspend+0x0/0x78 @ 840, parent: 10000000.lbc_nor</span><br><span class="line">[  409.321075] mtd mtd1: mtd_cls_suspend+0x0/0x78 returned 0 after 1 usecs</span><br><span class="line">...</span><br><span class="line">[  412.886230] Disabling non-boot CPUs ...</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>禁用异步suspend resume设备，排除设备驱动的pm问题<code>echo 0 &gt; /sys/power/pm_async</code>，在Linux异步对设备进行suspend resume时出现问题的情况下，可以禁用异步suspend resume来排查设备驱动pm问题</p>
-</li>
+<li>关闭串口睡眠：在启动参数中增加<code>no_console_suspend ignore_loglevel</code>，S3调试日志如下</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~# <span class="built_in">echo</span> mem &gt; /sys/power/state</span><br><span class="line">[   74.403728] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[   74.411597] Filesystems <span class="built_in">sync</span>: 0.004 seconds</span><br><span class="line">[   74.576746] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[   74.586948] OOM killer disabled.</span><br><span class="line">[   74.590196] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[   74.604967] pcieport 0000:00:04.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 71912 msec ago)</span><br><span class="line">[   74.605025] pcieport 0000:00:05.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 71884 msec ago)</span><br><span class="line">[   74.617628] macb 3200c000.ethernet eth0: Link is Down</span><br><span class="line">[   74.629279] macb 3200c000.ethernet: gem-ptp-timer ptp clock unregistered.</span><br><span class="line">[   74.752892] pcieport 0000:00:01.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x1438 (issued 72084 msec ago)</span><br><span class="line">[   76.636865] pcieport 0000:00:04.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2020 msec ago)</span><br><span class="line">[   76.644855] pcieport 0000:00:05.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2024 msec ago)</span><br><span class="line">[   76.784854] pcieport 0000:00:01.0: pciehp: Timeout on hotplug <span class="built_in">command</span> 0x0418 (issued 2024 msec ago)</span><br><span class="line">[   76.917236] Disabling non-boot CPUs ...</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>在启动参数中加入<code>initcall_debug</code>，打印init函数的进入和返回log，可以定位哪个init函数运行失败或运行时间过长，S3调试日志如下</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:~# <span class="built_in">echo</span> mem &gt; /sys/power/state</span><br><span class="line">[  409.072355] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[  409.087412] Filesystems <span class="built_in">sync</span>: 0.011 seconds</span><br><span class="line">[  409.260860] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[  409.271298] OOM killer disabled.</span><br><span class="line">[  409.274561] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[  409.284345] rtc rtc0: calling rtc_suspend+0x0/0x138 @ 840, parent: 0-0068</span><br><span class="line">[  409.291569] rtc rtc0: rtc_suspend+0x0/0x138 returned 0 after 317 usecs</span><br><span class="line">[  409.298209] mtd mtd1ro: calling mtd_cls_suspend+0x0/0x78 @ 840, parent: 10000000.lbc_nor</span><br><span class="line">[  409.306323] mtd mtd1ro: mtd_cls_suspend+0x0/0x78 returned 0 after 1 usecs</span><br><span class="line">[  409.313140] mtd mtd1: calling mtd_cls_suspend+0x0/0x78 @ 840, parent: 10000000.lbc_nor</span><br><span class="line">[  409.321075] mtd mtd1: mtd_cls_suspend+0x0/0x78 returned 0 after 1 usecs</span><br><span class="line">...</span><br><span class="line">[  412.886230] Disabling non-boot CPUs ...</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>禁用异步suspend resume设备，排除设备驱动的pm问题<code>echo 0 &gt; /sys/power/pm_async</code>，在Linux异步对设备进行suspend resume时出现问题的情况下，可以禁用异步suspend resume来排查设备驱动pm问题</li>
 </ol>
 <h3 id="PM-DEBUG选项调试休眠唤醒"><a href="#PM-DEBUG选项调试休眠唤醒" class="headerlink" title="PM_DEBUG选项调试休眠唤醒"></a>PM_DEBUG选项调试休眠唤醒</h3><p>打开CONFIG_PM_DEBUG选项，使用<code>/sys/power/pm_test</code>来测试休眠、唤醒，pm_test里面一共有5种测试模式</p>
 <ul>
@@ -346,10 +370,10 @@
 <p>详细描述可参考内核文档<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/power/basic-pm-debugging.txt">basic-pm-debugging.txt</a></p>
 </blockquote>
 <p>freezer休眠唤醒调试日志</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:/sys/power<span class="comment"># cat /proc/cmdline </span></span><br><span class="line">console=ttyAMA1,115200 audit=0 earlycon=pl011,0x2800d000 root=/dev/nvme0n1p2 rw no_console_suspend initcall_debug ignore_loglevel</span><br><span class="line">root@Ubuntu:/sys/power<span class="comment"># echo freezer &gt; pm_test</span></span><br><span class="line">root@Ubuntu:/sys/power<span class="comment"># echo mem &gt; state </span></span><br><span class="line">[ 1341.488023] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[ 1341.501723] Filesystems sync: 0.009 seconds</span><br><span class="line">[ 1341.624379] [drm] can not get n_m <span class="keyword">for</span> link_rate(270000) and sample_rate(0)</span><br><span class="line">[ 1341.779698] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1341.790421] OOM killer disabled.</span><br><span class="line">[ 1341.793664] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1341.802539] PM: <span class="built_in">suspend</span> debug: Waiting <span class="keyword">for</span> 5 second(s).</span><br><span class="line">[ 1346.808159] OOM killer enabled.</span><br><span class="line">[ 1346.811304] Restarting tasks ... <span class="keyword">done</span>.</span><br><span class="line">[ 1346.817354] PM: <span class="built_in">suspend</span> <span class="built_in">exit</span></span><br><span class="line">root@Ubuntu:/sys/power<span class="comment"># </span></span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:/sys/power# <span class="built_in">cat</span> /proc/cmdline </span><br><span class="line">console=ttyAMA1,115200 audit=0 earlycon=pl011,0x2800d000 root=/dev/nvme0n1p2 rw no_console_suspend initcall_debug ignore_loglevel</span><br><span class="line">root@Ubuntu:/sys/power# <span class="built_in">echo</span> freezer &gt; pm_test</span><br><span class="line">root@Ubuntu:/sys/power# <span class="built_in">echo</span> mem &gt; state </span><br><span class="line">[ 1341.488023] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[ 1341.501723] Filesystems <span class="built_in">sync</span>: 0.009 seconds</span><br><span class="line">[ 1341.624379] [drm] can not get n_m <span class="keyword">for</span> link_rate(270000) and sample_rate(0)</span><br><span class="line">[ 1341.779698] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1341.790421] OOM killer disabled.</span><br><span class="line">[ 1341.793664] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1341.802539] PM: <span class="built_in">suspend</span> debug: Waiting <span class="keyword">for</span> 5 second(s).</span><br><span class="line">[ 1346.808159] OOM killer enabled.</span><br><span class="line">[ 1346.811304] Restarting tasks ... <span class="keyword">done</span>.</span><br><span class="line">[ 1346.817354] PM: <span class="built_in">suspend</span> <span class="built_in">exit</span></span><br><span class="line">root@Ubuntu:/sys/power# </span><br></pre></td></tr></table></figure>
 
 <p>devices休眠唤醒调试日志</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:/sys/power<span class="comment"># cat /proc/cmdline </span></span><br><span class="line">console=ttyAMA1,115200 audit=0 earlycon=pl011,0x2800d000 root=/dev/nvme0n1p2 rw no_console_suspend initcall_debug loglevel=7</span><br><span class="line">root@Ubuntu:/sys/power<span class="comment"># echo devices &gt; pm_test</span></span><br><span class="line">root@Ubuntu:/sys/power<span class="comment"># echo mem &gt; state </span></span><br><span class="line"></span><br><span class="line">[ 1628.921417] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[ 1628.934839] Filesystems sync: 0.009 seconds</span><br><span class="line">[ 1629.066342] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1629.076995] OOM killer disabled.</span><br><span class="line">[ 1629.080260] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1629.090074] rtc rtc0: calling rtc_suspend+0x0/0x138 @ 998, parent: 0-0068</span><br><span class="line">[ 1629.097263] rtc rtc0: rtc_suspend+0x0/0x138 returned 0 after 309 usecs</span><br><span class="line">[ 1629.103874] mtd mtd1ro: calling mtd_cls_suspend+0x0/0x78 @ 998, parent: 10000000.lbc_nor</span><br><span class="line">[ 1629.111983] mtd mtd1ro: mtd_cls_suspend+0x0/0x78 returned 0 after 0 usecs</span><br><span class="line">[ 1629.118818] mtd mtd1: calling mtd_cls_suspend+0x0/0x78 @ 998, parent: 10000000.lbc_nor</span><br><span class="line">[ 1629.126754] mtd mtd1: mtd_cls_suspend+0x0/0x78 returned 0 after 2 usecs</span><br><span class="line">...</span><br><span class="line">[ 1632.473232] PM: <span class="built_in">suspend</span> debug: Waiting <span class="keyword">for</span> 5 second(s).</span><br><span class="line">[ 1637.479347] reg-dummy reg-dummy: calling platform_pm_resume+0x0/0x60 @ 998, parent: platform</span><br><span class="line">[ 1637.487835] reg-dummy reg-dummy: platform_pm_resume+0x0/0x60 returned 0 after 0 usecs</span><br><span class="line">[ 1637.495697] regulator regulator.0: calling regulator_resume+0x0/0x190 @ 998, parent: reg-dummy</span><br><span class="line">[ 1637.504334] regulator regulator.0: regulator_resume+0x0/0x190 returned 0 after 1 usecs</span><br><span class="line">...</span><br><span class="line">[ 1639.619802] nvme 0000:01:00.0: pci_pm_resume+0x0/0xb8 returned 0 after 12 usecs</span><br><span class="line">[ 1639.628076] OOM killer enabled.</span><br><span class="line">[ 1639.631235] Restarting tasks ... <span class="keyword">done</span>.</span><br><span class="line">[ 1639.651582] PM: <span class="built_in">suspend</span> <span class="built_in">exit</span></span><br><span class="line">[ 1639.665907] nvme nvme0: Shutdown timeout <span class="built_in">set</span> to 8 seconds</span><br><span class="line">[ 1639.769959] nvme nvme0: 2/0/0 default/<span class="built_in">read</span>/poll queues</span><br><span class="line">[ 1641.640767] macb 3200c000.ethernet eth0: yt8521_read_status, phy addr: 0, link up, media: UTP, mii reg 0x11 = 0xbc00</span><br><span class="line">[ 1641.651931] macb 3200c000.ethernet eth0: unable to generate target frequency: 125000000 Hz</span><br><span class="line">[ 1641.661478] macb 3200c000.ethernet eth0: Link is Up - 1Gbps/Full - flow control off</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">root@Ubuntu:/sys/power# <span class="built_in">cat</span> /proc/cmdline </span><br><span class="line">console=ttyAMA1,115200 audit=0 earlycon=pl011,0x2800d000 root=/dev/nvme0n1p2 rw no_console_suspend initcall_debug loglevel=7</span><br><span class="line">root@Ubuntu:/sys/power# <span class="built_in">echo</span> devices &gt; pm_test</span><br><span class="line">root@Ubuntu:/sys/power# <span class="built_in">echo</span> mem &gt; state </span><br><span class="line"></span><br><span class="line">[ 1628.921417] PM: <span class="built_in">suspend</span> entry (deep)</span><br><span class="line">[ 1628.934839] Filesystems <span class="built_in">sync</span>: 0.009 seconds</span><br><span class="line">[ 1629.066342] Freezing user space processes ... (elapsed 0.003 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1629.076995] OOM killer disabled.</span><br><span class="line">[ 1629.080260] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) <span class="keyword">done</span>.</span><br><span class="line">[ 1629.090074] rtc rtc0: calling rtc_suspend+0x0/0x138 @ 998, parent: 0-0068</span><br><span class="line">[ 1629.097263] rtc rtc0: rtc_suspend+0x0/0x138 returned 0 after 309 usecs</span><br><span class="line">[ 1629.103874] mtd mtd1ro: calling mtd_cls_suspend+0x0/0x78 @ 998, parent: 10000000.lbc_nor</span><br><span class="line">[ 1629.111983] mtd mtd1ro: mtd_cls_suspend+0x0/0x78 returned 0 after 0 usecs</span><br><span class="line">[ 1629.118818] mtd mtd1: calling mtd_cls_suspend+0x0/0x78 @ 998, parent: 10000000.lbc_nor</span><br><span class="line">[ 1629.126754] mtd mtd1: mtd_cls_suspend+0x0/0x78 returned 0 after 2 usecs</span><br><span class="line">...</span><br><span class="line">[ 1632.473232] PM: <span class="built_in">suspend</span> debug: Waiting <span class="keyword">for</span> 5 second(s).</span><br><span class="line">[ 1637.479347] reg-dummy reg-dummy: calling platform_pm_resume+0x0/0x60 @ 998, parent: platform</span><br><span class="line">[ 1637.487835] reg-dummy reg-dummy: platform_pm_resume+0x0/0x60 returned 0 after 0 usecs</span><br><span class="line">[ 1637.495697] regulator regulator.0: calling regulator_resume+0x0/0x190 @ 998, parent: reg-dummy</span><br><span class="line">[ 1637.504334] regulator regulator.0: regulator_resume+0x0/0x190 returned 0 after 1 usecs</span><br><span class="line">...</span><br><span class="line">[ 1639.619802] nvme 0000:01:00.0: pci_pm_resume+0x0/0xb8 returned 0 after 12 usecs</span><br><span class="line">[ 1639.628076] OOM killer enabled.</span><br><span class="line">[ 1639.631235] Restarting tasks ... <span class="keyword">done</span>.</span><br><span class="line">[ 1639.651582] PM: <span class="built_in">suspend</span> <span class="built_in">exit</span></span><br><span class="line">[ 1639.665907] nvme nvme0: Shutdown <span class="built_in">timeout</span> <span class="built_in">set</span> to 8 seconds</span><br><span class="line">[ 1639.769959] nvme nvme0: 2/0/0 default/read/poll queues</span><br><span class="line">[ 1641.640767] macb 3200c000.ethernet eth0: yt8521_read_status, phy addr: 0, <span class="built_in">link</span> up, media: UTP, mii reg 0x11 = 0xbc00</span><br><span class="line">[ 1641.651931] macb 3200c000.ethernet eth0: unable to generate target frequency: 125000000 Hz</span><br><span class="line">[ 1641.661478] macb 3200c000.ethernet eth0: Link is Up - 1Gbps/Full - flow control off</span><br></pre></td></tr></table></figure>
 
 
 <h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ol>
@@ -395,8 +419,8 @@
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/archives/da6c5b0b.html" rel="next" title="git ssh代理设置">
-                  git ssh代理设置 <i class="fa fa-angle-right"></i>
+                <a href="/archives/d281c370.html" rel="next" title="Linux字符设备驱动开发">
+                  Linux字符设备驱动开发 <i class="fa fa-angle-right"></i>
                 </a>
             </div>
           </div>
@@ -417,7 +441,7 @@
 
   <div class="copyright">
     &copy; 2021 – 
-    <span itemprop="copyrightYear">2024</span>
+    <span itemprop="copyrightYear">2026</span>
     <span class="with-love">
       <i class="fa fa-user"></i>
     </span>
@@ -428,13 +452,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">298k</span>
+    <span title="站点总字数">289k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:31</span>
+    <span title="站点阅读时长">4:22</span>
   </span>
 </div>
 <div class="busuanzi-count">
@@ -478,28 +502,6 @@
 <noscript>
   <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
 </noscript>
-
-
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
-<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
-<script src="/js/third-party/search/local-search.js"></script>
-
-
-
-
-
-  <script src="/js/third-party/pace.js"></script>
-
-
-  
-  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
-
-
-
-
 
 </body>
 </html>
